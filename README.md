@@ -14,7 +14,9 @@ Before you begin, ensure you have Python 3.8 or higher installed on your system.
 
 1. **Clone the Repository**:   
     ```bash   
-    git clone https://your-repository-url.com   cd AI-trading-Bot   
+    git clone git@github.com:DeltaCompute24/SN8_Trading_App.git   
+
+    cd SN8_Trading_App
     ```
 
 
@@ -22,8 +24,10 @@ Before you begin, ensure you have Python 3.8 or higher installed on your system.
 
     ```bash   
     python3 -m venv venv   
-    source venv/bin/activate  
-    **On Windows use** `venv\Scripts\activate`   
+
+    -macos/linus: source venv/bin/activate  
+
+    -Windows: `venv\Scripts\activate`   
     ```
 
 3. **Install Requirements**:   
