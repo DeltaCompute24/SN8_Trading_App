@@ -151,7 +151,7 @@ class TradeMonitor:
 
     async def evaluate_trade_conditions(self):
         profit_loss = self.calculate_profit_loss()
-        if (self.order_type == "SHORT" and (profit_loss >= self.stop_loss_level or profit_loss <= self.take_profit_level)) or \
+        if (self.order_type == "SHORT" and (profit_loss >= -self.stop_loss_level or profit_loss <= -self.take_profit_level)) or \
            (self.order_type == "LONG" and (profit_loss >= self.take_profit_level or profit_loss <= self.stop_loss_level)):
             if not self.test_mode:
                 await self.exit_trade()
