@@ -61,7 +61,7 @@ python3 trade.py --summary_interval 10 --check_interval 1 --take_profit 2 --stop
 - `--summary_interval` (int): Frequency in seconds to display the trade summary (default: 60)
 - `--check_interval` (int): Frequency in seconds to check for new price updates (default: 5)
 - `--take_profit` (float): Take profit level in percentage (default: 2.0)
-- `--stop_loss` (float): Stop loss level in percentage (default: -9.5)
+- `--stop_loss` (float): Stop loss level in percentage (default: 9.5)
 - `--test_mode` (bool): Run the bot in simulation mode to test without making actual trades (default: disabled)
 
 ### Interactive Inputs
