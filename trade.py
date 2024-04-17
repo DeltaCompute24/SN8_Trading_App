@@ -151,8 +151,7 @@ class TradeMonitor:
 
     async def evaluate_trade_conditions(self):
         profit_loss = self.calculate_profit_loss()
-        if (self.order_type == "SHORT" and (profit_loss >= -self.stop_loss_level or profit_loss <= -self.take_profit_level)) or \
-           (self.order_type == "LONG" and (profit_loss >= self.take_profit_level or profit_loss <= self.stop_loss_level)):
+        if profit_loss >= self.take_profit_level or profit_loss <= -self.stop_loss_level:
             if not self.test_mode:
                 await self.exit_trade()
             logging.info(colored(f"Exiting trade at {self.current_price} with profit/loss: {profit_loss:.2f}%", "magenta"))
@@ -176,7 +175,7 @@ def parse_arguments():
     parser.add_argument('--summary_interval', type=int, default=60, help='Summary log interval in seconds')
     parser.add_argument('--check_interval', type=int, default=5, help='Price check interval in seconds')
     parser.add_argument('--take_profit', type=float, default=2.0, help='Take profit level in percentage')
-    parser.add_argument('--stop_loss', type=float, default=-9.5, help='Stop loss level in percentage')
+    parser.add_argument('--stop_loss', type=float, default=9.5, help='Stop loss level in percentage')
     parser.add_argument('--test_mode', action='store_true', help='Enable test mode to simulate trades')
     return parser.parse_args()
 
