@@ -53,7 +53,7 @@ Create a `.env` file in the root directory of the project and add the following 
 Run the script from the command line, specifying parameters for summary and check intervals, and trading thresholds:
 
 ```bash
-python3 trade.py --summary_interval 10 --check_interval 1 --take_profit 2 --stop_loss -9.5 --test_mode
+python3 trade.py --summary_interval 10 --check_interval 1 --take_profit 2 --stop_loss -9.5 --test_mode --trader_id 4040
 ```
 
 ### Parameters
@@ -63,6 +63,7 @@ python3 trade.py --summary_interval 10 --check_interval 1 --take_profit 2 --stop
 - `--take_profit` (float): Take profit level in percentage (default: 2.0)
 - `--stop_loss` (float): Stop loss level in percentage (default: 9.5)
 - `--test_mode` (bool): Run the bot in simulation mode to test without making actual trades (default: disabled)
+- `--trader_id` (int): the trader id which will be used to minitor it's trades
 
 ### Interactive Inputs
 

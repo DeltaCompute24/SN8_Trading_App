@@ -18,8 +18,7 @@ load_dotenv()
 
 API_KEY = os.getenv('POLYGON_API_KEY')
 SIGNAL_API_KEY = os.getenv('SIGNAL_API_KEY')
-SIGNAL_API_URL = "http://34.254.248.14:4040/api/receive-signal"
-
+SIGNAL_API_BASE_URL = os.getenv('SIGNAL_API_BASE_URL')
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 
@@ -40,6 +39,8 @@ class TradeMonitor:
         self.last_summary_time = datetime.now()  # Correctly initialize last_summary_time
         self.websocket_url = f"wss://socket.polygon.io/{self.asset_type}"
         self.is_trade_open = False
+        self.trader_id = args.trader_id
+        self.signal_api_url = SIGNAL_API_BASE_URL.format(id=self.trader_id)
 
     async def connect_to_websocket(self):
         logging.info(colored("Connecting to WebSocket...", "cyan"))
@@ -165,7 +166,7 @@ class TradeMonitor:
             "leverage": str(self.leverage)
         }
         async with aiohttp.ClientSession() as session:
-            async with session.post(SIGNAL_API_URL, json=params) as response:
+            async with session.post(SIGNAL_API_BASE_URL, json=params) as response:
                 response_text = await response.text()
                 logging.info(colored(f"Exit trade signal sent. Response: {response_text}", "green"))
 
@@ -177,6 +178,7 @@ def parse_arguments():
     parser.add_argument('--take_profit', type=float, default=2.0, help='Take profit level in percentage')
     parser.add_argument('--stop_loss', type=float, default=9.5, help='Stop loss level in percentage')
     parser.add_argument('--test_mode', action='store_true', help='Enable test mode to simulate trades')
+    parser.add_argument('--trader_id', type=int, required=True, help='Trader ID to construct the SIGNAL API URL')
     return parser.parse_args()
 
 def main():
