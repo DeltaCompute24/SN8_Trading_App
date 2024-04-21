@@ -2,3 +2,4 @@ venv
 .env
 simulation.py
 *.pyc*
+trade.py
