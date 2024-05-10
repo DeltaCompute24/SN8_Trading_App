@@ -4,9 +4,8 @@ from uuid import uuid4
 import asyncio
 from fastapi import BackgroundTasks
 from src.utils import setup_logging
-
-
 from src.monitorapi import TradeMonitor  # Ensure this is correctly imported
+
 logger = setup_logging()
 
 app = FastAPI()
@@ -29,37 +28,22 @@ class TradeSession:
 
 sessions = {}
 
-@app.post("/trades/")
-async def start_trade(trade_input: TradeInput, background_tasks: BackgroundTasks):
-    args = {
-        "self.trader_id" : trade_input.trader_id,
-        "trade_pair": trade_input.trade_pair,
-        "order_type": trade_input.order_type,
-        "leverage": trade_input.leverage,
-        "asset_type": trade_input.asset_type,
-        "stop_loss": trade_input.stop_loss,
-        "take_profit": trade_input.take_profit,
-        "test_mode": trade_input.test_mode,
-    }
+@app.post("/initiate-trade/")
+async def initiate_trade(trade_input: TradeInput, background_tasks: BackgroundTasks):
+    args = trade_input.dict()
     monitor = TradeMonitor(args)
     session = TradeSession(monitor)
     sessions[session.session_id] = session
-
-    # Move connection to background task
     background_tasks.add_task(monitor.connect_to_websocket)
-    session.is_trade_active = True  # Make sure this is set after the monitor starts successfully
-    return {"session_id": session.session_id, "message": "Initiating trade"}
+    session.is_trade_active = True
+    return {"session_id": session.session_id, "message": "Trade initiated successfully"}
 
-@app.get("/trades/{session_id}")
-async def get_trade_status(session_id: str):
-    logger.info(f"Requested session_id: {session_id}")
-    logger.info(f"Available sessions: {list(sessions.keys())}")
-    clean_session_id = session_id.strip('"')
-    
-    session = sessions.get(clean_session_id)
+@app.get("/check-trade-status/{session_id}")
+async def check_trade_status(session_id: str):
+    session = sessions.get(session_id.strip('"'))
     if not session or not session.is_trade_active:
         raise HTTPException(status_code=404, detail="Session not found or trade not active")
-    
+
     monitor = session.monitor
     trade_status = {
         "Trade Open Time": str(monitor.trade_open_time),
@@ -75,6 +59,39 @@ async def get_trade_status(session_id: str):
         "Stop Loss": f"{monitor.stop_loss_level:.2f}%",
     }
     return trade_status
+
+@app.post("/adjust-trade/{session_id}")
+async def adjust_trade(session_id: str, trade_input: TradeInput):
+    session = sessions.get(session_id.strip('"'))
+    if not session or not session.is_trade_active:
+        raise HTTPException(status_code=404, detail="Session not found or trade not active")
+
+    monitor = session.monitor
+
+    # Determine if the new trade is the same type (LONG/SHORT) as the existing trade
+    if (monitor.order_type == 'LONG' and trade_input.order_type.upper() == 'LONG') or \
+       (monitor.order_type == 'SHORT' and trade_input.order_type.upper() == 'SHORT'):
+        new_leverage = monitor.leverage + trade_input.leverage
+    else:
+        new_leverage = monitor.leverage - trade_input.leverage
+
+    # Update the order type based on the resulting leverage
+    if new_leverage == 0:
+        monitor.order_type = 'FLAT'  # Assuming 'FLAT' means no open position
+        monitor.leverage = 0
+    elif new_leverage < 0:
+        monitor.order_type = 'SHORT'
+        monitor.leverage = abs(new_leverage)
+    else:  # new_leverage > 0
+        monitor.order_type = 'LONG'
+        monitor.leverage = new_leverage
+
+    # Update stop loss and take profit based on the latest trade input
+    monitor.stop_loss_level = trade_input.stop_loss
+    monitor.take_profit_level = trade_input.take_profit
+
+    logger.info(f"Trade parameters updated: Order Type - {monitor.order_type}, Leverage - {monitor.leverage}")
+    return {"message": "Trade parameters updated successfully", "session_id": session_id}
 
 if __name__ == "__main__":
     import uvicorn
