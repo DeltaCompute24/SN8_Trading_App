@@ -4,11 +4,23 @@ from uuid import uuid4
 import asyncio
 from fastapi import BackgroundTasks
 from src.utils import setup_logging
-from src.monitorapi import TradeMonitor  # Ensure this is correctly imported
+from src.monitorapi import TradeMonitor 
+from fastapi.middleware.cors import CORSMiddleware
+
 
 logger = setup_logging()
 
 app = FastAPI()
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Specify domains, '*' allows all domains
+    allow_credentials=True,
+    allow_methods=["*"],  # Specify methods or ['GET', 'POST', 'PUT', etc.]
+    allow_headers=["*"],  # Specify headers or ['Authorization', 'Content-Type', etc.]
+)
+
 
 class TradeInput(BaseModel):
     trader_id: int
