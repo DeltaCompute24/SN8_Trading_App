@@ -50,14 +50,14 @@ class WebSocketManager:
         last_log_time = None
         price = None
 
-        while log_count < 3:
+        while log_count < 1:
             message = await self.websocket.recv()
             data = json.loads(message)
             event_code = self.get_event_code()
             if isinstance(data, list) and len(data) > 0 and data[0].get('ev') == event_code:
                 price = float(data[0]['c'])
                 current_time = asyncio.get_event_loop().time()
-                if last_log_time is None or current_time - last_log_time >= 10:
+                if last_log_time is None or current_time - last_log_time >= 1:
                     logger.info(f"Current price for {self.trade_pair}: {price}")
                     last_log_time = current_time
                     log_count += 1

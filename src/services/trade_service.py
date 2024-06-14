@@ -5,23 +5,28 @@ from src.models.position import Position
 from src.schemas.position import PositionCreate
 from datetime import datetime
 
-async def create_position(db: AsyncSession, position_data: PositionCreate, entry_price: float, operation_type: str) -> Position:
+async def create_position(db: AsyncSession, position_data: PositionCreate, entry_price: float, operation_type: str, 
+                          cumulative_leverage: float, cumulative_stop_loss: float, cumulative_take_profit: float, 
+                          cumulative_order_type: str, close_time: datetime = None, close_price: float = None, profit_loss: float = None):
     position = Position(
         trader_id=position_data.trader_id,
         trade_pair=position_data.trade_pair,
         leverage=position_data.leverage,
+        entry_price=entry_price,
         asset_type=position_data.asset_type,
         stop_loss=position_data.stop_loss,
         take_profit=position_data.take_profit,
         open_time=datetime.utcnow(),
-        status="OPEN",
+        status="OPEN" if operation_type != "close" else "CLOSED",
         order_type=position_data.order_type,
-        entry_price=entry_price,
-        cumulative_leverage=position_data.leverage,
-        cumulative_stop_loss=position_data.stop_loss,
-        cumulative_take_profit=position_data.take_profit,
-        cumulative_order_type=position_data.order_type,
-        operation_type=operation_type
+        cumulative_leverage=cumulative_leverage,
+        cumulative_stop_loss=cumulative_stop_loss,
+        cumulative_take_profit=cumulative_take_profit,
+        cumulative_order_type=cumulative_order_type,
+        operation_type=operation_type,
+        close_time=close_time,
+        close_price=close_price,
+        profit_loss=profit_loss
     )
     db.add(position)
     await db.commit()
@@ -38,43 +43,24 @@ async def get_open_position(db: AsyncSession, trader_id: int, trade_pair: str) -
     ))
     return result.scalars().first()
 
-async def calculate_profit_loss(db: AsyncSession, trader_id: int, trade_pair: str) -> float:
-    position = await get_open_position(db, trader_id, trade_pair)
-    if not position:
-        return None
+async def get_latest_position(db: AsyncSession, trader_id: int, trade_pair: str) -> Position:
+    result = await db.execute(select(Position).where(
+        and_(
+            Position.trader_id == trader_id,
+            Position.trade_pair == trade_pair
+        )
+    ).order_by(Position.open_time.desc()))
+    return result.scalars().first()
 
-    # Here you can add your logic to calculate profit/loss based on the current price
-    # For demonstration, let's assume we have a simple difference calculation
-    if position.entry_price is not None and position.current_price is not None:
-        return (position.current_price - position.entry_price) * position.leverage
+def calculate_profit_loss(entry_price: float, current_price: float, leverage: float, order_type: str, asset_type: str) -> float:
+    fee = calculate_fee(leverage, asset_type)
+    if order_type == "LONG":
+        price_difference = (current_price - entry_price) * leverage
+    elif order_type == "SHORT":
+        price_difference = (entry_price - current_price) * leverage
+    net_profit = price_difference - fee
+    profit_loss_percent = (net_profit / (entry_price * leverage)) * 100
+    return profit_loss_percent
 
-    return None
-
-async def adjust_position(db: AsyncSession, trader_id: int, trade_pair: str, leverage: float, stop_loss: float, take_profit: float, order_type: str) -> Position:
-    position = await get_open_position(db, trader_id, trade_pair)
-    if not position:
-        return None
-
-    # Adjust leverage and potentially change order type
-    if position.order_type == order_type.upper():
-        position.leverage += leverage
-    else:
-        position.leverage -= leverage
-
-    if position.leverage == 0:
-        position.order_type = 'FLAT'
-    elif position.leverage < 0:
-        position.order_type = 'SHORT'
-        position.leverage = abs(position.leverage)
-    else:
-        position.order_type = 'LONG'
-
-    # Update cumulative columns
-    position.cumulative_leverage += leverage
-    position.cumulative_stop_loss = stop_loss
-    position.cumulative_take_profit = take_profit
-    position.cumulative_order_type = order_type
-
-    await db.commit()
-    await db.refresh(position)
-    return position
+def calculate_fee(leverage: float, asset_type: str) -> float:
+    return (0.00007 * leverage) if asset_type == 'forex' else (0.002 * leverage)

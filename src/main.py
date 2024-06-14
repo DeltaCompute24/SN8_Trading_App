@@ -1,6 +1,6 @@
 import uvicorn
 from fastapi import FastAPI
-from src.api.routes.trade import router as trade_router
+from src.api.routes.position import router as trade_router
 from src.database import engine
 from src.models.base import Base
 
