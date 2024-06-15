@@ -2,7 +2,7 @@ from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional
 
-class PositionBase(BaseModel):
+class TransactionBase(BaseModel):
     trader_id: int
     trade_pair: str
     leverage: float
@@ -11,23 +11,24 @@ class PositionBase(BaseModel):
     take_profit: Optional[float]
     order_type: str
 
-class PositionCreate(PositionBase):
+class TransactionCreate(TransactionBase):
     pass
 
-class Position(PositionBase):
-    id: int
-    entry_price: float
-    current_price: Optional[float]
+class Transaction(TransactionBase):
+    order_id: int
     open_time: datetime
-    close_time: Optional[datetime]
-    status: str
-    cumulative_leverage: float
-    cumulative_stop_loss: float
-    cumulative_take_profit: float
-    cumulative_order_type: str
+    entry_price: float
     operation_type: str
+    cumulative_leverage: float
+    cumulative_stop_loss: Optional[float]
+    cumulative_take_profit: Optional[float]
+    cumulative_order_type: str
+    status: str
+    close_time: Optional[datetime]
     close_price: Optional[float]
     profit_loss: Optional[float]
+    position_id: int
+    trade_order: int
 
     class Config:
         orm_mode = True
