@@ -10,6 +10,8 @@ from src.api.routes.close_position import router as close_router
 from src.api.routes.profit_loss import router as profit_loss_router
 from src.api.routes.get_positions import router as get_positions_router
 from src.database import engine, Base, DATABASE_URL
+from src.models.transaction import Transaction  # Ensure the models are imported
+from src.models.monitored_positions import MonitoredPosition  # Ensure the models are imported
 
 app = FastAPI()
 

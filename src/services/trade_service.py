@@ -1,8 +1,9 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy.sql import and_
+from sqlalchemy.sql import and_, text
 from src.models.transaction import Transaction
 from src.schemas.transaction import TransactionCreate
+from src.schemas.monitored_position import MonitoredPositionCreate
 from datetime import datetime
 from sqlalchemy.sql import func
 
@@ -50,8 +51,39 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
     await db.refresh(new_transaction)
     return new_transaction
 
+async def update_monitored_positions(db: AsyncSession, position_data: MonitoredPositionCreate):
+    await db.execute(
+        text("""
+        INSERT INTO monitored_positions (
+            position_id, order_id, trader_id, trade_pair, cumulative_leverage, cumulative_order_type, 
+            cumulative_stop_loss, cumulative_take_profit, asset_type, entry_price
+        ) VALUES (
+            :position_id, :order_id, :trader_id, :trade_pair, :cumulative_leverage, :cumulative_order_type, 
+            :cumulative_stop_loss, :cumulative_take_profit, :asset_type, :entry_price
+        ) ON CONFLICT (position_id, order_id) DO UPDATE SET
+            cumulative_leverage = EXCLUDED.cumulative_leverage,
+            cumulative_order_type = EXCLUDED.cumulative_order_type,
+            cumulative_stop_loss = EXCLUDED.cumulative_stop_loss,
+            cumulative_take_profit = EXCLUDED.cumulative_take_profit,
+            asset_type = EXCLUDED.asset_type,
+            entry_price = EXCLUDED.entry_price
+        """),
+        {
+            "position_id": position_data.position_id,
+            "order_id": position_data.order_id,
+            "trader_id": position_data.trader_id,
+            "trade_pair": position_data.trade_pair,
+            "cumulative_leverage": position_data.cumulative_leverage,
+            "cumulative_order_type": position_data.cumulative_order_type,
+            "cumulative_stop_loss": position_data.cumulative_stop_loss,
+            "cumulative_take_profit": position_data.cumulative_take_profit,
+            "asset_type": position_data.asset_type,
+            "entry_price": position_data.entry_price
+        }
+    )
+    await db.commit()
+
 async def get_open_position(db: AsyncSession, trader_id: int, trade_pair: str) -> Transaction:
-    # Get the latest position_id for the given trader_id and trade_pair
     latest_position_id = await db.scalar(
         select(func.max(Transaction.position_id)).where(
             and_(
@@ -64,7 +96,6 @@ async def get_open_position(db: AsyncSession, trader_id: int, trade_pair: str) -
     if not latest_position_id:
         return None
 
-    # Get the transaction with the latest trade_order for the latest position_id
     latest_transaction = await db.scalar(
         select(Transaction).where(
             and_(

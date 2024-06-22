@@ -22,6 +22,24 @@ async def get_profit_loss(profit_loss_request: ProfitLossRequest, db: AsyncSessi
         raise HTTPException(status_code=404, detail="No open position found for this trade pair and trader")
 
     try:
+        # Explicitly log the details of the latest position
+        logger.info(f"Latest position details: {latest_position}")
+
+        # Ensure latest_position is a dictionary for logging purposes
+        if hasattr(latest_position, "__dict__"):
+            logger.info(f"Latest position attributes: {latest_position.__dict__}")
+        else:
+            logger.warning(f"Latest position has no __dict__ attribute: {latest_position}")
+
+        # Extract and log individual attributes for better visibility
+        logger.info(f"Position ID: {latest_position.position_id}")
+        logger.info(f"Trader ID: {latest_position.trader_id}")
+        logger.info(f"Trade Pair: {latest_position.trade_pair}")
+        logger.info(f"Entry Price: {latest_position.entry_price}")
+        logger.info(f"Cumulative Leverage: {latest_position.cumulative_leverage}")
+        logger.info(f"Cumulative Order Type: {latest_position.cumulative_order_type}")
+        logger.info(f"Asset Type: {latest_position.asset_type}")
+
         # Connect and subscribe to the WebSocket
         websocket = await websocket_manager.connect(latest_position.asset_type)
         subscription_response = await websocket_manager.subscribe(trade_pair)
@@ -33,11 +51,27 @@ async def get_profit_loss(profit_loss_request: ProfitLossRequest, db: AsyncSessi
             logger.error("Failed to fetch current price for the trade pair")
             raise HTTPException(status_code=500, detail="Failed to fetch current price for the trade pair")
         
+        # Log the details used for profit/loss calculation
+        logger.info(f"Calculating profit/loss with details: entry_price={latest_position.entry_price}, "
+                    f"current_price={first_price}, leverage={latest_position.cumulative_leverage}, "
+                    f"order_type={latest_position.cumulative_order_type}, asset_type={latest_position.asset_type}")
+
         # Calculate profit/loss based on the first price
-        logger.info(f"Entry price: {latest_position.entry_price}, Current price: {first_price}, Leverage: {latest_position.cumulative_leverage}, Order type: {latest_position.cumulative_order_type}")
         profit_loss = calculate_profit_loss(latest_position.entry_price, first_price, latest_position.cumulative_leverage, latest_position.cumulative_order_type, latest_position.asset_type)
 
-        return {"profit_loss": profit_loss}
+        # Log the calculated profit/loss
+        logger.info(f"Calculated profit/loss: {profit_loss}")
+
+        # Return the details in the response
+        return {
+            "trader_id": trader_id,
+            "trade_pair": trade_pair,
+            "cumulative_leverage": latest_position.cumulative_leverage,
+            "cumulative_order_type": latest_position.cumulative_order_type,
+            "cumulative_stop_loss": latest_position.cumulative_stop_loss,
+            "cumulative_take_profit": latest_position.cumulative_take_profit,
+            "profit_loss": profit_loss
+        }
 
     except Exception as e:
         logger.error(f"Error calculating profit/loss: {e}")

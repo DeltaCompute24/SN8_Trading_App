@@ -1,8 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import text  # Add this import
 from src.database import get_db
 from src.schemas.transaction import TransactionCreate, TradeResponse
-from src.services.trade_service import create_transaction, get_latest_position
+from src.schemas.monitored_position import MonitoredPositionCreate
+from src.services.trade_service import create_transaction, get_latest_position, update_monitored_positions
 from src.utils.logging import setup_logging
 from src.utils.websocket_manager import websocket_manager
 
@@ -22,30 +24,29 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
     try:
         logger.info(f"Latest position: {latest_position}")
 
-        # Determine if the new trade is the same type (LONG/SHORT) as the existing trade
-        if (latest_position.order_type == 'LONG' and position_data.order_type.upper() == 'LONG') or \
-           (latest_position.order_type == 'SHORT' and position_data.order_type.upper() == 'SHORT'):
+        # Calculate new leverage based on the cumulative order type
+        if (latest_position.cumulative_order_type == 'LONG' and position_data.order_type.upper() == 'LONG') or \
+           (latest_position.cumulative_order_type == 'SHORT' and position_data.order_type.upper() == 'SHORT'):
             new_leverage = latest_position.cumulative_leverage + position_data.leverage
         else:
             new_leverage = latest_position.cumulative_leverage - position_data.leverage
 
-        # Update the order type based on the resulting leverage
+        # Determine the new cumulative order type
         if new_leverage == 0:
-            position_data.order_type = 'FLAT'
+            cumulative_order_type = 'FLAT'
             new_leverage = 0
         elif new_leverage < 0:
-            position_data.order_type = 'SHORT'
+            cumulative_order_type = 'SHORT'
             new_leverage = abs(new_leverage)
         else:  # new_leverage > 0
-            position_data.order_type = 'LONG'
+            cumulative_order_type = 'LONG'
 
-        logger.info(f"New leverage: {new_leverage}, Updated order type: {position_data.order_type}")
+        logger.info(f"New leverage: {new_leverage}, Updated cumulative order type: {cumulative_order_type}")
 
         # Update cumulative values based on the latest position
         cumulative_leverage = abs(new_leverage)  # Ensure cumulative leverage is always positive
         cumulative_stop_loss = position_data.stop_loss
         cumulative_take_profit = position_data.take_profit
-        cumulative_order_type = position_data.order_type
 
         logger.info(f"Cumulative leverage: {cumulative_leverage}, Cumulative stop loss: {cumulative_stop_loss}, Cumulative take profit: {cumulative_take_profit}, Cumulative order type: {cumulative_order_type}")
 
@@ -58,15 +59,40 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
         logger.info("Adjustment submitted successfully")
 
         # Create a new transaction record with updated values
-        await create_transaction(
-            db, position_data, entry_price=latest_position.entry_price, operation_type="adjust",
+        new_transaction = await create_transaction(
+            db, position_data, entry_price=latest_position.entry_price, operation_type="adjust", 
             position_id=latest_position.position_id,
             trade_order=latest_position.trade_order + 1,
             cumulative_leverage=cumulative_leverage,
             cumulative_stop_loss=cumulative_stop_loss,
             cumulative_take_profit=cumulative_take_profit,
-            cumulative_order_type=cumulative_order_type
+            cumulative_order_type=position_data.order_type.upper()
         )
+
+        # Remove old monitored position
+        await db.execute(
+            text("DELETE FROM monitored_positions WHERE position_id = :position_id"),
+            {"position_id": latest_position.position_id}
+        )
+        await db.commit()
+
+        # Update the monitored_positions table with the new transaction
+        await update_monitored_positions(
+            db, 
+            MonitoredPositionCreate(
+                position_id=new_transaction.position_id, 
+                order_id=new_transaction.trade_order, 
+                trader_id=new_transaction.trader_id, 
+                trade_pair=new_transaction.trade_pair,
+                cumulative_leverage=new_transaction.cumulative_leverage,
+                cumulative_order_type=new_transaction.cumulative_order_type,
+                cumulative_stop_loss=new_transaction.cumulative_stop_loss,
+                cumulative_take_profit=new_transaction.cumulative_take_profit,
+                asset_type=new_transaction.asset_type,
+                entry_price=new_transaction.entry_price
+            )
+        )
+
         logger.info("Position adjusted successfully")
         return TradeResponse(message="Position adjusted successfully")
 

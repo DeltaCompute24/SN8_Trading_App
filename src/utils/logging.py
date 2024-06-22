@@ -1,13 +1,27 @@
-import logging
+# src/utils/logging.py
 
-def setup_logging():
-    logger = logging.getLogger("trading_app")
-    if not logger.hasHandlers():
-        logger.setLevel(logging.INFO)
-        handler = logging.StreamHandler()
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        handler.setFormatter(formatter)
+import logging
+from logging.handlers import RotatingFileHandler
+import os
+
+LOG_DIR = "logs"
+if not os.path.exists(LOG_DIR):
+    os.makedirs(LOG_DIR)
+
+def setup_logging(log_name='trading_app', level=logging.INFO):
+    logger = logging.getLogger(log_name)
+    logger.setLevel(level)
+    
+    log_file = os.path.join(LOG_DIR, f"{log_name}.log")
+    handler = RotatingFileHandler(log_file, maxBytes=10**6, backupCount=5)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler.setFormatter(formatter)
+    
+    if not logger.handlers:
         logger.addHandler(handler)
+    
     return logger
 
-logger = setup_logging()
+# Example usage:
+# logger = setup_logging()
+# logger.info("Logging is set up.")

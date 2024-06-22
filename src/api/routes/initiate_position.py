@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.database import get_db
 from src.schemas.transaction import TransactionCreate, TradeResponse
-from src.services.trade_service import create_transaction, get_open_position
+from src.schemas.monitored_position import MonitoredPositionCreate
+from src.services.trade_service import create_transaction, get_open_position, update_monitored_positions
 from src.utils.logging import setup_logging
 from src.utils.websocket_manager import websocket_manager
 from datetime import datetime
@@ -26,7 +27,7 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
         logger.info(f"Subscription response: {subscription_response}")
 
         # Wait for the first price to be received
-        first_price = await websocket_manager.listen_for_price()
+        first_price = await websocket_manager.listen_for_initial_price()
         if first_price is None:
             logger.error("Failed to fetch current price for the trade pair")
             raise HTTPException(status_code=500, detail="Failed to fetch current price for the trade pair")
@@ -40,7 +41,25 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
         logger.info("Trade submitted successfully")
 
         # Create the transaction with the first received price
-        await create_transaction(db, position_data, entry_price=first_price, operation_type="initiate")
+        new_transaction = await create_transaction(db, position_data, entry_price=first_price, operation_type="initiate")
+
+        # Create MonitoredPositionCreate data
+        monitored_position_data = MonitoredPositionCreate(
+            position_id=new_transaction.position_id,
+            order_id=new_transaction.trade_order,
+            trader_id=new_transaction.trader_id,
+            trade_pair=new_transaction.trade_pair,
+            cumulative_leverage=new_transaction.cumulative_leverage,
+            cumulative_order_type=new_transaction.cumulative_order_type,
+            cumulative_stop_loss=new_transaction.cumulative_stop_loss,
+            cumulative_take_profit=new_transaction.cumulative_take_profit,
+            asset_type=new_transaction.asset_type,
+            entry_price=new_transaction.entry_price,
+        )
+
+        # Update the monitored_positions table
+        await update_monitored_positions(db, monitored_position_data)
+
         logger.info(f"Position initiated successfully with entry price {first_price}")
         return TradeResponse(message="Position initiated successfully")
 

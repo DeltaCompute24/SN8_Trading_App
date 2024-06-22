@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import text  # Add this import
 from src.database import get_db
 from src.schemas.transaction import TradeResponse, ProfitLossRequest, TransactionCreate
 from src.services.trade_service import create_transaction, get_open_position, get_latest_position, calculate_profit_loss
@@ -38,7 +39,7 @@ async def close_position(profit_loss_request: ProfitLossRequest, db: AsyncSessio
         logger.info(f"Subscription response: {subscription_response}")
 
         # Wait for the first price to be received
-        close_price = await websocket_manager.listen_for_price()
+        close_price = await websocket_manager.listen_for_initial_price()
         if close_price is None:
             logger.error("Failed to fetch current price for the trade pair")
             raise HTTPException(status_code=500, detail="Failed to fetch current price for the trade pair")
@@ -66,15 +67,24 @@ async def close_position(profit_loss_request: ProfitLossRequest, db: AsyncSessio
         )
 
         # Create the close transaction with the calculated profit/loss
-        await create_transaction(db, close_transaction_data, entry_price=position.entry_price, operation_type="close", status="CLOSED",
-                                 position_id=position.position_id,
-                                 trade_order=position.trade_order + 1,
-                                 cumulative_leverage=latest_position.cumulative_leverage,
-                                 cumulative_stop_loss=latest_position.cumulative_stop_loss,
-                                 cumulative_take_profit=latest_position.cumulative_take_profit,
-                                 cumulative_order_type=latest_position.cumulative_order_type,
-                                 close_time=close_time, close_price=close_price, profit_loss=profit_loss)
-        
+        new_transaction = await create_transaction(
+            db, close_transaction_data, entry_price=position.entry_price, operation_type="close", status="CLOSED",
+            position_id=position.position_id,
+            trade_order=position.trade_order + 1,
+            cumulative_leverage=latest_position.cumulative_leverage,
+            cumulative_stop_loss=latest_position.cumulative_stop_loss,
+            cumulative_take_profit=latest_position.cumulative_take_profit,
+            cumulative_order_type=latest_position.cumulative_order_type,
+            close_time=close_time, close_price=close_price, profit_loss=profit_loss
+        )
+
+        # Remove closed position from the monitored_positions table
+        await db.execute(
+            text("DELETE FROM monitored_positions WHERE position_id = :position_id"),
+            {"position_id": position.position_id}
+        )
+        await db.commit()
+
         logger.info(f"Position closed successfully with close price {close_price} and profit/loss {profit_loss}")
         return TradeResponse(message="Position closed successfully")
 

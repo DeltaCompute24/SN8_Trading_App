@@ -11,9 +11,11 @@ from src.utils.logging import setup_logging
 logger = setup_logging()
 router = APIRouter()
 
+
+@router.get("/positions/", response_model=List[TransactionSchema])
 @router.get("/positions/{trader_id}", response_model=List[TransactionSchema])
 async def get_positions(
-    trader_id: int,
+    trader_id: Optional[int] = None,
     db: AsyncSession = Depends(get_db),
     trade_pair: Optional[str] = None,
     only_open: Optional[bool] = False
@@ -21,7 +23,9 @@ async def get_positions(
     logger.info(f"Fetching positions for trader_id={trader_id}, trade_pair={trade_pair}, only_open={only_open}")
 
     # Base query
-    query = select(Transaction).where(Transaction.trader_id == trader_id)
+    query = select(Transaction)
+    if trader_id:
+        query = query.where(Transaction.trader_id == trader_id)
 
     # Apply trade_pair filter if specified
     if trade_pair:
@@ -31,7 +35,6 @@ async def get_positions(
         # Subquery to get the latest trade order for each position
         latest_trade_subquery = (
             select(Transaction.position_id, func.max(Transaction.trade_order).label("max_trade_order"))
-            .where(Transaction.trader_id == trader_id)
             .group_by(Transaction.position_id)
             .subquery()
         )
@@ -52,13 +55,12 @@ async def get_positions(
         query = (
             select(Transaction)
             .where(
-                Transaction.trader_id == trader_id,
                 Transaction.position_id.in_(latest_status_subquery)
             )
             .order_by(Transaction.position_id, Transaction.trade_order)
         )
     else:
-        # Main query to fetch all transactions for the trader_id
+        # Main query to fetch all transactions
         query = query.order_by(Transaction.position_id, Transaction.trade_order)
 
     result = await db.execute(query)
