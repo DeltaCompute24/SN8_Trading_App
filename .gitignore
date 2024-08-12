@@ -1,6 +1,9 @@
+.idea/
 venv
 .env
 *.pyc*
 logs/
 celerybeat-schedule.db
+celerybeat-schedule
+celery.log
 dump.rdb
