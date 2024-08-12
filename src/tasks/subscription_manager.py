@@ -1,55 +1,53 @@
 import asyncio
-from sqlalchemy.ext.asyncio import AsyncSession
+import gc
+import logging
+
 from sqlalchemy.future import select
+
+from src.core.celery_app import celery_app
 from src.database_tasks import get_task_db
 from src.models.monitored_positions import MonitoredPosition
-from src.core.celery_app import celery_app
 from src.utils.websocket_manager import WebSocketManager
-import logging
-from contextlib import asynccontextmanager
 
 logger = logging.getLogger(__name__)
 
-# Track current subscriptions and tasks
 current_subscriptions = set()
 subscription_tasks = {}
-db_lock = asyncio.Lock()
-websocket_manager = WebSocketManager()  # Initialize the WebSocketManager
+websocket_manager = WebSocketManager()
+
 
 @celery_app.task(name='src.tasks.subscription_manager.manage_subscriptions')
 def manage_subscriptions():
+    gc.disable()
     logger.info("Starting manage_subscriptions")
     loop = asyncio.get_event_loop()
     loop.run_until_complete(manage_subscriptions_async())
 
-@asynccontextmanager
-async def get_db_session():
-    async with get_task_db() as db:
-        yield db
 
 async def manage_subscriptions_async():
     logger.info("Starting manage_subscriptions_async")
-    async with db_lock:
-        async with get_db_session() as db:
-            trade_pairs = await get_unique_trade_pairs(db)
-            if trade_pairs:
-                logger.info(f"Current monitored trade pairs: {trade_pairs}")
-                await manage_trade_pair_subscriptions(trade_pairs)
-            else:
-                logger.info("No trade pairs to monitor.")
+    trade_pairs = await get_unique_trade_pairs()
+    if trade_pairs:
+        logger.info(f"Current monitored trade pairs: {trade_pairs}")
+        await manage_trade_pair_subscriptions(trade_pairs)
+    else:
+        logger.info("No trade pairs to monitor.")
     logger.info("Finished manage_subscriptions_async")
 
-async def get_unique_trade_pairs(db: AsyncSession):
+
+async def get_unique_trade_pairs():
     logger.info("Fetching unique trade pairs from database")
-    result = await db.execute(select(MonitoredPosition.trade_pair, MonitoredPosition.asset_type).distinct())
-    trade_pairs = [(row.trade_pair, row.asset_type) for row in result.all()]
-    logger.info(f"Retrieved trade pairs: {trade_pairs}")
-    return trade_pairs
+    async with get_task_db() as db:
+        result = await db.execute(select(MonitoredPosition.trade_pair, MonitoredPosition.asset_type).distinct())
+        trade_pairs = [(row.trade_pair, row.asset_type) for row in result.all()]
+        logger.info(f"Retrieved trade pairs: {trade_pairs}")
+        return trade_pairs
+
 
 async def manage_trade_pair_subscriptions(trade_pairs):
     global current_subscriptions, subscription_tasks
     active_trade_pairs = set(trade_pairs)
-    
+
     new_pairs = active_trade_pairs - current_subscriptions
     removed_pairs = current_subscriptions - active_trade_pairs
 
@@ -87,11 +85,13 @@ async def manage_trade_pair_subscriptions(trade_pairs):
 
     logger.info(f"Active subscriptions: {current_subscriptions}")
 
+
 @celery_app.task(bind=True, name='src.tasks.subscription_manager.trade_pair_worker')
 def trade_pair_worker(self, trade_pair):
     logger.info(f"Starting trade_pair_worker for {trade_pair}")
     loop = asyncio.get_event_loop()
     loop.run_until_complete(trade_pair_worker_async(trade_pair))
+
 
 async def trade_pair_worker_async(trade_pair):
     asset_type, pair = trade_pair
@@ -103,4 +103,3 @@ async def trade_pair_worker_async(trade_pair):
     logger.info(f"Finished trade_pair_worker_async for {trade_pair}")
 
 # Ensure tasks are loaded
-import src.tasks.subscription_manager
