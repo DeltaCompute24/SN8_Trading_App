@@ -1,17 +1,15 @@
-import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.exc import ProgrammingError
+from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.sql import text
-from src.api.routes.initiate_position import router as initiate_router
+
 from src.api.routes.adjust_position import router as adjust_router
 from src.api.routes.close_position import router as close_router
-from src.api.routes.profit_loss import router as profit_loss_router
 from src.api.routes.get_positions import router as get_positions_router
+from src.api.routes.initiate_position import router as initiate_router
+from src.api.routes.profit_loss import router as profit_loss_router
 from src.database import engine, Base, DATABASE_URL
-from src.models.transaction import Transaction  # Ensure the models are imported
-from src.models.monitored_positions import MonitoredPosition  # Ensure the models are imported
 
 app = FastAPI()
 
@@ -30,6 +28,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 @app.on_event("startup")
 async def startup_event():
@@ -53,6 +52,3 @@ async def startup_event():
     # Create the tables in the monitoring database
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-
-if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000)
