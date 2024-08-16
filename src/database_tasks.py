@@ -5,7 +5,7 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 
 from src.config import DATABASE_URL
 
-task_engine = create_async_engine(DATABASE_URL, echo=True, pool_size=100, max_overflow=200, pool_timeout=30)
+task_engine = create_async_engine(DATABASE_URL, echo=True, pool_size=20, max_overflow=30, pool_timeout=30)
 TaskSessionLocal = sessionmaker(
     bind=task_engine,
     class_=AsyncSession,
