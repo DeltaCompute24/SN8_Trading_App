@@ -10,8 +10,8 @@ celery_app.conf.update(
     task_routes={
         'src.tasks.subscription_manager.manage_subscriptions': {'queue': 'subscription_management'},
         'src.tasks.subscription_manager.trade_pair_worker': {'queue': 'trade_pair_workers'},
-        'src.tasks.position_monitor.monitor_positions': {'queue': 'position_monitoring'},
-        'src.tasks.position_monitor_sync.monitor_positions': {'queue': 'position_monitoring_sync'},
+        # 'src.tasks.position_monitor.monitor_positions': {'queue': 'position_monitoring'},
+        'src.tasks.position_monitor_sync.monitor_positions': {'queue': 'position_monitoring'},
     },
     beat_schedule={
         'manage_subscriptions-every-10-seconds': {
