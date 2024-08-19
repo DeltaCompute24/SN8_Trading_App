@@ -14,12 +14,12 @@ TaskSessionLocal = sessionmaker(
 )
 
 # mysql
-DATABASE_URL="mysql+mysqlconnector://root:password@localhost:3306/database_name"
-task_engine_2 = create_engine(DATABASE_URL, echo=True, pool_size=20, max_overflow=30, pool_timeout=30)
-TaskSessionLocal_2 = sessionmaker(
-    bind=task_engine_2,
-    expire_on_commit=False
-)
+# DATABASE_URL="mysql+mysqlconnector://root:password@localhost:3306/database_name"
+# task_engine_2 = create_engine(DATABASE_URL, echo=True, pool_size=20, max_overflow=30, pool_timeout=30)
+# TaskSessionLocal_2 = sessionmaker(
+#     bind=task_engine_2,
+#     expire_on_commit=False
+# )
 
 # postgres
 DATABASE_URL = "postgresql+psycopg2://developer:DeltaCompute123@rococo-db-server-postgres-aurora.cluster-c3y444mm80qj.eu-west-1.rds.amazonaws.com/postgres"
