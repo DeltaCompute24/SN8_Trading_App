@@ -11,14 +11,19 @@ celery_app.conf.update(
         'src.tasks.subscription_manager.manage_subscriptions': {'queue': 'subscription_management'},
         'src.tasks.subscription_manager.trade_pair_worker': {'queue': 'trade_pair_workers'},
         'src.tasks.position_monitor.monitor_positions': {'queue': 'position_monitoring'},
+        'src.tasks.position_monitor_sync.monitor_positions': {'queue': 'position_monitoring_sync'},
     },
     beat_schedule={
         'manage_subscriptions-every-10-seconds': {
             'task': 'src.tasks.subscription_manager.manage_subscriptions',
             'schedule': 10.0,  # every 10 seconds
         },
+        # 'monitor_positions-every-1-second': {
+        #     'task': 'src.tasks.position_monitor.monitor_positions',
+        #     'schedule': 1.0,  # every 1 second
+        # },
         'monitor_positions-every-1-second': {
-            'task': 'src.tasks.position_monitor.monitor_positions',
+            'task': 'src.tasks.position_monitor_sync.monitor_positions',
             'schedule': 1.0,  # every 1 second
         },
     },
@@ -29,4 +34,4 @@ celery_app.autodiscover_tasks(['src.tasks'])
 
 # Ensure tasks are loaded
 import src.tasks.subscription_manager
-import src.tasks.position_monitor
+import src.tasks.position_monitor_sync
