@@ -1,4 +1,3 @@
-import gc
 import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -47,7 +46,6 @@ def get_open_position(db: AsyncSession, trader_id: int, trade_pair: str):
 
 @celery_app.task(name='src.tasks.position_monitor_sync.monitor_positions')
 def monitor_positions():
-    gc.disable()
     logger.info("Starting monitor_positions task")
     monitor_positions_sync()
 
@@ -125,8 +123,6 @@ def should_close_position(profit_loss, position):
                 (position.cumulative_order_type == "SHORT" and profit_loss >= position.cumulative_stop_loss)
         )
         logger.info(f"Determining whether to close position: {result}")
-        # Enable the garbage collector
-        gc.enable()
         return result
     except Exception as e:
         logger.error(f"An error occurred while determining if position should be closed: {e}")
