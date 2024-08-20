@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from src.database import get_db
 from src.schemas.transaction import ProfitLossRequest
 from src.services.trade_service import get_latest_position, calculate_profit_loss
@@ -8,6 +9,7 @@ from src.utils.websocket_manager import websocket_manager
 
 logger = setup_logging()
 router = APIRouter()
+
 
 @router.post("/profit-loss/", response_model=dict)
 async def get_profit_loss(profit_loss_request: ProfitLossRequest, db: AsyncSession = Depends(get_db)):
@@ -46,18 +48,20 @@ async def get_profit_loss(profit_loss_request: ProfitLossRequest, db: AsyncSessi
         logger.info(f"Subscription response: {subscription_response}")
 
         # Wait for the first price to be received
-        first_price = await websocket_manager.listen_for_price()
+        first_price = await websocket_manager.listen_for_initial_price()
         if first_price is None:
             logger.error("Failed to fetch current price for the trade pair")
             raise HTTPException(status_code=500, detail="Failed to fetch current price for the trade pair")
-        
+
         # Log the details used for profit/loss calculation
         logger.info(f"Calculating profit/loss with details: entry_price={latest_position.entry_price}, "
                     f"current_price={first_price}, leverage={latest_position.cumulative_leverage}, "
                     f"order_type={latest_position.cumulative_order_type}, asset_type={latest_position.asset_type}")
 
         # Calculate profit/loss based on the first price
-        profit_loss = calculate_profit_loss(latest_position.entry_price, first_price, latest_position.cumulative_leverage, latest_position.cumulative_order_type, latest_position.asset_type)
+        profit_loss = calculate_profit_loss(latest_position.entry_price, first_price,
+                                            latest_position.cumulative_leverage, latest_position.cumulative_order_type,
+                                            latest_position.asset_type)
 
         # Log the calculated profit/loss
         logger.info(f"Calculated profit/loss: {profit_loss}")
