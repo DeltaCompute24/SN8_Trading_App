@@ -95,11 +95,9 @@ def trade_pair_worker(self, trade_pair):
 
 async def trade_pair_worker_async(trade_pair):
     asset_type, pair = trade_pair
-    websocket_manager = WebSocketManager()  # Initialize a new WebSocketManager for the worker
+    websocket_manager = WebSocketManager()
     logger.info(f"Starting trade_pair_worker_async for {trade_pair}")
     await websocket_manager.connect(asset_type)
     await websocket_manager.subscribe(pair)
     await websocket_manager.listen_for_price()
     logger.info(f"Finished trade_pair_worker_async for {trade_pair}")
-
-# Ensure tasks are loaded
