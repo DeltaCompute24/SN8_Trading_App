@@ -3,7 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import text  # Add this import
 from src.database import get_db
 from src.schemas.transaction import TradeResponse, ProfitLossRequest, TransactionCreate
-from src.services.trade_service import create_transaction, get_open_position, get_latest_position, calculate_profit_loss
+from src.services.trade_service import create_transaction, get_open_position, get_latest_position, \
+    calculate_profit_loss, close_transaction
 from src.utils.logging import setup_logging
 from src.utils.websocket_manager import websocket_manager
 from datetime import datetime
@@ -65,6 +66,9 @@ async def close_position(profit_loss_request: ProfitLossRequest, db: AsyncSessio
             take_profit=None,  # Set take_profit to None
             order_type="FLAT"
         )
+
+        # Close Previous Open Position
+        await close_transaction(db, position.order_id, close_price)
 
         # Create the close transaction with the calculated profit/loss
         new_transaction = await create_transaction(
