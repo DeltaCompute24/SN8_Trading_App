@@ -1,12 +1,18 @@
 import asyncio
-import websockets
 import json
-from datetime import datetime
+
+import aiohttp
+import websockets
+from throttler import Throttler
+
 from src.config import POLYGON_API_KEY, SIGNAL_API_KEY, SIGNAL_API_BASE_URL
 from src.utils.logging import setup_logging
-import aiohttp
 
 logger = setup_logging()
+
+# Set the rate limit: max 10 requests per second
+throttler = Throttler(rate_limit=10, period=1.0)
+
 
 class WebSocketManager:
     def __init__(self):
@@ -31,10 +37,11 @@ class WebSocketManager:
 
     async def authenticate(self):
         logger.info("Authenticating WebSocket connection...")
-        await self.websocket.send(json.dumps({"action": "auth", "params": POLYGON_API_KEY}))
+        async with throttler:
+            await self.websocket.send(json.dumps({"action": "auth", "params": POLYGON_API_KEY}))
         response = await self.websocket.recv()
         logger.info(f"Authentication response: {response}")
-        
+
         data = json.loads(response)
         if isinstance(data, list) and any(item.get("status") == "connected" for item in data):
             logger.info("WebSocket authenticated successfully")
@@ -49,7 +56,8 @@ class WebSocketManager:
         formatted_pair = self.format_pair(self.trade_pair)
         event_code = self.get_event_code()
         params = f"{event_code}.{formatted_pair}"
-        await self.websocket.send(json.dumps({"action": "subscribe", "params": params}))
+        async with throttler:
+            await self.websocket.send(json.dumps({"action": "subscribe", "params": params}))
         response = await self.websocket.recv()
         logger.info(f"Subscription response: {response}")
         return response
@@ -60,7 +68,8 @@ class WebSocketManager:
             formatted_pair = self.format_pair(trade_pair)
             event_code = self.get_event_code()
             params = f"{event_code}.{formatted_pair}"
-            await self.websocket.send(json.dumps({"action": "unsubscribe", "params": params}))
+            async with throttler:
+                await self.websocket.send(json.dumps({"action": "unsubscribe", "params": params}))
             response = await self.websocket.recv()
             logger.info(f"Unsubscription response: {response}")
             return response
@@ -71,22 +80,23 @@ class WebSocketManager:
 
         while True:
             async with self._recv_lock:
-                try:
-                    message = await self.websocket.recv()
-                    data = json.loads(message)
-                    event_code = self.get_event_code()
-                    if isinstance(data, list) and len(data) > 0 and data[0].get('ev') == event_code:
-                        price = float(data[0]['c'])
-                        self.current_prices[self.trade_pair] = price
-                        current_time = asyncio.get_event_loop().time()
-                        if last_log_time is None or current_time - last_log_time >= 1:
-                            logger.info(f"Current price for {self.trade_pair}: {price}")
-                            last_log_time = current_time
-                    await asyncio.sleep(1)  # Adjust sleep duration as necessary
-                except websockets.ConnectionClosedError as e:
-                    logger.error(f"Connection closed: {e}. Reconnecting...")
-                    await self.connect(self.asset_type)
-                    await self.subscribe(self.trade_pair)
+                async with throttler:
+                    try:
+                        message = await self.websocket.recv()
+                        data = json.loads(message)
+                        event_code = self.get_event_code()
+                        if isinstance(data, list) and len(data) > 0 and data[0].get('ev') == event_code:
+                            price = float(data[0]['c'])
+                            self.current_prices[self.trade_pair] = price
+                            current_time = asyncio.get_event_loop().time()
+                            if last_log_time is None or current_time - last_log_time >= 1:
+                                logger.info(f"Current price for {self.trade_pair}: {price}")
+                                last_log_time = current_time
+                            await asyncio.sleep(1)  # Adjust sleep duration as necessary
+                    except websockets.ConnectionClosedError as e:
+                        logger.error(f"Connection closed: {e}. Reconnecting...")
+                        await self.connect(self.asset_type)
+                        await self.subscribe(self.trade_pair)
 
     async def listen_for_initial_price(self):
         logger.info(f"Listening for price updates for {self.trade_pair}")
@@ -96,17 +106,18 @@ class WebSocketManager:
 
         while log_count < 1:
             async with self._recv_lock:
-                message = await self.websocket.recv()
-                data = json.loads(message)
-                event_code = self.get_event_code()
-                if isinstance(data, list) and len(data) > 0 and data[0].get('ev') == event_code:
-                    price = float(data[0]['c'])
-                    current_time = asyncio.get_event_loop().time()
-                    if last_log_time is None or current_time - last_log_time >= 1:
-                        logger.info(f"Current price for {self.trade_pair}: {price}")
-                        last_log_time = current_time
-                        log_count += 1
-                await asyncio.sleep(1)  # Adjust sleep duration as necessary
+                async with throttler:
+                    message = await self.websocket.recv()
+                    data = json.loads(message)
+                    event_code = self.get_event_code()
+                    if isinstance(data, list) and len(data) > 0 and data[0].get('ev') == event_code:
+                        price = float(data[0]['c'])
+                        current_time = asyncio.get_event_loop().time()
+                        if last_log_time is None or current_time - last_log_time >= 1:
+                            logger.info(f"Current price for {self.trade_pair}: {price}")
+                            last_log_time = current_time
+                            log_count += 1
+                        await asyncio.sleep(1)  # Adjust sleep duration as necessary
 
         logger.info("Closing WebSocket connection after logging price.")
         await self.websocket.close()
@@ -121,10 +132,11 @@ class WebSocketManager:
             "leverage": leverage
         }
         async with aiohttp.ClientSession() as session:
-            async with session.post(signal_api_url, json=params) as response:
-                response_text = await response.text()
-                logger.info(f"Submit trade signal sent. Response: {response_text}")
-                return response.status == 200
+            async with throttler:
+                async with session.post(signal_api_url, json=params) as response:
+                    response_text = await response.text()
+                    logger.info(f"Submit trade signal sent. Response: {response_text}")
+                    return response.status == 200
 
     async def close(self):
         if self.websocket:
