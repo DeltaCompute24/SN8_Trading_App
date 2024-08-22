@@ -115,33 +115,17 @@ async def update_monitored_positions(db: AsyncSession, position_data: MonitoredP
     await db.commit()
 
 
-async def get_open_position(db: AsyncSession, trader_id: int, trade_pair: str) -> Transaction:
-    latest_position_id = await db.scalar(
-        select(func.max(Transaction.position_id)).where(
-            and_(
-                Transaction.trader_id == trader_id,
-                Transaction.trade_pair == trade_pair
-            )
-        )
-    )
-
-    if not latest_position_id:
-        return None
-
-    latest_transaction = await db.scalar(
+async def get_open_position(db: AsyncSession, trader_id: int, trade_pair: str):
+    open_transaction = await db.scalar(
         select(Transaction).where(
             and_(
-                Transaction.position_id == latest_position_id,
                 Transaction.trader_id == trader_id,
-                Transaction.trade_pair == trade_pair
+                Transaction.trade_pair == trade_pair,
+                Transaction.status != "CLOSED"
             )
         ).order_by(Transaction.trade_order.desc())
     )
-
-    if latest_transaction and latest_transaction.status == "OPEN":
-        return latest_transaction
-
-    return None
+    return open_transaction
 
 
 async def get_latest_position(db: AsyncSession, trader_id: int, trade_pair: str) -> Transaction:
