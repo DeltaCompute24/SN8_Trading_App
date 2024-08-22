@@ -6,14 +6,13 @@ from sqlalchemy.future import select
 
 from src.core.celery_app import celery_app
 from src.database_tasks import get_task_db
-from src.models.monitored_positions import MonitoredPosition
-from src.utils.websocket_manager import WebSocketManager
+from src.models.transaction import Transaction
+from src.utils.websocket_manager import websocket_manager
 
 logger = logging.getLogger(__name__)
 
 current_subscriptions = set()
 subscription_tasks = {}
-websocket_manager = WebSocketManager()
 
 
 @celery_app.task(name='src.tasks.subscription_manager.manage_subscriptions')
@@ -38,7 +37,7 @@ async def manage_subscriptions_async():
 async def get_unique_trade_pairs():
     logger.info("Fetching unique trade pairs from database")
     async with get_task_db() as db:
-        result = await db.execute(select(MonitoredPosition.trade_pair, MonitoredPosition.asset_type).distinct())
+        result = await db.execute(select(Transaction.trade_pair, Transaction.asset_type).distinct())
         trade_pairs = [(row.trade_pair, row.asset_type) for row in result.all()]
         logger.info(f"Retrieved trade pairs: {trade_pairs}")
         return trade_pairs
@@ -82,7 +81,6 @@ async def manage_trade_pair_subscriptions(trade_pairs):
             logger.info(f"Ensuring active subscription for trade pair: {pair}")
             task = asyncio.create_task(websocket_manager.listen_for_price())
             subscription_tasks[pair] = task
-
     logger.info(f"Active subscriptions: {current_subscriptions}")
 
 
@@ -95,7 +93,6 @@ def trade_pair_worker(self, trade_pair):
 
 async def trade_pair_worker_async(trade_pair):
     asset_type, pair = trade_pair
-    websocket_manager = WebSocketManager()
     logger.info(f"Starting trade_pair_worker_async for {trade_pair}")
     await websocket_manager.connect(asset_type)
     await websocket_manager.subscribe(pair)
