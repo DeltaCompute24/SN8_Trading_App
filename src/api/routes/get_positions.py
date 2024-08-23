@@ -1,13 +1,15 @@
 from typing import Optional, List
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from src.database import get_db
 from src.models.transaction import Transaction
 from src.schemas.transaction import Transaction as TransactionSchema
+from src.services.trade_service import calculate_profit_loss
 from src.utils.logging import setup_logging
+from src.utils.websocket_manager import websocket_manager
 
 logger = setup_logging()
 router = APIRouter()
@@ -34,36 +36,29 @@ async def get_positions(
 
     if only_open:
         query = query.where(Transaction.status != "CLOSED")
-        # Subquery to get the latest trade order for each position
-        # latest_trade_subquery = (
-        #     select(Transaction.position_id, func.max(Transaction.trade_order).label("max_trade_order"))
-        #     .group_by(Transaction.position_id)
-        #     .subquery()
-        # )
-        #
-        # # Join with the transactions table to get the latest status
-        # latest_status_subquery = (
-        #     select(Transaction.position_id)
-        #     .join(latest_trade_subquery,
-        #           and_(
-        #               Transaction.position_id == latest_trade_subquery.c.position_id,
-        #               Transaction.trade_order == latest_trade_subquery.c.max_trade_order
-        #           ))
-        #     .where(Transaction.status != "CLOSED")
-        #     .distinct()
-        # )
-        #
-        # # Main query to fetch all orders for positions that are not closed
-        # query = (
-        #     select(Transaction)
-        #     .where(
-        #         Transaction.position_id.in_(latest_status_subquery)
-        #     )
-        #     .order_by(Transaction.position_id, Transaction.trade_order)
-        # )
-    # else:
     # Main query to fetch all transactions
     query = query.order_by(Transaction.position_id, Transaction.trade_order)
     result = await db.execute(query)
     positions = result.scalars().all()
+    for position in positions:
+        if position.status != "OPEN":
+            logger.info("Position is Closed => Continue")
+            continue
+
+        logger.info("Position is Open!")
+        # Connect and subscribe to the WebSocket
+        websocket = await websocket_manager.connect(position.asset_type)
+        subscription_response = await websocket_manager.subscribe(position.trade_pair)
+        logger.info(f"Subscription response: {subscription_response}")
+
+        # Wait for the first price to be received
+        first_price = await websocket_manager.listen_for_initial_price()
+        if first_price is None:
+            logger.error("Failed to fetch current price for the trade pair")
+            raise HTTPException(status_code=500, detail="Failed to fetch current price for the trade pair")
+        profit_loss = calculate_profit_loss(position.entry_price, first_price,
+                                            position.cumulative_leverage, position.cumulative_order_type,
+                                            position.asset_type)
+        position.profit_loss = profit_loss
+
     return positions
