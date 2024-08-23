@@ -57,15 +57,31 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
     await db.refresh(new_transaction)
     return new_transaction
 
+async def update_profit_loss(db: AsyncSession, order_id, profit_loss):
+    statement = text("""
+            UPDATE transactions
+            SET profit_loss = :profit_loss,
+            WHERE order_id = :order_id
+        """)
 
-async def close_transaction(db: AsyncSession, order_id, close_price):
+    await db.execute(
+        statement,
+        {
+            "profit_loss": profit_loss,
+            "order_id": order_id
+        }
+    )
+    await db.commit()
+
+async def close_transaction(db: AsyncSession, order_id, close_price, profit_loss):
     close_time = datetime.utcnow()
     statement = text("""
             UPDATE transactions
             SET operation_type = :operation_type, 
                 status = :status, 
                 close_time = :close_time, 
-                close_price = :close_price
+                close_price = :close_price,
+                profit_loss = :profit_loss
             WHERE order_id = :order_id
         """)
 
@@ -76,6 +92,7 @@ async def close_transaction(db: AsyncSession, order_id, close_price):
             "status": "CLOSED",
             "close_time": close_time,
             "close_price": close_price,
+            "profit_loss": profit_loss,
             "order_id": order_id
         }
     )

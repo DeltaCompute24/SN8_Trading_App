@@ -6,7 +6,7 @@ from src.database import get_db
 from src.schemas.monitored_position import MonitoredPositionCreate
 from src.schemas.transaction import TransactionCreate
 from src.services.trade_service import create_transaction, get_open_position, update_monitored_positions, \
-    close_transaction
+    close_transaction, calculate_profit_loss
 from src.utils.logging import setup_logging
 from src.utils.websocket_manager import websocket_manager
 
@@ -71,7 +71,11 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
 
         # Close Old Transaction
         close_price = await websocket_manager.listen_for_initial_price()
-        await close_transaction(db, latest_position.order_id, close_price)
+        # Calculate profit/loss
+        profit_loss = calculate_profit_loss(latest_position.entry_price, close_price,
+                                            latest_position.cumulative_leverage, latest_position.order_type,
+                                            latest_position.asset_type)
+        await close_transaction(db, latest_position.order_id, close_price, profit_loss)
 
         # Create a new transaction record with updated values
         new_transaction = await create_transaction(
@@ -123,7 +127,6 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
                 "entry_price": new_transaction.entry_price,
             }
         }
-
     except Exception as e:
         logger.error(f"Error adjusting position: {e}")
         raise HTTPException(status_code=500, detail=str(e))

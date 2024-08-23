@@ -68,7 +68,7 @@ async def close_position(profit_loss_request: ProfitLossRequest, db: AsyncSessio
         )
 
         # Close Previous Open Position
-        await close_transaction(db, position.order_id, close_price)
+        await close_transaction(db, position.order_id, close_price, profit_loss)
 
         # Create the close transaction with the calculated profit/loss
         new_transaction = await create_transaction(
