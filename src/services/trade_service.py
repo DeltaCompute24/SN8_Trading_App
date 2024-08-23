@@ -158,6 +158,8 @@ def calculate_profit_loss(entry_price: float, current_price: float, leverage: fl
         price_difference = (current_price - entry_price) * leverage
     elif order_type == "SHORT":
         price_difference = (entry_price - current_price) * leverage
+    else:
+        price_difference = 0.00
     net_profit = price_difference - fee
     if (entry_price * leverage) == 0:
         return 0.00
