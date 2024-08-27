@@ -1,31 +1,30 @@
-import asyncio
+import json
 import logging
+import time
+from datetime import datetime
 
-from sqlalchemy.ext.asyncio import AsyncSession
+import asyncio
+import redis
+from sqlalchemy import update
 from sqlalchemy.future import select
-from sqlalchemy.orm import Session
-from sqlalchemy.sql import and_
 
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.models.transaction import Transaction
-from src.services.trade_service import calculate_profit_loss, close_transaction
+from src.services.trade_service import calculate_profit_loss
 from src.utils.websocket_manager import websocket_manager
+
+redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
 
 logger = logging.getLogger(__name__)
 
+FLUSH_INTERVAL = 15
+last_flush_time = time.time()
+objects_to_be_updated = []
 
-def get_open_position(db: AsyncSession, trader_id: int, trade_pair: str):
-    open_transaction = db.scalar(
-        select(Transaction).where(
-            and_(
-                Transaction.trader_id == trader_id,
-                Transaction.trade_pair == trade_pair,
-                Transaction.status != "CLOSED"
-            )
-        ).order_by(Transaction.trade_order.desc())
-    )
-    return open_transaction
+
+def push_to_redis_queue(queue_name, data):
+    redis_client.lpush(queue_name, json.dumps(data))
 
 
 @celery_app.task(name='src.tasks.position_monitor_sync.monitor_positions')
@@ -37,10 +36,11 @@ def monitor_positions():
 def get_monitored_positions():
     try:
         logger.info("Fetching monitored positions from database")
-        db: Session = TaskSessionLocal_()
-        result = db.execute(select(Transaction))
-        positions = result.scalars().all()
-        db.close()
+        with TaskSessionLocal_() as db:
+            result = db.execute(
+                select(Transaction).where(Transaction.status != "CLOSED")
+            )
+            positions = result.scalars().all()
         logger.info(f"Retrieved {len(positions)} monitored positions")
         return positions
     except Exception as e:
@@ -49,11 +49,23 @@ def get_monitored_positions():
 
 
 def monitor_positions_sync():
+    global objects_to_be_updated, last_flush_time
     try:
         logger.info("Starting monitor_positions_sync")
+
+        current_time = time.time()
+        if (current_time - last_flush_time) >= FLUSH_INTERVAL:
+            logger.error(f"Going to Flush previous Objects!: {str(current_time - last_flush_time)}")
+            push_to_redis_queue('db_operations_queue', objects_to_be_updated)
+            last_flush_time = current_time
+            logger.error(f"Before: {objects_to_be_updated}")
+            objects_to_be_updated = []
+            logger.error(f"After: {objects_to_be_updated}")
+
         positions = get_monitored_positions()
+
         for position in positions:
-            logger.info(f"Processing position {position.position_id}")
+            logger.info(f"Processing position {position.position_id}: {position.trader_id}")
             monitor_position(position)
         logger.info("Finished monitor_positions_sync")
     except Exception as e:
@@ -61,9 +73,12 @@ def monitor_positions_sync():
 
 
 def monitor_position(position):
+    global objects_to_be_updated
     try:
-        current_price = websocket_manager.current_prices.get(position.trade_pair)
+        current_price = redis_client.hget('current_prices', position.trade_pair)
+        logger.error(f"Current Price Pair: {position.trade_pair}")
         if current_price:
+            current_price = float(current_price.decode('utf-8'))
             logger.error(f"Current Price Found: {current_price}")
             profit_loss = calculate_profit_loss(
                 position.entry_price,
@@ -72,25 +87,33 @@ def monitor_position(position):
                 position.cumulative_order_type,
                 position.asset_type
             )
+
             if should_close_position(profit_loss, position):
-                db: Session = TaskSessionLocal_()
-                close_position(position, current_price)
-                db.close()
+                close_position(position, current_price, profit_loss)
+            else:
+                objects_to_be_updated.append({
+                    "order_id": position.order_id,
+                    "profit_loss": profit_loss
+                })
+
         return True
     except Exception as e:
         logger.error(f"An error occurred while monitoring position {position.position_id}: {e}")
 
 
-def close_position(position, close_price):
+def close_position(position, close_price, profit_loss):
+    global objects_to_be_updated
     try:
-        db: AsyncSession = TaskSessionLocal_()
-        open_position = get_open_position(db, position.trader_id, position.trade_pair)
-
-        if open_position:
-            close_submitted = websocket_manager.submit_trade(position.trader_id, position.trade_pair, "FLAT", 1)
-            if close_submitted:
-                asyncio.run(close_transaction(db, position.order_id, close_price))
-        db.close()
+        close_submitted = asyncio.run(websocket_manager.submit_trade(position.trader_id, position.trade_pair, "FLAT", 1))
+        if close_submitted:
+            objects_to_be_updated.append({
+                "order_id": position.order_id,
+                "close_price": close_price,
+                "close_time": str(datetime.utcnow()),
+                "profit_loss": profit_loss,
+                "operation_type": "close",
+                "status": "CLOSED",
+            })
     except Exception as e:
         logger.error(f"An error occurred while closing position {position.position_id}: {e}")
 
