@@ -79,6 +79,7 @@ async def manage_trade_pair_subscriptions(trade_pairs):
             logger.info(f"Ensuring active subscription for trade pair: {pair}")
             task = asyncio.create_task(websocket_manager.listen_for_price())
             subscription_tasks[pair] = task
+    logger.error(f"Current Prices: {websocket_manager.current_prices}")
     logger.info(f"Active subscriptions: {current_subscriptions}")
 
 
