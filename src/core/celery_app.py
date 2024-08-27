@@ -12,6 +12,7 @@ celery_app.conf.update(
         'src.tasks.subscription_manager.trade_pair_worker': {'queue': 'trade_pair_workers'},
         # 'src.tasks.position_monitor.monitor_positions': {'queue': 'position_monitoring'},
         'src.tasks.position_monitor_sync.monitor_positions': {'queue': 'position_monitoring'},
+        'src.tasks.redis_listener.event_listener': {'queue': 'event_listener'},
     },
     beat_schedule={
         'manage_subscriptions-every-10-seconds': {
@@ -26,6 +27,10 @@ celery_app.conf.update(
             'task': 'src.tasks.position_monitor_sync.monitor_positions',
             'schedule': 1.0,  # every 1 second
         },
+        'redis-listener-every-15-seconds': {
+            'task': 'src.tasks.redis_listener.event_listener',
+            'schedule': 20.0,  # every 15 second
+        },
     },
     timezone='UTC',
 )
@@ -35,3 +40,4 @@ celery_app.autodiscover_tasks(['src.tasks'])
 # Ensure tasks are loaded
 import src.tasks.subscription_manager
 import src.tasks.position_monitor_sync
+import src.tasks.redis_listener
