@@ -1,5 +1,6 @@
 import asyncio
 import json
+import redis
 
 import aiohttp
 import websockets
@@ -12,7 +13,7 @@ logger = setup_logging()
 
 # Set the rate limit: max 10 requests per second
 throttler = Throttler(rate_limit=10, period=1.0)
-
+redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
 
 class WebSocketManager:
     def __init__(self):
@@ -88,6 +89,7 @@ class WebSocketManager:
                         if isinstance(data, list) and len(data) > 0 and data[0].get('ev') == event_code:
                             price = float(data[0]['c'])
                             self.current_prices[self.trade_pair] = price
+                            await redis_client.hset('current_prices', self.trade_pair, data[0]['c'])
                             current_time = asyncio.get_event_loop().time()
                             if last_log_time is None or current_time - last_log_time >= 1:
                                 logger.info(f"Current price for {self.trade_pair}: {price}")
@@ -97,6 +99,18 @@ class WebSocketManager:
                         logger.error(f"Connection closed: {e}. Reconnecting...")
                         await self.connect(self.asset_type)
                         await self.subscribe(self.trade_pair)
+
+    async def get_current_price(self):
+        logger.info(f"Get Current price updates for {self.trade_pair}")
+
+        while True:
+            async with self._recv_lock:
+                async with throttler:
+                    message = await self.websocket.recv()
+                    data = json.loads(message)
+                    event_code = self.get_event_code()
+                    if isinstance(data, list) and len(data) > 0 and data[0].get('ev') == event_code:
+                        return float(data[0]['c'])
 
     async def listen_for_initial_price(self):
         logger.info(f"Listening for price updates for {self.trade_pair}")
