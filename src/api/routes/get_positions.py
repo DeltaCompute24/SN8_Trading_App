@@ -40,25 +40,25 @@ async def get_positions(
     query = query.order_by(Transaction.position_id, Transaction.trade_order)
     result = await db.execute(query)
     positions = result.scalars().all()
-    for position in positions:
-        if position.status != "OPEN":
-            logger.info("Position is Closed => Continue")
-            continue
-
-        logger.info("Position is Open!")
-        # Connect and subscribe to the WebSocket
-        websocket = await websocket_manager.connect(position.asset_type)
-        subscription_response = await websocket_manager.subscribe(position.trade_pair)
-        logger.info(f"Subscription response: {subscription_response}")
-
-        # Wait for the first price to be received
-        first_price = await websocket_manager.listen_for_initial_price()
-        if first_price is None:
-            logger.error("Failed to fetch current price for the trade pair")
-            raise HTTPException(status_code=500, detail="Failed to fetch current price for the trade pair")
-        profit_loss = calculate_profit_loss(position.entry_price, first_price,
-                                            position.cumulative_leverage, position.cumulative_order_type,
-                                            position.asset_type)
-        position.profit_loss = profit_loss
+    # for position in positions:
+    #     if position.status != "OPEN":
+    #         logger.info("Position is Closed => Continue")
+    #         continue
+    #
+    #     logger.info("Position is Open!")
+    #     # Connect and subscribe to the WebSocket
+    #     websocket = await websocket_manager.connect(position.asset_type)
+    #     subscription_response = await websocket_manager.subscribe(position.trade_pair)
+    #     logger.info(f"Subscription response: {subscription_response}")
+    #
+    #     # Wait for the first price to be received
+    #     first_price = await websocket_manager.listen_for_initial_price()
+    #     if first_price is None:
+    #         logger.error("Failed to fetch current price for the trade pair")
+    #         raise HTTPException(status_code=500, detail="Failed to fetch current price for the trade pair")
+    #     profit_loss = calculate_profit_loss(position.entry_price, first_price,
+    #                                         position.cumulative_leverage, position.cumulative_order_type,
+    #                                         position.asset_type)
+    #     position.profit_loss = profit_loss
 
     return positions
