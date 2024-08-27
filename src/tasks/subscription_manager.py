@@ -1,5 +1,4 @@
 import asyncio
-import gc
 import logging
 
 from sqlalchemy.future import select
@@ -17,7 +16,6 @@ subscription_tasks = {}
 
 @celery_app.task(name='src.tasks.subscription_manager.manage_subscriptions')
 def manage_subscriptions():
-    gc.disable()
     logger.info("Starting manage_subscriptions")
     loop = asyncio.get_event_loop()
     loop.run_until_complete(manage_subscriptions_async())
