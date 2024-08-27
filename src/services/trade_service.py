@@ -60,7 +60,7 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
 async def update_profit_loss(db: AsyncSession, order_id, profit_loss):
     statement = text("""
             UPDATE transactions
-            SET profit_loss = :profit_loss,
+            SET profit_loss = :profit_loss
             WHERE order_id = :order_id
         """)
 
