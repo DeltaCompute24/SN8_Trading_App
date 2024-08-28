@@ -1,11 +1,10 @@
+import asyncio
 import json
 import logging
 import time
 from datetime import datetime
 
-import asyncio
 import redis
-from sqlalchemy import update
 from sqlalchemy.future import select
 
 from src.core.celery_app import celery_app
@@ -65,6 +64,8 @@ def monitor_positions_sync():
         positions = get_monitored_positions()
 
         for position in positions:
+            if not position.take_profit or position.take_profit == 0 or not position.stop_loss or position.stop_loss == 0:
+                continue
             logger.info(f"Processing position {position.position_id}: {position.trader_id}")
             monitor_position(position)
         logger.info("Finished monitor_positions_sync")
@@ -90,11 +91,11 @@ def monitor_position(position):
 
             if should_close_position(profit_loss, position):
                 close_position(position, current_price, profit_loss)
-            else:
-                objects_to_be_updated.append({
-                    "order_id": position.order_id,
-                    "profit_loss": profit_loss
-                })
+            # else:
+            #     objects_to_be_updated.append({
+            #         "order_id": position.order_id,
+            #         "profit_loss": profit_loss
+            #     })
 
         return True
     except Exception as e:
@@ -104,7 +105,8 @@ def monitor_position(position):
 def close_position(position, close_price, profit_loss):
     global objects_to_be_updated
     try:
-        close_submitted = asyncio.run(websocket_manager.submit_trade(position.trader_id, position.trade_pair, "FLAT", 1))
+        close_submitted = asyncio.run(
+            websocket_manager.submit_trade(position.trader_id, position.trade_pair, "FLAT", 1))
         if close_submitted:
             objects_to_be_updated.append({
                 "order_id": position.order_id,
@@ -113,6 +115,7 @@ def close_position(position, close_price, profit_loss):
                 "profit_loss": profit_loss,
                 "operation_type": "close",
                 "status": "CLOSED",
+                "modified_by": "system",
             })
     except Exception as e:
         logger.error(f"An error occurred while closing position {position.position_id}: {e}")
