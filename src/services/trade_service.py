@@ -11,8 +11,7 @@ from src.schemas.transaction import TransactionCreate
 
 
 async def create_transaction(db: AsyncSession, transaction_data: TransactionCreate, entry_price: float,
-                             operation_type: str,
-                             position_id: int = None, trade_order: int = None, cumulative_leverage: float = None,
+                             operation_type: str, position_id: int = None, cumulative_leverage: float = None,
                              cumulative_stop_loss: float = None, cumulative_take_profit: float = None,
                              cumulative_order_type: str = None, status: str = "OPEN", close_time: datetime = None,
                              close_price: float = None, profit_loss: float = None):
@@ -57,23 +56,9 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
     await db.refresh(new_transaction)
     return new_transaction
 
-async def update_profit_loss(db: AsyncSession, order_id, profit_loss):
-    statement = text("""
-            UPDATE transactions
-            SET profit_loss = :profit_loss
-            WHERE order_id = :order_id
-        """)
 
-    await db.execute(
-        statement,
-        {
-            "profit_loss": profit_loss,
-            "order_id": order_id
-        }
-    )
-    await db.commit()
-
-async def close_transaction(db: AsyncSession, order_id, close_price, profit_loss):
+async def close_transaction(db: AsyncSession, order_id, trader_id, close_price: float = None,
+                            profit_loss: float = None):
     close_time = datetime.utcnow()
     statement = text("""
             UPDATE transactions
@@ -81,7 +66,12 @@ async def close_transaction(db: AsyncSession, order_id, close_price, profit_loss
                 status = :status, 
                 close_time = :close_time, 
                 close_price = :close_price,
-                profit_loss = :profit_loss
+                profit_loss = :profit_loss,
+                leverage = :leverage,
+                stop_loss = :stop_loss,
+                take_profit = :take_profit,
+                order_type = :order_type,
+                modified_by = :modified_by
             WHERE order_id = :order_id
         """)
 
@@ -93,7 +83,12 @@ async def close_transaction(db: AsyncSession, order_id, close_price, profit_loss
             "close_time": close_time,
             "close_price": close_price,
             "profit_loss": profit_loss,
-            "order_id": order_id
+            "leverage": 1,
+            "stop_loss": None,
+            "take_profit": None,
+            "order_type": "FLAT",
+            "order_id": order_id,
+            "modified_by": str(trader_id),
         }
     )
     await db.commit()
