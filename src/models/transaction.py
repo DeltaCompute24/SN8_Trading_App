@@ -26,3 +26,4 @@ class Transaction(Base):
     profit_loss = Column(Float, nullable=True)
     position_id = Column(Integer, nullable=False)
     trade_order = Column(Integer, nullable=False)
+    modified_by = Column(String, default="", nullable=True)
