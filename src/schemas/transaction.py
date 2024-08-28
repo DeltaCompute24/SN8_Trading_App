@@ -29,6 +29,7 @@ class Transaction(TransactionBase):
     profit_loss: Optional[float]
     position_id: int
     trade_order: int
+    modified_by: Optional[str]
 
     class Config:
         orm_mode = True
