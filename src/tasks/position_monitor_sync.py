@@ -142,7 +142,7 @@ def close_position(position, close_price, profit_loss):
 
 def should_open_position(position, current_price):
     return (
-        (position.upward != -1) and
+        (position.status == "PENDING") and
         (position.upward == 0 and current_price <= position.entry_price) or
         (position.upward == 1 and current_price >= position.entry_price)
     )
@@ -150,6 +150,7 @@ def should_open_position(position, current_price):
 def should_close_position(profit_loss, position):
     try:
         result = (
+                (position.status == "OPEN") and
                 (position.cumulative_order_type == "LONG" and profit_loss >= position.cumulative_take_profit) or
                 (position.cumulative_order_type == "LONG" and profit_loss <= position.cumulative_stop_loss) or
                 (position.cumulative_order_type == "SHORT" and profit_loss <= position.cumulative_take_profit) or
