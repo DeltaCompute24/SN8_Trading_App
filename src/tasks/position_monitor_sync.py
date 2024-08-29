@@ -5,7 +5,6 @@ import time
 from datetime import datetime
 
 import redis
-from celery.bin.result import result
 from sqlalchemy.future import select
 
 from src.core.celery_app import celery_app
@@ -65,7 +64,8 @@ def monitor_positions_sync():
         positions = get_monitored_positions()
 
         for position in positions:
-            if not position.take_profit or position.take_profit == 0 or not position.stop_loss or position.stop_loss == 0:
+            if position.status == "OPEN" and (not position.take_profit or
+                                              position.take_profit == 0 or not position.stop_loss or position.stop_loss == 0):
                 continue
             logger.info(f"Processing position {position.position_id}: {position.trader_id}")
             monitor_position(position)
@@ -104,11 +104,13 @@ def monitor_position(position):
     except Exception as e:
         logger.error(f"An error occurred while monitoring position {position.position_id}: {e}")
 
+
 def open_position(position, current_price):
     global objects_to_be_updated
     try:
         open_submitted = asyncio.run(
-            websocket_manager.submit_trade(position.trader_id, position.trade_pair, position.order_type, position.leverage))
+            websocket_manager.submit_trade(position.trader_id, position.trade_pair, position.order_type,
+                                           position.leverage))
         if open_submitted:
             objects_to_be_updated.append({
                 "order_id": position.order_id,
@@ -119,6 +121,7 @@ def open_position(position, current_price):
             })
     except Exception as e:
         logger.error(f"An error occurred while opening position {position.position_id}: {e}")
+
 
 def close_position(position, close_price, profit_loss):
     global objects_to_be_updated
@@ -140,12 +143,14 @@ def close_position(position, close_price, profit_loss):
     except Exception as e:
         logger.error(f"An error occurred while closing position {position.position_id}: {e}")
 
+
 def should_open_position(position, current_price):
     return (
-        (position.status == "PENDING") and
-        (position.upward == 0 and current_price <= position.entry_price) or
-        (position.upward == 1 and current_price >= position.entry_price)
+            (position.status == "PENDING") and
+            (position.upward == 0 and current_price <= position.entry_price) or
+            (position.upward == 1 and current_price >= position.entry_price)
     )
+
 
 def should_close_position(profit_loss, position):
     try:
