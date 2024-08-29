@@ -83,7 +83,8 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
             cumulative_leverage=cumulative_leverage,
             cumulative_stop_loss=cumulative_stop_loss,
             cumulative_take_profit=cumulative_take_profit,
-            cumulative_order_type=cumulative_order_type
+            cumulative_order_type=cumulative_order_type,
+            status=latest_position.status
         )
 
         await close_transaction(db, latest_position.order_id, latest_position.trader_id, close_price, profit_loss)
