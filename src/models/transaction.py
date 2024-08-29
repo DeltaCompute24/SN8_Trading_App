@@ -1,6 +1,9 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime
-from src.database import Base
 from datetime import datetime
+
+from sqlalchemy import Column, Integer, String, Float, DateTime
+
+from src.database import Base
+
 
 class Transaction(Base):
     __tablename__ = "transactions"
@@ -10,6 +13,7 @@ class Transaction(Base):
     trade_pair = Column(String, nullable=False)
     open_time = Column(DateTime, default=datetime.utcnow)
     entry_price = Column(Float, nullable=False)
+    upward = Column(Float, default=-1, nullable=True)
     leverage = Column(Float, nullable=False)
     stop_loss = Column(Float, nullable=True)
     take_profit = Column(Float, nullable=True)
