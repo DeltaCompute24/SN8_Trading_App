@@ -14,7 +14,7 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
                              operation_type: str, position_id: int = None, cumulative_leverage: float = None,
                              cumulative_stop_loss: float = None, cumulative_take_profit: float = None,
                              cumulative_order_type: str = None, status: str = "OPEN", close_time: datetime = None,
-                             close_price: float = None, profit_loss: float = None):
+                             close_price: float = None, profit_loss: float = None, upward: float = -1):
     if operation_type == "initiate":
         max_position_id = await db.scalar(
             select(func.max(Transaction.position_id)).filter(Transaction.trader_id == transaction_data.trader_id))
@@ -49,7 +49,8 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
         close_price=close_price,
         profit_loss=profit_loss,
         position_id=position_id,
-        trade_order=trade_order
+        trade_order=trade_order,
+        upward=upward,
     )
     db.add(new_transaction)
     await db.commit()
