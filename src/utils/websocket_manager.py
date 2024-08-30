@@ -1,8 +1,8 @@
 import asyncio
 import json
-import redis
 
 import aiohttp
+import redis
 import websockets
 from throttler import Throttler
 
@@ -14,6 +14,7 @@ logger = setup_logging()
 # Set the rate limit: max 10 requests per second
 throttler = Throttler(rate_limit=10, period=1.0)
 redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
+
 
 class WebSocketManager:
     def __init__(self):
@@ -54,9 +55,7 @@ class WebSocketManager:
             raise Exception("WebSocket is not connected")
         self.trade_pair = trade_pair
         logger.info(f"Subscribing to trade pair: {self.trade_pair}")
-        formatted_pair = self.format_pair(self.trade_pair)
-        event_code = self.get_event_code()
-        params = f"{event_code}.{formatted_pair}"
+        params = self.format_pair(trade_pair)
         async with throttler:
             await self.websocket.send(json.dumps({"action": "subscribe", "params": params}))
         response = await self.websocket.recv()
@@ -66,17 +65,15 @@ class WebSocketManager:
     async def unsubscribe(self, trade_pair):
         if self.websocket and self.websocket.open:
             logger.info(f"Unsubscribing from trade pair: {trade_pair}")
-            formatted_pair = self.format_pair(trade_pair)
-            event_code = self.get_event_code()
-            params = f"{event_code}.{formatted_pair}"
+            params = self.format_pair(trade_pair)
             async with throttler:
                 await self.websocket.send(json.dumps({"action": "unsubscribe", "params": params}))
             response = await self.websocket.recv()
             logger.info(f"Unsubscription response: {response}")
             return response
 
-    async def listen_for_price(self):
-        logger.info(f"Listening for price updates for {self.trade_pair}")
+    async def listen_for_price(self, trade_pair, asset_type):
+        logger.info(f"Listening for price updates for {trade_pair}")
         last_log_time = None
 
         while True:
@@ -85,21 +82,22 @@ class WebSocketManager:
                     try:
                         message = await self.websocket.recv()
                         data = json.loads(message)
-                        event_code = self.get_event_code()
+                        event_code = self.get_event_code(asset_type)
                         if isinstance(data, list) and len(data) > 0 and data[0].get('ev') == event_code:
+                            pair = data[0]['pair']
+                            trade_pair = pair.replace("-", "").replace("/", "")
                             price = float(data[0]['c'])
                             current_time = asyncio.get_event_loop().time()
                             if last_log_time is None or current_time - last_log_time >= 1:
-                                logger.info(f"Current price for {self.trade_pair}: {price}")
-                                self.current_prices[self.trade_pair] = price
-                                await redis_client.hset('current_prices', self.trade_pair, data[0]['c'])
+                                logger.info(f"Current price for {trade_pair}: {price}")
+                                self.current_prices[trade_pair] = price
+                                await redis_client.hset('current_prices', trade_pair, data[0]['c'])
                                 last_log_time = current_time
                             await asyncio.sleep(1)  # Adjust sleep duration as necessary
                     except websockets.ConnectionClosedError as e:
                         logger.error(f"Connection closed: {e}. Reconnecting...")
-                        await self.connect(self.asset_type)
-                        await self.subscribe(self.trade_pair)
-
+                        await self.connect(asset_type)
+                        await self.subscribe(trade_pair)
 
     async def listen_for_initial_price(self):
         logger.info(f"Listening for price updates for {self.trade_pair}")
@@ -112,8 +110,9 @@ class WebSocketManager:
                 async with throttler:
                     message = await self.websocket.recv()
                     data = json.loads(message)
-                    event_code = self.get_event_code()
+                    event_code = self.get_event_code(self.asset_type)
                     if isinstance(data, list) and len(data) > 0 and data[0].get('ev') == event_code:
+                        pair = data[0]['pair']
                         price = float(data[0]['c'])
                         current_time = asyncio.get_event_loop().time()
                         if last_log_time is None or current_time - last_log_time >= 1:
@@ -146,13 +145,24 @@ class WebSocketManager:
             await self.websocket.close()
             self.websocket = None
 
-    def get_event_code(self):
-        return "CAS" if self.asset_type == "forex" else "XAS"
+    def get_event_code(self, asset_type):
+        return "CAS" if asset_type == "forex" else "XAS"
+
+    # def format_pair(self, pair):
+    #     separator = '/' if self.asset_type == "forex" else '-'
+    #     base = pair[:-3]
+    #     quote = pair[-3:]
+    #     return f"{base}{separator}{quote}"
 
     def format_pair(self, pair):
+        ev = "CAS" if self.asset_type == "forex" else "XAS"
         separator = '/' if self.asset_type == "forex" else '-'
-        base = pair[:-3]
-        quote = pair[-3:]
-        return f"{base}{separator}{quote}"
+
+        if pair in ["SPX", "DJI", "FTSE", "GDAXI"]:
+            formatted_pair = pair
+        else:
+            formatted_pair = f"{pair[:-3]}{separator}{pair[-3:]}"
+        return f"{ev}.{formatted_pair}"
+
 
 websocket_manager = WebSocketManager()
