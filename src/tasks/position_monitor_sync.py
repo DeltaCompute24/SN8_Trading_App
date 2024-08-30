@@ -92,15 +92,10 @@ def monitor_position(position):
                 position.asset_type
             )
 
-            if should_open_position(position, current_price):
+            if position.status == "PENDING" and should_open_position(position, current_price):
                 open_position(position, current_price)
-            elif should_close_position(profit_loss, position):
+            elif position.status == "OPEN" and should_close_position(profit_loss, position):
                 close_position(position, current_price, profit_loss)
-            # else:
-            #     objects_to_be_updated.append({
-            #         "order_id": position.order_id,
-            #         "profit_loss": profit_loss
-            #     })
 
         return True
     except Exception as e:
@@ -116,7 +111,7 @@ def open_position(position, current_price):
         if open_submitted:
             objects_to_be_updated.append({
                 "order_id": position.order_id,
-                "entry_price": current_price,
+                "initial_price": current_price,
                 "operation_type": "open",
                 "status": "OPEN",
                 "old_status": position.status,
