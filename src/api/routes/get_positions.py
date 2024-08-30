@@ -26,8 +26,7 @@ async def get_positions(
 ):
     logger.info(f"Fetching positions for trader_id={trader_id}, trade_pair={trade_pair}, status={status}")
 
-    status = status.strip().upper()
-    if status and status not in ["OPEN", "PENDING", "CLOSED"]:
+    if status and status.strip().upper() not in ["OPEN", "PENDING", "CLOSED"]:
         logger.error("A status can only be open, pending and closed")
         raise HTTPException(status_code=400, detail="A status can only be open, pending and closed!")
 
@@ -42,6 +41,7 @@ async def get_positions(
         query = query.where(Transaction.trade_pair == trade_pair)
 
     if status:
+        status = status.strip().upper()
         query = query.where(Transaction.status == status)
     elif only_open:
         query = query.where(Transaction.status == "OPEN")
