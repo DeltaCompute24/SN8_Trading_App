@@ -35,10 +35,10 @@ async def get_positions(
     if trade_pair:
         query = query.where(Transaction.trade_pair == trade_pair)
 
-    if only_open:
-        query = query.where(Transaction.status == "OPEN")
-    elif status:
+    if status:
         query = query.where(Transaction.status == status)
+    elif only_open:
+        query = query.where(Transaction.status == "OPEN")
     # Main query to fetch all transactions
     query = query.order_by(Transaction.position_id, Transaction.trade_order)
     result = await db.execute(query)
