@@ -66,9 +66,9 @@ def monitor_positions_sync():
         for position in positions:
             if position.status == "OPEN" and (not position.take_profit or
                                               position.take_profit == 0 or not position.stop_loss or position.stop_loss == 0):
-                logger.info(f"Skip position {position.position_id}: {position.trader_id}")
+                logger.info(f"Skip position {position.position_id}: {position.trader_id}: {position.trade_pair}")
                 continue
-            logger.info(f"Processing position {position.position_id}: {position.trader_id}")
+            logger.info(f"Processing position {position.position_id}: {position.trader_id}: {position.trade_pair}")
             monitor_position(position)
         logger.info("Finished monitor_positions_sync")
     except Exception as e:
@@ -149,11 +149,13 @@ def close_position(position, close_price, profit_loss):
 
 
 def should_open_position(position, current_price):
-    return (
+    result = (
             (position.status == "PENDING") and
             (position.upward == 0 and current_price <= position.entry_price) or
             (position.upward == 1 and current_price >= position.entry_price)
     )
+    logger.info(f"Determining whether to open position: {result}")
+    return result
 
 
 def should_close_position(profit_loss, position):
