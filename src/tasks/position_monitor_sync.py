@@ -66,6 +66,7 @@ def monitor_positions_sync():
         for position in positions:
             if position.status == "OPEN" and (not position.take_profit or
                                               position.take_profit == 0 or not position.stop_loss or position.stop_loss == 0):
+                logger.info(f"Skip position {position.position_id}: {position.trader_id}")
                 continue
             logger.info(f"Processing position {position.position_id}: {position.trader_id}")
             monitor_position(position)
@@ -90,10 +91,10 @@ def monitor_position(position):
                 position.asset_type
             )
 
-            if should_close_position(profit_loss, position):
-                close_position(position, current_price, profit_loss)
-            elif should_open_position(position, current_price):
+            if should_open_position(position, current_price):
                 open_position(position, current_price)
+            elif should_close_position(profit_loss, position):
+                close_position(position, current_price, profit_loss)
             # else:
             #     objects_to_be_updated.append({
             #         "order_id": position.order_id,
@@ -117,6 +118,7 @@ def open_position(position, current_price):
                 "entry_price": current_price,
                 "operation_type": "open",
                 "status": "OPEN",
+                "old_status": position.status,
                 "modified_by": "system",
             })
     except Exception as e:
@@ -136,6 +138,7 @@ def close_position(position, close_price, profit_loss):
                 "profit_loss": profit_loss,
                 "operation_type": "close",
                 "status": "CLOSED",
+                "old_status": position.status,
                 "modified_by": "system",
                 "order_type": "FLAT",
                 "leverage": 1,

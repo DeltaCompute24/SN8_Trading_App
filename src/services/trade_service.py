@@ -11,10 +11,12 @@ from src.schemas.transaction import TransactionCreate
 
 
 async def create_transaction(db: AsyncSession, transaction_data: TransactionCreate, entry_price: float,
-                             operation_type: str, position_id: int = None, cumulative_leverage: float = None,
-                             cumulative_stop_loss: float = None, cumulative_take_profit: float = None,
-                             cumulative_order_type: str = None, status: str = "OPEN", close_time: datetime = None,
-                             close_price: float = None, profit_loss: float = None, upward: float = -1):
+                             operation_type: str, initial_price: float, position_id: int = None,
+                             cumulative_leverage: float = None, cumulative_stop_loss: float = None,
+                             cumulative_take_profit: float = None,
+                             cumulative_order_type: str = None, status: str = "OPEN", old_status: str = "OPEN",
+                             close_time: datetime = None, close_price: float = None, profit_loss: float = None,
+                             upward: float = -1):
     if operation_type == "initiate":
         max_position_id = await db.scalar(
             select(func.max(Transaction.position_id)).filter(Transaction.trader_id == transaction_data.trader_id))
@@ -34,6 +36,7 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
         trade_pair=transaction_data.trade_pair,
         open_time=datetime.utcnow(),
         entry_price=entry_price,
+        initial_price=initial_price,
         leverage=transaction_data.leverage,
         stop_loss=transaction_data.stop_loss,
         take_profit=transaction_data.take_profit,
@@ -45,6 +48,7 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
         cumulative_take_profit=cumulative_take_profit,
         cumulative_order_type=cumulative_order_type,
         status=status,
+        old_status=old_status,
         close_time=close_time,
         close_price=close_price,
         profit_loss=profit_loss,
@@ -59,12 +63,13 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
 
 
 async def close_transaction(db: AsyncSession, order_id, trader_id, close_price: float = None,
-                            profit_loss: float = None):
+                            profit_loss: float = None, old_status: str = None):
     close_time = datetime.utcnow()
     statement = text("""
             UPDATE transactions
             SET operation_type = :operation_type, 
                 status = :status, 
+                old_status = :old_status,
                 close_time = :close_time, 
                 close_price = :close_price,
                 profit_loss = :profit_loss,
@@ -81,6 +86,7 @@ async def close_transaction(db: AsyncSession, order_id, trader_id, close_price: 
         {
             "operation_type": "close",
             "status": "CLOSED",
+            "old_status": old_status,
             "close_time": close_time,
             "close_price": close_price,
             "profit_loss": profit_loss,

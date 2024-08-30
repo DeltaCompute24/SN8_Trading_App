@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import text
@@ -53,7 +51,8 @@ async def close_position(profit_loss_request: ProfitLossRequest, db: AsyncSessio
                                             position.order_type, position.asset_type)
 
         # Close Previous Open Position
-        await close_transaction(db, position.order_id, position.trader_id, close_price, profit_loss)
+        await close_transaction(db, position.order_id, position.trader_id, close_price, profit_loss,
+                                old_status=position.status)
 
         # Remove closed position from the monitored_positions table
         await db.execute(

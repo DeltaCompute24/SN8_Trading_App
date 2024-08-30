@@ -79,15 +79,17 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
         # Create a new transaction record with updated values
         new_transaction = await create_transaction(
             db, position_data, entry_price=latest_position.entry_price, operation_type="adjust",
-            position_id=latest_position.position_id,
+            position_id=latest_position.position_id, initial_price=latest_position.initial_price,
             cumulative_leverage=cumulative_leverage,
             cumulative_stop_loss=cumulative_stop_loss,
             cumulative_take_profit=cumulative_take_profit,
             cumulative_order_type=cumulative_order_type,
-            status=latest_position.status
+            status=latest_position.status,
+            old_status=latest_position.old_status
         )
 
-        await close_transaction(db, latest_position.order_id, latest_position.trader_id, close_price, profit_loss)
+        await close_transaction(db, latest_position.order_id, latest_position.trader_id, close_price, profit_loss,
+                                old_status=latest_position.status)
 
         # Remove old monitored position
         await db.execute(
