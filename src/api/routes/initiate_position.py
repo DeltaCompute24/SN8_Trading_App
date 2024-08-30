@@ -44,6 +44,7 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
 
         logger.info("Trade submitted successfully")
         entry_price = position_data.entry_price
+        initial_price = first_price
         status = "OPEN"
         if entry_price and entry_price != 0 and entry_price != first_price:
             # upward: 1, downward: 0
@@ -53,7 +54,8 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
 
         # Create the transaction with the first received price
         new_transaction = await create_transaction(db, position_data, entry_price=first_price,
-                                                   operation_type="initiate", status=status, upward=upward)
+                                                   initial_price=initial_price, operation_type="initiate",
+                                                   status=status, upward=upward, old_status=status)
 
         # Create MonitoredPositionCreate data
         monitored_position_data = MonitoredPositionCreate(
