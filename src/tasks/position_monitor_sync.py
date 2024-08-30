@@ -79,6 +79,7 @@ def monitor_position(position):
     global objects_to_be_updated
     try:
         current_price = redis_client.hget('current_prices', position.trade_pair)
+        logger.info(f"Current Prices Dict: {redis_client.hgetall('current_prices')}")
         logger.error(f"Current Price Pair: {position.trade_pair}")
         if current_price:
             current_price = float(current_price.decode('utf-8'))
