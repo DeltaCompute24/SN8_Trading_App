@@ -1,4 +1,4 @@
-from typing import Optional, List, Literal
+from typing import Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,9 +22,15 @@ async def get_positions(
         db: AsyncSession = Depends(get_db),
         trade_pair: Optional[str] = None,
         only_open: Optional[bool] = False,
-        status: Optional[Literal["OPEN", "CLOSED", "PENDING"]] = None
+        status: Optional[str] = None
 ):
     logger.info(f"Fetching positions for trader_id={trader_id}, trade_pair={trade_pair}, status={status}")
+
+    status = status.strip().upper()
+    if status and status not in ["OPEN", "PENDING", "CLOSED"]:
+        logger.error("A status can only be open, pending and closed")
+        raise HTTPException(status_code=400, detail="A status can only be open, pending and closed!")
+
 
     # Base query
     query = select(Transaction)
