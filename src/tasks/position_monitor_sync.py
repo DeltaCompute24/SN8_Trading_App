@@ -64,7 +64,7 @@ def monitor_positions_sync():
         positions = get_monitored_positions()
 
         for position in positions:
-            logger.info(f"Current Prices Dict: {redis_client.hgetall('current_prices')}")
+            logger.error(f"Current Prices Dict: {redis_client.hgetall('current_prices')}")
             if position.status == "OPEN" and (not position.take_profit or
                                               position.take_profit == 0 or not position.stop_loss or position.stop_loss == 0):
                 logger.info(f"Skip position {position.position_id}: {position.trader_id}: {position.trade_pair}")

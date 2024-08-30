@@ -1,14 +1,17 @@
 import asyncio
 import logging
 
+import redis
 from sqlalchemy.future import select
 
 from src.core.celery_app import celery_app
 from src.database_tasks import get_task_db
 from src.models.transaction import Transaction
-from src.utils.websocket_manager import websocket_manager
+from src.utils.websocket_manager import WebSocketManager
 
 logger = logging.getLogger(__name__)
+
+redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
 
 current_subscriptions = set()
 subscription_tasks = {}
@@ -43,6 +46,7 @@ async def get_unique_trade_pairs():
 
 async def manage_trade_pair_subscriptions(trade_pairs):
     global current_subscriptions, subscription_tasks
+    websocket_manager = WebSocketManager()
     active_trade_pairs = set(trade_pairs)
 
     new_pairs = active_trade_pairs - current_subscriptions
@@ -64,12 +68,14 @@ async def manage_trade_pair_subscriptions(trade_pairs):
 
     # Subscribe to new pairs
     for pair in new_pairs:
+        asset_type = pair[1]
+        trade_pair = pair[0]
         logger.info(f"Subscribing to new trade pair: {pair}")
         if not websocket_manager.websocket or websocket_manager.websocket.closed:
-            await websocket_manager.connect(pair[1])
-        await websocket_manager.subscribe(pair[0])
+            await websocket_manager.connect(asset_type)
+        await websocket_manager.subscribe(trade_pair)
         current_subscriptions.add(pair)
-        task = asyncio.create_task(websocket_manager.listen_for_price())
+        task = asyncio.create_task(websocket_manager.listen_for_price(trade_pair, asset_type))
         subscription_tasks[pair] = task
         logger.info(f"Started task for trade pair: {pair}")
 
@@ -77,8 +83,9 @@ async def manage_trade_pair_subscriptions(trade_pairs):
     for pair in active_trade_pairs:
         if pair not in subscription_tasks:
             logger.info(f"Ensuring active subscription for trade pair: {pair}")
-            task = asyncio.create_task(websocket_manager.listen_for_price())
+            task = asyncio.create_task(websocket_manager.listen_for_price(pair[0], pair[1]))
             subscription_tasks[pair] = task
+    logger.error(f"Current Prices Dict: {redis_client.hgetall('current_prices')}")
     logger.error(f"Current Prices: {websocket_manager.current_prices}")
     logger.info(f"Active subscriptions: {current_subscriptions}")
 
@@ -93,7 +100,8 @@ def trade_pair_worker(self, trade_pair):
 async def trade_pair_worker_async(trade_pair):
     asset_type, pair = trade_pair
     logger.info(f"Starting trade_pair_worker_async for {trade_pair}")
+    websocket_manager = WebSocketManager()
     await websocket_manager.connect(asset_type)
     await websocket_manager.subscribe(pair)
-    await websocket_manager.listen_for_price()
+    await websocket_manager.listen_for_price(pair, asset_type)
     logger.info(f"Finished trade_pair_worker_async for {trade_pair}")
