@@ -7,7 +7,7 @@ from sqlalchemy.future import select
 from src.core.celery_app import celery_app
 from src.database_tasks import get_task_db
 from src.models.transaction import Transaction
-from src.utils.websocket_manager import WebSocketManager
+from src.utils.websocket_manager import websocket_manager
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +46,6 @@ async def get_unique_trade_pairs():
 
 async def manage_trade_pair_subscriptions(trade_pairs):
     global current_subscriptions, subscription_tasks
-    websocket_manager = WebSocketManager()
     active_trade_pairs = set(trade_pairs)
 
     new_pairs = active_trade_pairs - current_subscriptions
@@ -100,7 +99,6 @@ def trade_pair_worker(self, trade_pair):
 async def trade_pair_worker_async(trade_pair):
     asset_type, pair = trade_pair
     logger.info(f"Starting trade_pair_worker_async for {trade_pair}")
-    websocket_manager = WebSocketManager()
     await websocket_manager.connect(asset_type)
     await websocket_manager.subscribe(pair)
     await websocket_manager.listen_for_price(pair, asset_type)
