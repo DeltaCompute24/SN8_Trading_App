@@ -87,11 +87,13 @@ class WebSocketManager:
                             pair = data[0]['pair']
                             trade_pair = pair.replace("-", "").replace("/", "")
                             price = float(data[0]['c'])
+                            self.current_prices[trade_pair] = price
+                            await redis_client.hset('current_prices', trade_pair, data[0]['c'])
                             current_time = asyncio.get_event_loop().time()
                             if last_log_time is None or current_time - last_log_time >= 1:
                                 logger.info(f"Current price for {trade_pair}: {price}")
-                                self.current_prices[trade_pair] = price
-                                await redis_client.hset('current_prices', trade_pair, data[0]['c'])
+                                # self.current_prices[trade_pair] = price
+                                # await redis_client.hset('current_prices', trade_pair, data[0]['c'])
                                 last_log_time = current_time
                             await asyncio.sleep(1)  # Adjust sleep duration as necessary
                     except websockets.ConnectionClosedError as e:
