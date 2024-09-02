@@ -38,7 +38,8 @@ async def manage_subscriptions_async():
 async def get_unique_trade_pairs():
     logger.info("Fetching unique trade pairs from database")
     async with get_task_db() as db:
-        result = await db.execute(select(Transaction.trade_pair, Transaction.asset_type).distinct())
+        result = await db.execute(
+            select(Transaction.trade_pair, Transaction.asset_type).where(Transaction.status != "CLOSED").distinct())
         trade_pairs = [(row.trade_pair, row.asset_type) for row in result.all()]
         logger.info(f"Retrieved trade pairs: {trade_pairs}")
         return trade_pairs
