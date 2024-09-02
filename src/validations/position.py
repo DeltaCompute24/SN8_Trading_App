@@ -160,6 +160,10 @@ crypto_pairs = ['DNTUSD', 'LCXUSD', 'XRDUSD', 'ZECUSD', 'AERGOUSD', 'RUNEUSD', '
                 'FXUSD',
                 'TUSD', 'GTCUSD', 'XRPUSD', 'ZENUSD', 'VETUSD', 'FUNUSD']
 
+crypto = ["BTCUSD", "ETHUSD"]
+forex = ["AUDCAD", "AUDUSD", "AUDJPY", "CADCHF", "CADJPY", "CHFJPY", "EURCAD", "EURUSD", "EURCHF", "EURGBP",
+         "EURJPY", "EURNZD", "NZDCAD", "NZDJPY", "GBPUSD", "GBPJPY", "USDCAD", "USDCHF", "USDJPY", ]
+
 
 def validate_position(position):
     asset_type, trade_pair = validate_trade_pair(position.asset_type, position.trade_pair)
@@ -167,8 +171,13 @@ def validate_position(position):
     position.asset_type = asset_type
     position.trade_pair = trade_pair
     position.order_type = order_type
-    return position
 
+    if position.stop_loss is None:
+        position.stop_loss = 0
+    if position.take_profit is None:
+        position.take_profit = 0
+
+    return position
 
 
 def validate_trade_pair(asset_type, trade_pair):
@@ -178,10 +187,10 @@ def validate_trade_pair(asset_type, trade_pair):
     if asset_type not in ["crypto", "forex"]:
         logger.error("Invalid asset type, It should be crypto or forex!")
         raise HTTPException(status_code=400, detail="Invalid asset type, It should be crypto or forex!")
-    if asset_type == "crypto" and trade_pair not in crypto_pairs:
+    if asset_type == "crypto" and trade_pair not in crypto:
         logger.error("Invalid trade pair for asset type crypto!")
         raise HTTPException(status_code=400, detail="Invalid trade pair for asset type crypto!")
-    if asset_type == "forex" and trade_pair not in forex_pairs:
+    if asset_type == "forex" and trade_pair not in forex:
         logger.error("Invalid trade pair for asset type forex!")
         raise HTTPException(status_code=400, detail="Invalid trade pair for asset type forex!")
 
