@@ -7,25 +7,29 @@ from src.schemas.transaction import TradeResponse, ProfitLossRequest
 from src.services.trade_service import get_open_position, calculate_profit_loss, close_transaction
 from src.utils.logging import setup_logging
 from src.utils.websocket_manager import websocket_manager
+from src.validations.position import validate_trade_pair
 
 logger = setup_logging()
 router = APIRouter()
 
 
 @router.post("/close-position/", response_model=TradeResponse)
-async def close_position(profit_loss_request: ProfitLossRequest, db: AsyncSession = Depends(get_db)):
+async def close_position(position_data: ProfitLossRequest, db: AsyncSession = Depends(get_db)):
     logger.info(
-        f"Closing position for trader_id={profit_loss_request.trader_id} and trade_pair={profit_loss_request.trade_pair}")
+        f"Closing position for trader_id={position_data.trader_id} and trade_pair={position_data.trade_pair}")
 
-    position = await get_open_position(db, profit_loss_request.trader_id, profit_loss_request.trade_pair)
+    position_data.asset_type, position_data.trade_pair = validate_trade_pair(position_data.asset_type,
+                                                                             position_data.trade_pair)
+
+    position = await get_open_position(db, position_data.trader_id, position_data.trade_pair)
     if not position:
         logger.error("No open position found for this trade pair and trader")
         raise HTTPException(status_code=404, detail="No open position found for this trade pair and trader")
 
     try:
         # Submit the FLAT signal to close the position
-        close_submitted = await websocket_manager.submit_trade(profit_loss_request.trader_id,
-                                                               profit_loss_request.trade_pair, "FLAT", 1)
+        close_submitted = await websocket_manager.submit_trade(position_data.trader_id,
+                                                               position_data.trade_pair, "FLAT", 1)
         if not close_submitted:
             logger.error("Failed to submit close signal")
             raise HTTPException(status_code=500, detail="Failed to submit close signal")

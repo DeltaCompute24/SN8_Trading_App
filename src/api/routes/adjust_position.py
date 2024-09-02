@@ -9,6 +9,7 @@ from src.services.trade_service import create_transaction, get_open_position, up
     close_transaction, calculate_profit_loss
 from src.utils.logging import setup_logging
 from src.utils.websocket_manager import websocket_manager
+from src.validations.position import validate_position
 
 logger = setup_logging()
 router = APIRouter()
@@ -17,6 +18,8 @@ router = APIRouter()
 @router.post("/adjust-position/", response_model=dict)
 async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSession = Depends(get_db)):
     logger.info(f"Adjusting position for trader_id={position_data.trader_id} and trade_pair={position_data.trade_pair}")
+
+    position_data = validate_position(position_data)
 
     # Get the latest transaction record for the given trader and trade pair
     latest_position = await get_open_position(db, position_data.trader_id, position_data.trade_pair)

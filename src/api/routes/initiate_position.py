@@ -7,6 +7,7 @@ from src.schemas.transaction import TransactionCreate, TradeResponse
 from src.services.trade_service import create_transaction, get_open_position, update_monitored_positions
 from src.utils.logging import setup_logging
 from src.utils.websocket_manager import websocket_manager
+from src.validations.position import validate_position
 
 logger = setup_logging()
 router = APIRouter()
@@ -16,6 +17,8 @@ router = APIRouter()
 async def initiate_position(position_data: TransactionCreate, db: AsyncSession = Depends(get_db)):
     logger.info(
         f"Initiating position for trader_id={position_data.trader_id} and trade_pair={position_data.trade_pair}")
+
+    position_data = validate_position(position_data)
 
     existing_position = await get_open_position(db, position_data.trader_id, position_data.trade_pair)
     if existing_position:

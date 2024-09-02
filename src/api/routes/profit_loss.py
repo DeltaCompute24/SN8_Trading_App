@@ -6,6 +6,7 @@ from src.schemas.transaction import ProfitLossRequest
 from src.services.trade_service import get_latest_position, calculate_profit_loss
 from src.utils.logging import setup_logging
 from src.utils.websocket_manager import websocket_manager
+from src.validations.position import validate_trade_pair
 
 logger = setup_logging()
 router = APIRouter()
@@ -17,6 +18,9 @@ async def get_profit_loss(profit_loss_request: ProfitLossRequest, db: AsyncSessi
     trade_pair = profit_loss_request.trade_pair
 
     logger.info(f"Calculating profit/loss for trader_id={trader_id} and trade_pair={trade_pair}")
+
+    profit_loss_request.asset_type, trade_pair = validate_trade_pair(profit_loss_request.asset_type,
+                                                                     profit_loss_request.trade_pair)
 
     latest_position = await get_latest_position(db, trader_id, trade_pair)
     if not latest_position:
