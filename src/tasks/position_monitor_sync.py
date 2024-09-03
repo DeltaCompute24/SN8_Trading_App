@@ -156,22 +156,35 @@ def should_open_position(position, current_price):
 
 def should_close_position(profit_loss, position):
     try:
-        take_profit = (
-                (position.cumulative_order_type == "LONG" and profit_loss >= position.cumulative_take_profit) or
-                (position.cumulative_order_type == "SHORT" and profit_loss <= position.cumulative_take_profit)
-        )
-        stop_loss = (
-                (position.cumulative_order_type == "LONG" and profit_loss <= position.cumulative_stop_loss) or
-                (position.cumulative_order_type == "SHORT" and profit_loss >= position.cumulative_stop_loss)
-        )
-        if position.status != "OPEN":
-            result = False
-        elif position.take_profit != 0 and position.stop_loss != 0:
-            result = take_profit or stop_loss
-        elif position.take_profit == 0:
-            result = stop_loss
+        # take_profit = (
+        #         (position.cumulative_order_type == "LONG" and profit_loss >= position.cumulative_take_profit) or
+        #         (position.cumulative_order_type == "SHORT" and profit_loss <= position.cumulative_take_profit)
+        # )
+        # stop_loss = (
+        #         (position.cumulative_order_type == "LONG" and profit_loss <= position.cumulative_stop_loss) or
+        #         (position.cumulative_order_type == "SHORT" and profit_loss >= position.cumulative_stop_loss)
+        # )
+        # if position.status != "OPEN":
+        #     result = False
+        # elif position.take_profit != 0 and position.stop_loss != 0:
+        #     result = take_profit or stop_loss
+        # elif position.take_profit == 0:
+        #     result = stop_loss
+        # else:
+        #     result = take_profit
+        take_profit = float('inf') if position.cumulative_take_profit == 0 else position.cumulative_take_profit
+        stop_loss = float('inf') if position.cumulative_stop_loss == 0 else position.cumulative_stop_loss
+
+        if position.cumulative_order_type == "LONG":
+            if (stop_loss * -1) < profit_loss < take_profit:
+                result = False
+            else:
+                result = (profit_loss >= take_profit) or (profit_loss <= stop_loss)
         else:
-            result = take_profit
+            if (take_profit * -1) < profit_loss < stop_loss:
+                result = False
+            else:
+                result = (profit_loss >= stop_loss) or (profit_loss <= take_profit)
 
         logger.info(f"Determining whether to close position: {result}")
         return result
