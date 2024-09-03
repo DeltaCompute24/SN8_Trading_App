@@ -156,13 +156,26 @@ def should_open_position(position, current_price):
 
 def should_close_position(profit_loss, position):
     try:
-        result = (
-                (position.status == "OPEN") and
-                (position.cumulative_order_type == "LONG" and profit_loss >= position.cumulative_take_profit) or
-                (position.cumulative_order_type == "LONG" and profit_loss <= position.cumulative_stop_loss) or
-                (position.cumulative_order_type == "SHORT" and profit_loss <= position.cumulative_take_profit) or
-                (position.cumulative_order_type == "SHORT" and profit_loss >= position.cumulative_stop_loss)
-        )
+        if position.status != "OPEN":
+            result = False
+        elif position.take_profit != 0 and position.stop_loss != 0:
+            result = (
+                    (position.cumulative_order_type == "LONG" and profit_loss >= position.cumulative_take_profit) or
+                    (position.cumulative_order_type == "LONG" and profit_loss <= position.cumulative_stop_loss) or
+                    (position.cumulative_order_type == "SHORT" and profit_loss <= position.cumulative_take_profit) or
+                    (position.cumulative_order_type == "SHORT" and profit_loss >= position.cumulative_stop_loss)
+            )
+        elif position.take_profit == 0:
+            result = (
+                    (position.cumulative_order_type == "LONG" and profit_loss <= position.cumulative_stop_loss) or
+                    (position.cumulative_order_type == "SHORT" and profit_loss >= position.cumulative_stop_loss)
+            )
+        else:
+            result = (
+                    (position.cumulative_order_type == "LONG" and profit_loss >= position.cumulative_take_profit) or
+                    (position.cumulative_order_type == "SHORT" and profit_loss <= position.cumulative_take_profit)
+            )
+
         logger.info(f"Determining whether to close position: {result}")
         return result
     except Exception as e:
