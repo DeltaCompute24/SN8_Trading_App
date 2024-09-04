@@ -96,6 +96,7 @@ def monitor_position(position):
             if position.status == "PENDING" and should_open_position(position, current_price):
                 open_position(position, current_price)
             elif position.status == "OPEN" and should_close_position(profit_loss, position):
+                logger.info(f"Position shouldn't be closed: {position.position_id}: {position.trader_id}: {position.trade_pair}")
                 close_position(position, current_price, profit_loss)
 
         return True
@@ -194,7 +195,7 @@ def should_close_position(profit_loss, position):
         #         return True
         # logger.info(f"Determining whether to close position: False")
         logger.info(f"Determining whether to close position: False")
-        return False
+        # return False
 
     except Exception as e:
         logger.error(f"An error occurred while determining if position should be closed: {e}")
