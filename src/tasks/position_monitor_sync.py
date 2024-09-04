@@ -170,30 +170,30 @@ def should_close_position(profit_loss, position):
         #     else:
         #         result = (profit_loss >= stop_loss) or (profit_loss <= take_profit)
 
-        take_profit = position.cumulative_take_profit
-        stop_loss = position.cumulative_stop_loss
-
-        if position.cumulative_order_type == "LONG":
-
-            if stop_loss is not None and stop_loss != 0 and profit_loss <= -stop_loss:
-                logger.info(f"Determining whether to close position: {True}")
-                return True
-
-            if take_profit is not None and take_profit != 0 and profit_loss >= take_profit:
-                logger.info(f"Determining whether to close position: {True}")
-
-                return True
-        elif position.cumulative_order_type == "SHOT":
-            if stop_loss is not None and stop_loss != 0 and profit_loss >= stop_loss:
-                logger.info(f"Determining whether to close position: {True}")
-
-                return True
-            if take_profit is not None and take_profit != 0 and profit_loss <= -take_profit:
-                logger.info(f"Determining whether to close position: {True}")
-
-                return True
-        logger.info(f"Determining whether to close position: {False}")
-
+        # take_profit = position.cumulative_take_profit
+        # stop_loss = position.cumulative_stop_loss
+        #
+        # if position.cumulative_order_type == "LONG":
+        #
+        #     if stop_loss is not None and stop_loss != 0 and profit_loss <= -stop_loss:
+        #         logger.info(f"Determining whether to close position: True")
+        #         return True
+        #
+        #     if take_profit is not None and take_profit != 0 and profit_loss >= take_profit:
+        #         logger.info(f"Determining whether to close position: True")
+        #
+        #         return True
+        # elif position.cumulative_order_type == "SHORT":
+        #     if stop_loss is not None and stop_loss != 0 and profit_loss >= stop_loss:
+        #         logger.info(f"Determining whether to close position: True")
+        #
+        #         return True
+        #     if take_profit is not None and take_profit != 0 and profit_loss <= -take_profit:
+        #         logger.info(f"Determining whether to close position: True")
+        #
+        #         return True
+        # logger.info(f"Determining whether to close position: False")
+        logger.info(f"Determining whether to close position: False")
         return False
 
     except Exception as e:
