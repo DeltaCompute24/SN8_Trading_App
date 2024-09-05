@@ -93,10 +93,12 @@ def monitor_position(position):
                 position.asset_type
             )
 
+            logger.error(f"Objects to be Updated: {objects_to_be_updated}")
             if position.status == "PENDING" and should_open_position(position, current_price):
                 open_position(position, current_price)
             elif position.status == "OPEN" and should_close_position(profit_loss, position):
-                logger.info(f"Position shouldn't be closed: {position.position_id}: {position.trader_id}: {position.trade_pair}")
+                logger.info(
+                    f"Position shouldn't be closed: {position.position_id}: {position.trader_id}: {position.trade_pair}")
                 close_position(position, current_price, profit_loss)
 
         return True
@@ -107,6 +109,7 @@ def monitor_position(position):
 def open_position(position, current_price):
     global objects_to_be_updated
     try:
+        logger.info("Open Position Called!")
         open_submitted = asyncio.run(
             websocket_manager.submit_trade(position.trader_id, position.trade_pair, position.order_type,
                                            position.leverage))
@@ -126,6 +129,7 @@ def open_position(position, current_price):
 def close_position(position, close_price, profit_loss):
     global objects_to_be_updated
     try:
+        logger.info("Close Position Called!")
         close_submitted = asyncio.run(
             websocket_manager.submit_trade(position.trader_id, position.trade_pair, "FLAT", 1))
         if close_submitted:
@@ -171,31 +175,30 @@ def should_close_position(profit_loss, position):
         #     else:
         #         result = (profit_loss >= stop_loss) or (profit_loss <= take_profit)
 
-        # take_profit = position.cumulative_take_profit
-        # stop_loss = position.cumulative_stop_loss
-        #
-        # if position.cumulative_order_type == "LONG":
-        #
-        #     if stop_loss is not None and stop_loss != 0 and profit_loss <= -stop_loss:
-        #         logger.info(f"Determining whether to close position: True")
-        #         return True
-        #
-        #     if take_profit is not None and take_profit != 0 and profit_loss >= take_profit:
-        #         logger.info(f"Determining whether to close position: True")
-        #
-        #         return True
-        # elif position.cumulative_order_type == "SHORT":
-        #     if stop_loss is not None and stop_loss != 0 and profit_loss >= stop_loss:
-        #         logger.info(f"Determining whether to close position: True")
-        #
-        #         return True
-        #     if take_profit is not None and take_profit != 0 and profit_loss <= -take_profit:
-        #         logger.info(f"Determining whether to close position: True")
-        #
-        #         return True
-        # logger.info(f"Determining whether to close position: False")
-        logger.info(f"Determining whether to close position: False")
-        # return False
+        take_profit = position.cumulative_take_profit
+        stop_loss = position.cumulative_stop_loss
+
+        if position.cumulative_order_type == "LONG":
+
+            if stop_loss is not None and stop_loss != 0 and profit_loss <= -stop_loss:
+                logger.info(f"Determining whether to close position: True")
+                return True
+
+            if take_profit is not None and take_profit != 0 and profit_loss >= take_profit:
+                logger.info(f"Determining whether to close position: True")
+
+                return True
+        elif position.cumulative_order_type == "SHORT":
+            if stop_loss is not None and stop_loss != 0 and profit_loss >= stop_loss:
+                logger.info(f"Determining whether to close position: True")
+
+                return True
+            if take_profit is not None and take_profit != 0 and profit_loss <= -take_profit:
+                logger.info(f"Determining whether to close position: True")
+
+                return True
+        logger.info(f"closing position: False")
+        return False
 
     except Exception as e:
         logger.error(f"An error occurred while determining if position should be closed: {e}")
