@@ -16,7 +16,7 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
                              cumulative_take_profit: float = None,
                              cumulative_order_type: str = None, status: str = "OPEN", old_status: str = "OPEN",
                              close_time: datetime = None, close_price: float = None, profit_loss: float = None,
-                             upward: float = -1):
+                             upward: float = -1, challenge_level: str = None):
     if operation_type == "initiate":
         max_position_id = await db.scalar(
             select(func.max(Transaction.position_id)).filter(Transaction.trader_id == transaction_data.trader_id))
@@ -55,6 +55,7 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
         position_id=position_id,
         trade_order=trade_order,
         upward=upward,
+        challenge_level=challenge_level,
     )
     db.add(new_transaction)
     await db.commit()
@@ -63,7 +64,7 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
 
 
 async def close_transaction(db: AsyncSession, order_id, trader_id, close_price: float = None,
-                            profit_loss: float = None, old_status: str = None):
+                            profit_loss: float = None, old_status: str = None, challenge_level: str = None):
     close_time = datetime.utcnow()
     statement = text("""
             UPDATE transactions
@@ -77,7 +78,8 @@ async def close_transaction(db: AsyncSession, order_id, trader_id, close_price: 
                 stop_loss = :stop_loss,
                 take_profit = :take_profit,
                 order_type = :order_type,
-                modified_by = :modified_by
+                modified_by = :modified_by,
+                challenge_level = :challenge_level
             WHERE order_id = :order_id
         """)
 
@@ -96,6 +98,7 @@ async def close_transaction(db: AsyncSession, order_id, trader_id, close_price: 
             "order_type": "FLAT",
             "order_id": order_id,
             "modified_by": str(trader_id),
+            "challenge_level": challenge_level
         }
     )
     await db.commit()

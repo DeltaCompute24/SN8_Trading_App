@@ -2,8 +2,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.sql import and_
 
-from src.schemas.user import UsersBase
 from src.models.users import Users
+from src.schemas.user import UsersBase
 
 
 async def get_user(db: AsyncSession, trader_id: int):
@@ -27,3 +27,10 @@ async def create_user(db: AsyncSession, user_data: UsersBase):
     await db.commit()
     await db.refresh(new_user)
     return new_user
+
+
+async def get_user_challenge_level(db: AsyncSession, trader_id: int):
+    user = await get_user(db, trader_id)
+    if not user:
+        return ""
+    return user.current_challenge_level
