@@ -34,6 +34,7 @@ class Transaction(TransactionBase):
     trade_order: int
     modified_by: Optional[str]
     upward: Optional[float]
+    challenge_level: Optional[str]
 
     class Config:
         orm_mode = True
