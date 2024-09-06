@@ -1,5 +1,7 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, UniqueConstraint
+from sqlalchemy import Column, Integer, String, Float, UniqueConstraint
+
 from src.database import Base
+
 
 class MonitoredPosition(Base):
     __tablename__ = "monitored_positions"
