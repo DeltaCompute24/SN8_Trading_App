@@ -5,6 +5,7 @@ from sqlalchemy.sql import text
 from src.database import get_db
 from src.schemas.transaction import TradeResponse, ProfitLossRequest
 from src.services.trade_service import get_open_position, calculate_profit_loss, close_transaction
+from src.services.user_service import get_user_challenge_level
 from src.utils.logging import setup_logging
 from src.utils.websocket_manager import websocket_manager
 from src.validations.position import validate_trade_pair
@@ -54,9 +55,10 @@ async def close_position(position_data: ProfitLossRequest, db: AsyncSession = De
         profit_loss = calculate_profit_loss(position.entry_price, close_price, position.cumulative_leverage,
                                             position.order_type, position.asset_type)
 
+        challenge_level = await get_user_challenge_level(db, position_data.trader_id)
         # Close Previous Open Position
         await close_transaction(db, position.order_id, position.trader_id, close_price, profit_loss,
-                                old_status=position.status)
+                                old_status=position.status, challenge_level=challenge_level)
 
         # Remove closed position from the monitored_positions table
         await db.execute(

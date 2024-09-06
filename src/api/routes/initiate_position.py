@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.services.user_service import get_user_challenge_level
 from src.database import get_db
 from src.schemas.monitored_position import MonitoredPositionCreate
 from src.schemas.transaction import TransactionCreate, TradeResponse
@@ -55,10 +56,13 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
             first_price = entry_price
             status = "PENDING"
 
+        challenge_level = await get_user_challenge_level(db, position_data.trader_id)
+
         # Create the transaction with the first received price
         new_transaction = await create_transaction(db, position_data, entry_price=first_price,
                                                    initial_price=initial_price, operation_type="initiate",
-                                                   status=status, upward=upward, old_status=status)
+                                                   status=status, upward=upward, old_status=status,
+                                                   challenge_level=challenge_level)
 
         # Create MonitoredPositionCreate data
         monitored_position_data = MonitoredPositionCreate(

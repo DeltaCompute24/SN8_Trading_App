@@ -7,6 +7,7 @@ from src.schemas.monitored_position import MonitoredPositionCreate
 from src.schemas.transaction import TransactionCreate
 from src.services.trade_service import create_transaction, get_open_position, update_monitored_positions, \
     close_transaction, calculate_profit_loss
+from src.services.user_service import get_user_challenge_level
 from src.utils.logging import setup_logging
 from src.utils.websocket_manager import websocket_manager
 from src.validations.position import validate_position
@@ -79,6 +80,8 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
                                             latest_position.cumulative_leverage, latest_position.order_type,
                                             latest_position.asset_type)
 
+        challenge_level = await get_user_challenge_level(db, position_data.trader_id)
+
         # Create a new transaction record with updated values
         new_transaction = await create_transaction(
             db, position_data, entry_price=latest_position.entry_price, operation_type="adjust",
@@ -88,11 +91,12 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
             cumulative_take_profit=cumulative_take_profit,
             cumulative_order_type=cumulative_order_type,
             status=latest_position.status,
-            old_status=latest_position.old_status
+            old_status=latest_position.old_status,
+            challenge_level=challenge_level,
         )
 
         await close_transaction(db, latest_position.order_id, latest_position.trader_id, close_price, profit_loss,
-                                old_status=latest_position.status)
+                                old_status=latest_position.status, challenge_level=challenge_level)
 
         # Remove old monitored position
         await db.execute(
