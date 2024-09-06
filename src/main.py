@@ -6,7 +6,9 @@ from sqlalchemy.sql import text
 
 from src.api.routes.adjust_position import router as adjust_router
 from src.api.routes.close_position import router as close_router
+from src.api.routes.create_users import router as create_user_router
 from src.api.routes.get_positions import router as get_positions_router
+from src.api.routes.get_users import router as get_users_router
 from src.api.routes.initiate_position import router as initiate_router
 from src.api.routes.profit_loss import router as profit_loss_router
 from src.database import engine, Base, DATABASE_URL
@@ -19,6 +21,8 @@ app.include_router(adjust_router, prefix="/trades")
 app.include_router(close_router, prefix="/trades")
 app.include_router(profit_loss_router, prefix="/trades")
 app.include_router(get_positions_router, prefix="/trades")
+app.include_router(create_user_router, prefix="/trades")
+app.include_router(get_users_router, prefix="/trades")
 
 # Enable CORS
 app.add_middleware(
