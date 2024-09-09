@@ -55,6 +55,21 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
         cumulative_stop_loss = position_data.stop_loss
         cumulative_take_profit = position_data.take_profit
 
+        # Connect and subscribe to the WebSocket
+        logger.info(f"Connecting to WebSocket for asset type {latest_position.asset_type}")
+        websocket = await websocket_manager.connect(latest_position.asset_type)
+        subscription_response = await websocket_manager.subscribe(latest_position.trade_pair)
+        logger.info(f"Subscription response: {subscription_response}")
+
+        # Close Old Transaction
+        close_price = await websocket_manager.listen_for_initial_price()
+
+        if cumulative_leverage != 0:
+            cumulative_entry_price = (latest_position.cumulative_entry_price * latest_position.cumulative_leverage
+                                   + close_price * position_data.leverage) / cumulative_leverage
+        else:
+            cumulative_entry_price = latest_position.cumulative_entry_price
+
         logger.info(
             f"Cumulative leverage: {cumulative_leverage}, Cumulative stop loss: {cumulative_stop_loss}, Cumulative take profit: {cumulative_take_profit}, Cumulative order type: {cumulative_order_type}")
 
@@ -67,14 +82,6 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
 
         logger.info("Adjustment submitted successfully")
 
-        # Connect and subscribe to the WebSocket
-        logger.info(f"Connecting to WebSocket for asset type {latest_position.asset_type}")
-        websocket = await websocket_manager.connect(latest_position.asset_type)
-        subscription_response = await websocket_manager.subscribe(latest_position.trade_pair)
-        logger.info(f"Subscription response: {subscription_response}")
-
-        # Close Old Transaction
-        close_price = await websocket_manager.listen_for_initial_price()
         # Calculate profit/loss
         profit_loss = calculate_profit_loss(latest_position.entry_price, close_price,
                                             latest_position.cumulative_leverage, latest_position.order_type,
@@ -95,6 +102,7 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
             challenge_level=challenge_level,
             modified_by=str(position_data.trader_id),
             upward=latest_position.upward,
+            cumulative_entry_price=cumulative_entry_price,
         )
 
         await close_transaction(db, latest_position.order_id, latest_position.trader_id, close_price, profit_loss,

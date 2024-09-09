@@ -1,6 +1,8 @@
-from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional
+
+from pydantic import BaseModel
+
 
 class TransactionBase(BaseModel):
     trader_id: int
@@ -12,8 +14,10 @@ class TransactionBase(BaseModel):
     entry_price: Optional[float]
     order_type: str
 
+
 class TransactionCreate(TransactionBase):
     pass
+
 
 class Transaction(TransactionBase):
     order_id: int
@@ -24,6 +28,7 @@ class Transaction(TransactionBase):
     cumulative_leverage: float
     cumulative_stop_loss: Optional[float]
     cumulative_take_profit: Optional[float]
+    cumulative_entry_price: Optional[float]
     cumulative_order_type: str
     status: str
     old_status: Optional[str]
@@ -35,12 +40,15 @@ class Transaction(TransactionBase):
     modified_by: Optional[str]
     upward: Optional[float]
     challenge_level: Optional[str]
+    fees: Optional[float]
 
     class Config:
         orm_mode = True
 
+
 class TradeResponse(BaseModel):
     message: str
+
 
 class ProfitLossRequest(BaseModel):
     trader_id: int

@@ -7,7 +7,7 @@ from sqlalchemy.future import select
 from src.database import get_db
 from src.models.transaction import Transaction
 from src.schemas.transaction import Transaction as TransactionSchema
-from src.services.trade_service import calculate_profit_loss
+from src.services.trade_service import calculate_profit_loss, get_open_position_return_with_fees
 from src.utils.logging import setup_logging
 from src.utils.websocket_manager import websocket_manager
 
@@ -30,25 +30,24 @@ async def get_positions(
         logger.error("A status can only be open, pending and closed")
         raise HTTPException(status_code=400, detail="A status can only be open, pending and closed!")
 
-
     # Base query
     query = select(Transaction)
     if trader_id:
         query = query.where(Transaction.trader_id == trader_id)
 
-    # Apply trade_pair filter if specified
     if trade_pair:
         query = query.where(Transaction.trade_pair == trade_pair)
-
     if status:
         status = status.strip().upper()
         query = query.where(Transaction.status == status)
     elif only_open:
         query = query.where(Transaction.status == "OPEN")
+
     # Main query to fetch all transactions
     query = query.order_by(Transaction.position_id, Transaction.trade_order)
     result = await db.execute(query)
     positions = result.scalars().all()
+
     for position in positions:
         if position.status != "OPEN":
             logger.info("Position is Closed => Continue")
@@ -65,9 +64,9 @@ async def get_positions(
         if first_price is None:
             logger.error("Failed to fetch current price for the trade pair")
             raise HTTPException(status_code=500, detail="Failed to fetch current price for the trade pair")
-        profit_loss = calculate_profit_loss(position.entry_price, first_price,
-                                            position.cumulative_leverage, position.cumulative_order_type,
-                                            position.asset_type)
-        position.profit_loss = profit_loss
+        position.profit_loss = calculate_profit_loss(position.entry_price, first_price,
+                                                     position.cumulative_leverage, position.cumulative_order_type,
+                                                     position.asset_type)
+        position.fees = get_open_position_return_with_fees(first_price, position)
 
     return positions

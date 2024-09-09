@@ -25,6 +25,7 @@ class Transaction(Base):
     cumulative_stop_loss = Column(Float, nullable=True)
     cumulative_take_profit = Column(Float, nullable=True)
     cumulative_order_type = Column(String, nullable=False)
+    cumulative_entry_price = Column(Float, nullable=True)
     status = Column(String, default="OPEN", nullable=False)
     old_status = Column(String, default="OPEN", nullable=True)
     close_time = Column(DateTime, nullable=True)
