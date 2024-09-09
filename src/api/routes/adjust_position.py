@@ -93,6 +93,8 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
             status=latest_position.status,
             old_status=latest_position.old_status,
             challenge_level=challenge_level,
+            modified_by=str(position_data.trader_id),
+            upward=latest_position.upward,
         )
 
         await close_transaction(db, latest_position.order_id, latest_position.trader_id, close_price, profit_loss,
