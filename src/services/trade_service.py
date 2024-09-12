@@ -178,6 +178,9 @@ async def get_latest_position(db: AsyncSession, trader_id: int, trade_pair: str)
 
 def calculate_profit_loss(entry_price: float, current_price: float, leverage: float, order_type: str,
                           asset_type: str) -> float:
+    if entry_price == 0:
+        return 0.00
+
     # broker fee or commission
     fee = calculate_fee(leverage, asset_type)
     # if long which means user bet that the price will increase i.e. current_price > entry_price => it's a profit
@@ -188,12 +191,9 @@ def calculate_profit_loss(entry_price: float, current_price: float, leverage: fl
         price_difference = (entry_price - current_price)
     else:
         price_difference = 0.00
-    net_profit = price_difference - fee
-    if (entry_price * leverage) == 0:
-        return 0.00
 
-    profit_loss_percent = ((net_profit / entry_price) * leverage) * 100
-    return profit_loss_percent
+    profit_loss_percent = ((price_difference / entry_price) * leverage) * 100
+    return profit_loss_percent - fee
 
 
 def calculate_fee(leverage: float, asset_type: str) -> float:
