@@ -64,7 +64,7 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
                                                    status=status, upward=upward, old_status=status,
                                                    challenge_level=challenge_level,
                                                    modified_by=str(position_data.trader_id),
-                                                   cumulative_entry_price=first_price)
+                                                   average_entry_price=first_price)
 
         # Create MonitoredPositionCreate data
         monitored_position_data = MonitoredPositionCreate(

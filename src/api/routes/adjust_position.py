@@ -61,14 +61,13 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
         subscription_response = await websocket_manager.subscribe(latest_position.trade_pair)
         logger.info(f"Subscription response: {subscription_response}")
 
-        # Close Old Transaction
-        close_price = await websocket_manager.listen_for_initial_price()
+        realtime_price = await websocket_manager.listen_for_initial_price()
 
         if cumulative_leverage != 0:
-            cumulative_entry_price = (latest_position.cumulative_entry_price * latest_position.cumulative_leverage
-                                   + close_price * position_data.leverage) / cumulative_leverage
+            average_entry_price = (latest_position.average_entry_price * latest_position.cumulative_leverage
+                                   + realtime_price * position_data.leverage) / cumulative_leverage
         else:
-            cumulative_entry_price = latest_position.cumulative_entry_price
+            average_entry_price = latest_position.average_entry_price
 
         logger.info(
             f"Cumulative leverage: {cumulative_leverage}, Cumulative stop loss: {cumulative_stop_loss}, Cumulative take profit: {cumulative_take_profit}, Cumulative order type: {cumulative_order_type}")
@@ -83,7 +82,7 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
         logger.info("Adjustment submitted successfully")
 
         # Calculate profit/loss
-        profit_loss = calculate_profit_loss(latest_position.entry_price, close_price,
+        profit_loss = calculate_profit_loss(latest_position.entry_price, realtime_price,
                                             latest_position.cumulative_leverage, latest_position.order_type,
                                             latest_position.asset_type)
 
@@ -102,10 +101,10 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
             challenge_level=challenge_level,
             modified_by=str(position_data.trader_id),
             upward=latest_position.upward,
-            cumulative_entry_price=cumulative_entry_price,
+            average_entry_price=average_entry_price,
         )
 
-        await close_transaction(db, latest_position.order_id, latest_position.trader_id, close_price, profit_loss,
+        await close_transaction(db, latest_position.order_id, latest_position.trader_id, realtime_price, profit_loss,
                                 old_status=latest_position.status, challenge_level=challenge_level)
 
         # Remove old monitored position
