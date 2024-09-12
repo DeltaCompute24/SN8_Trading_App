@@ -17,7 +17,7 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
                              cumulative_order_type: str = None, status: str = "OPEN", old_status: str = "OPEN",
                              close_time: datetime = None, close_price: float = None, profit_loss: float = None,
                              upward: float = -1, challenge_level: str = None, modified_by: str = None,
-                             cumulative_entry_price: float = None):
+                             average_entry_price: float = None):
     if operation_type == "initiate":
         max_position_id = await db.scalar(
             select(func.max(Transaction.position_id)).filter(Transaction.trader_id == transaction_data.trader_id))
@@ -48,7 +48,7 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
         cumulative_stop_loss=cumulative_stop_loss,
         cumulative_take_profit=cumulative_take_profit,
         cumulative_order_type=cumulative_order_type,
-        cumulative_entry_price=cumulative_entry_price,
+        average_entry_price=average_entry_price,
         status=status,
         old_status=old_status,
         close_time=close_time,
@@ -182,28 +182,30 @@ def calculate_profit_loss(entry_price: float, current_price: float, leverage: fl
     fee = calculate_fee(leverage, asset_type)
     # if long which means user bet that the price will increase i.e. current_price > entry_price => it's a profit
     if order_type == "LONG":
-        price_difference = (current_price - entry_price) * leverage
+        price_difference = (current_price - entry_price)
     # if long which means user bet that the price will increase i.e. current_price > entry_price => it's a profit
     elif order_type == "SHORT":
-        price_difference = (entry_price - current_price) * leverage
+        price_difference = (entry_price - current_price)
     else:
         price_difference = 0.00
     net_profit = price_difference - fee
     if (entry_price * leverage) == 0:
         return 0.00
-    profit_loss_percent = (net_profit / (entry_price * leverage)) * 100
+
+    profit_loss_percent = ((net_profit / entry_price) * leverage) * 100
     return profit_loss_percent
 
 
 def calculate_fee(leverage: float, asset_type: str) -> float:
     return (0.00007 * leverage) if asset_type == 'forex' else (0.002 * leverage)
 
+
 def calculate_unrealized_pnl(current_price, position):
-    if position.entry_price == 0 or position.cumulative_entry_price is None:
+    if position.entry_price == 0 or position.average_entry_price is None:
         return 1
 
     gain = (
-            (current_price - position.cumulative_entry_price)
+            (current_price - position.average_entry_price)
             * position.cumulative_leverage
             / position.entry_price
     )
@@ -213,9 +215,11 @@ def calculate_unrealized_pnl(current_price, position):
     net_return = 1 + gain
     return net_return
 
+
 def calculate_return_with_fees(current_return_no_fees, position):
     fee = calculate_fee(leverage=position.cumulative_leverage, asset_type=position.asset_type)
     return current_return_no_fees * fee
+
 
 def get_open_position_return_with_fees(realtime_price, position):
     current_return = calculate_unrealized_pnl(realtime_price, position)

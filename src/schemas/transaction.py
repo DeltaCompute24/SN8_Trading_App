@@ -28,7 +28,7 @@ class Transaction(TransactionBase):
     cumulative_leverage: float
     cumulative_stop_loss: Optional[float]
     cumulative_take_profit: Optional[float]
-    cumulative_entry_price: Optional[float]
+    average_entry_price: Optional[float]
     cumulative_order_type: str
     status: str
     old_status: Optional[str]
