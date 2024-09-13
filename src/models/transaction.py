@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Column, Integer, String, Float, DateTime
+from sqlalchemy import Column, Integer, String, Float, DateTime, JSON
 
 from src.database import Base
 
@@ -34,4 +34,7 @@ class Transaction(Base):
     position_id = Column(Integer, nullable=False)
     trade_order = Column(Integer, nullable=False)
     challenge_level = Column(String, nullable=True)
+    entry_price_list = Column(JSON, default=[])
+    leverage_list = Column(JSON, default=[])
+    order_type_list = Column(JSON, default=[])
     modified_by = Column(String, default="", nullable=True)
