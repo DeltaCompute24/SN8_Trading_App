@@ -41,6 +41,9 @@ class Transaction(TransactionBase):
     upward: Optional[float]
     challenge_level: Optional[str]
     fees: Optional[float]
+    entry_price_list: Optional[list]
+    leverage_list: Optional[list]
+    order_type_list: Optional[list]
 
     class Config:
         orm_mode = True
