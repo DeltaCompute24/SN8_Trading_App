@@ -23,20 +23,20 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
     position_data = validate_position(position_data)
 
     # Get the latest transaction record for the given trader and trade pair
-    latest_position = await get_open_position(db, position_data.trader_id, position_data.trade_pair)
-    if not latest_position:
+    position = await get_open_position(db, position_data.trader_id, position_data.trade_pair)
+    if not position:
         logger.error("No open position found for this trade pair and trader")
         raise HTTPException(status_code=404, detail="No open position found for this trade pair and trader")
 
     try:
-        logger.info(f"Latest position: {latest_position}")
+        logger.info(f"Latest position: {position}")
 
         # Calculate new leverage based on the cumulative order type
-        if (latest_position.cumulative_order_type == 'LONG' and position_data.order_type.upper() == 'LONG') or \
-                (latest_position.cumulative_order_type == 'SHORT' and position_data.order_type.upper() == 'SHORT'):
-            new_leverage = latest_position.cumulative_leverage + position_data.leverage
+        if (position.cumulative_order_type == 'LONG' and position_data.order_type.upper() == 'LONG') or \
+                (position.cumulative_order_type == 'SHORT' and position_data.order_type.upper() == 'SHORT'):
+            new_leverage = position.cumulative_leverage + position_data.leverage
         else:
-            new_leverage = latest_position.cumulative_leverage - position_data.leverage
+            new_leverage = position.cumulative_leverage - position_data.leverage
 
         # Determine the new cumulative order type
         if new_leverage == 0:
@@ -56,15 +56,15 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
         cumulative_take_profit = position_data.take_profit
 
         # Connect and subscribe to the WebSocket
-        logger.info(f"Connecting to WebSocket for asset type {latest_position.asset_type}")
-        websocket = await websocket_manager.connect(latest_position.asset_type)
-        subscription_response = await websocket_manager.subscribe(latest_position.trade_pair)
+        logger.info(f"Connecting to WebSocket for asset type {position.asset_type}")
+        websocket = await websocket_manager.connect(position.asset_type)
+        subscription_response = await websocket_manager.subscribe(position.trade_pair)
         logger.info(f"Subscription response: {subscription_response}")
 
         realtime_price = await websocket_manager.listen_for_initial_price()
-        prev_avg_entry_price = latest_position.average_entry_price if latest_position.average_entry_price else 0.0
+        prev_avg_entry_price = position.average_entry_price if position.average_entry_price else 0.0
         if cumulative_leverage != 0:
-            average_entry_price = (prev_avg_entry_price * latest_position.cumulative_leverage
+            average_entry_price = (prev_avg_entry_price * position.cumulative_leverage
                                    + realtime_price * position_data.leverage) / cumulative_leverage
         else:
             average_entry_price = prev_avg_entry_price
@@ -82,39 +82,39 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
         logger.info("Adjustment submitted successfully")
 
         # Calculate profit/loss
-        profit_loss = calculate_profit_loss(latest_position, realtime_price)
+        profit_loss = calculate_profit_loss(position, realtime_price)
 
         challenge_level = await get_user_challenge_level(db, position_data.trader_id)
-        entry_price_list = latest_position.entry_price_list if latest_position.entry_price_list else []
-        leverage_list = latest_position.leverage_list if latest_position.leverage_list else []
-        order_type_list = latest_position.order_type_list if latest_position.order_type_list else []
+        entry_price_list = position.entry_price_list if position.entry_price_list else []
+        leverage_list = position.leverage_list if position.leverage_list else []
+        order_type_list = position.order_type_list if position.order_type_list else []
 
         # Create a new transaction record with updated values
         new_transaction = await create_transaction(
-            db, position_data, entry_price=latest_position.entry_price, operation_type="adjust",
-            position_id=latest_position.position_id, initial_price=latest_position.initial_price,
+            db, position_data, entry_price=position.entry_price, operation_type="adjust",
+            position_id=position.position_id, initial_price=position.initial_price,
             cumulative_leverage=cumulative_leverage,
             cumulative_stop_loss=cumulative_stop_loss,
             cumulative_take_profit=cumulative_take_profit,
             cumulative_order_type=cumulative_order_type,
-            status=latest_position.status,
-            old_status=latest_position.old_status,
+            status=position.status,
+            old_status=position.old_status,
             challenge_level=challenge_level,
             modified_by=str(position_data.trader_id),
-            upward=latest_position.upward,
+            upward=position.upward,
             average_entry_price=average_entry_price,
             entry_price_list=entry_price_list + [realtime_price],
             leverage_list=leverage_list + [position_data.leverage],
             order_type_list=order_type_list + [position_data.order_type],
         )
 
-        await close_transaction(db, latest_position.order_id, latest_position.trader_id, realtime_price, profit_loss,
-                                old_status=latest_position.status, challenge_level=challenge_level)
+        await close_transaction(db, position.order_id, position.trader_id, realtime_price, profit_loss,
+                                old_status=position.status, challenge_level=challenge_level)
 
         # Remove old monitored position
         await db.execute(
             text("DELETE FROM monitored_positions WHERE position_id = :position_id"),
-            {"position_id": latest_position.position_id}
+            {"position_id": position.position_id}
         )
         await db.commit()
 
