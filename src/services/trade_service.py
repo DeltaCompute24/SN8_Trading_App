@@ -17,7 +17,8 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
                              cumulative_order_type: str = None, status: str = "OPEN", old_status: str = "OPEN",
                              close_time: datetime = None, close_price: float = None, profit_loss: float = None,
                              upward: float = -1, challenge_level: str = None, modified_by: str = None,
-                             average_entry_price: float = None):
+                             average_entry_price: float = None, entry_price_list: list = None,
+                             leverage_list: list = None, order_type_list: list = None):
     if operation_type == "initiate":
         max_position_id = await db.scalar(
             select(func.max(Transaction.position_id)).filter(Transaction.trader_id == transaction_data.trader_id))
@@ -58,6 +59,9 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
         trade_order=trade_order,
         upward=upward,
         challenge_level=challenge_level,
+        entry_price_list=entry_price_list,
+        leverage_list=leverage_list,
+        order_type_list=order_type_list,
         modified_by=modified_by,
     )
     db.add(new_transaction)
@@ -176,28 +180,34 @@ async def get_latest_position(db: AsyncSession, trader_id: int, trade_pair: str)
     return result.scalars().first()
 
 
-def calculate_profit_loss(entry_price: float, current_price: float, leverage: float, order_type: str,
-                          asset_type: str) -> float:
-    if entry_price == 0:
-        return 0.00
-
-    # broker fee or commission
-    fee = calculate_fee(leverage, asset_type)
-    # if long which means user bet that the price will increase i.e. current_price > entry_price => it's a profit
-    if order_type == "LONG":
-        price_difference = (current_price - entry_price)
-    # if long which means user bet that the price will increase i.e. current_price > entry_price => it's a profit
-    elif order_type == "SHORT":
-        price_difference = (entry_price - current_price)
-    else:
-        price_difference = 0.00
-
-    profit_loss_percent = ((price_difference / entry_price) * leverage) * 100
-    return profit_loss_percent - fee
-
-
 def calculate_fee(leverage: float, asset_type: str) -> float:
     return (0.00007 * leverage) if asset_type == 'forex' else (0.002 * leverage)
+
+
+def calculate_profit_loss(position, current_price: float) -> float:
+    prices = position.entry_price_list or []
+    leverages = position.leverage_list or []
+    order_types = position.order_type_list or []
+    asset_type = position.asset_type
+
+    # broker fee or commission
+    fee = calculate_fee(position.cumulative_leverage, asset_type)
+    returns = 0.0
+
+    for entry_price, leverage, order_type in zip(prices, leverages, order_types):
+        # if long which means user bet that the price will increase i.e. current_price > entry_price => it's a profit
+        if order_type == "LONG":
+            price_difference = (current_price - entry_price)
+        # if long which means user bet that the price will increase i.e. current_price > entry_price => it's a profit
+        elif order_type == "SHORT":
+            price_difference = (entry_price - current_price)
+        else:
+            price_difference = 0.00
+
+        profit_loss_percent = ((price_difference / entry_price) * leverage) * 100
+        returns += profit_loss_percent
+
+    return returns - fee
 
 
 def calculate_unrealized_pnl(current_price, position):
