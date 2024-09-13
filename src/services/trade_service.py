@@ -150,7 +150,7 @@ async def get_open_position(db: AsyncSession, trader_id: int, trade_pair: str):
             and_(
                 Transaction.trader_id == trader_id,
                 Transaction.trade_pair == trade_pair,
-                Transaction.status != "CLOSED"
+                Transaction.status == "OPEN"
             )
         ).order_by(Transaction.trade_order.desc())
     )
@@ -158,26 +158,16 @@ async def get_open_position(db: AsyncSession, trader_id: int, trade_pair: str):
 
 
 async def get_latest_position(db: AsyncSession, trader_id: int, trade_pair: str) -> Transaction:
-    latest_position_id = await db.scalar(
-        select(func.max(Transaction.position_id)).where(
+    latest_transaction = await db.scalar(
+        select(Transaction).where(
             and_(
                 Transaction.trader_id == trader_id,
-                Transaction.trade_pair == trade_pair
+                Transaction.trade_pair == trade_pair,
+                Transaction.status != "CLOSED"
             )
-        )
+        ).order_by(Transaction.trade_order.desc())
     )
-
-    if not latest_position_id:
-        return None
-
-    result = await db.execute(select(Transaction).where(
-        and_(
-            Transaction.position_id == latest_position_id,
-            Transaction.trader_id == trader_id,
-            Transaction.trade_pair == trade_pair
-        )
-    ).order_by(Transaction.trade_order.desc()))
-    return result.scalars().first()
+    return latest_transaction
 
 
 def calculate_fee(leverage: float, asset_type: str) -> float:
