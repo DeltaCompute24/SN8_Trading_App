@@ -1,13 +1,14 @@
-import asyncio
-import unittest
 import logging
+import unittest
+
 from httpx import AsyncClient
-from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.future import select
 from sqlalchemy.orm import sessionmaker
+
+from src.database import Base
 from src.main import app
 from src.models.transaction import Position
-from src.database import get_db, Base
 from src.services.trade_service import calculate_profit_loss
 
 logging.basicConfig(level=logging.INFO)
@@ -15,6 +16,7 @@ logging.basicConfig(level=logging.INFO)
 DATABASE_URL = "postgresql+asyncpg://user:password@localhost/test_db"
 engine = create_async_engine(DATABASE_URL, future=True)
 SessionTesting = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
 
 class TestTradingApp(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
@@ -45,7 +47,8 @@ class TestTradingApp(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.json(), {"message": "Position initiated successfully"})
 
         # Verify the initiated position
-        result = await self.session.execute(select(Position).where(Position.trader_id == 4060, Position.trade_pair == "BTCUSD"))
+        result = await self.session.execute(
+            select(Position).where(Position.trader_id == 4060, Position.trade_pair == "BTCUSD"))
         position = result.scalars().first()
 
         self.assertIsNotNone(position)
@@ -81,7 +84,9 @@ class TestTradingApp(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.json(), {"message": "Position closed successfully"})
 
         # Verify the closed position
-        result = await self.session.execute(select(Position).where(Position.trader_id == 4060, Position.trade_pair == "BTCUSD").order_by(Position.open_time.desc()))
+        result = await self.session.execute(
+            select(Position).where(Position.trader_id == 4060, Position.trade_pair == "BTCUSD").order_by(
+                Position.open_time.desc()))
         position = result.scalars().first()
 
         self.assertIsNotNone(position)
@@ -116,7 +121,9 @@ class TestTradingApp(unittest.IsolatedAsyncioTestCase):
         self.assertIn("profit_loss", response_data)
 
         # Verify the profit/loss calculation
-        result = await self.session.execute(select(Position).where(Position.trader_id == 4060, Position.trade_pair == "BTCUSD").order_by(Position.open_time.desc()))
+        result = await self.session.execute(
+            select(Position).where(Position.trader_id == 4060, Position.trade_pair == "BTCUSD").order_by(
+                Position.open_time.desc()))
         position = result.scalars().first()
 
         self.assertIsNotNone(position)
@@ -126,7 +133,7 @@ class TestTradingApp(unittest.IsolatedAsyncioTestCase):
         order_type = position.cumulative_order_type
 
         # Assuming you have a calculate_profit_loss function to verify the value
-        expected_profit_loss = calculate_profit_loss(entry_price, current_price, leverage, order_type, position.asset_type)
+        expected_profit_loss = calculate_profit_loss(position, current_price)
         self.assertEqual(response_data["profit_loss"], expected_profit_loss)
 
     async def test_get_positions(self):
@@ -153,6 +160,7 @@ class TestTradingApp(unittest.IsolatedAsyncioTestCase):
         # Verify the fetched positions
         self.assertEqual(positions[0]["trader_id"], 4060)
         self.assertEqual(positions[0]["trade_pair"], "BTCUSD")
+
 
 if __name__ == "__main__":
     unittest.main()

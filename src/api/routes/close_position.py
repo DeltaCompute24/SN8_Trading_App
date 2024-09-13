@@ -52,8 +52,7 @@ async def close_position(position_data: ProfitLossRequest, db: AsyncSession = De
         logger.info(f"Close price for {position.trade_pair} is {close_price}")
 
         # Calculate profit/loss
-        profit_loss = calculate_profit_loss(position.entry_price, close_price, position.cumulative_leverage,
-                                            position.order_type, position.asset_type)
+        profit_loss = calculate_profit_loss(position, close_price)
 
         challenge_level = await get_user_challenge_level(db, position_data.trader_id)
         # Close Previous Open Position

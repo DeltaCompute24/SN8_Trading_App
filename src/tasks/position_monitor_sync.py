@@ -85,13 +85,7 @@ def monitor_position(position):
         if current_price:
             current_price = float(current_price.decode('utf-8'))
             logger.error(f"Current Price Found: {current_price}")
-            profit_loss = calculate_profit_loss(
-                position.entry_price,
-                current_price,
-                position.cumulative_leverage,
-                position.cumulative_order_type,
-                position.asset_type
-            )
+            profit_loss = calculate_profit_loss(position, current_price)
 
             logger.error(f"Objects to be Updated: {objects_to_be_updated}")
             if position.status == "PENDING" and should_open_position(position, current_price):

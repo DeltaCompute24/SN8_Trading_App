@@ -52,13 +52,7 @@ async def monitor_position(position):
     try:
         current_price = websocket_manager.current_prices.get(position.trade_pair)
         if current_price:
-            profit_loss = calculate_profit_loss(
-                position.entry_price,
-                current_price,
-                position.cumulative_leverage,
-                position.cumulative_order_type,
-                position.asset_type
-            )
+            profit_loss = calculate_profit_loss(position, current_price)
             if should_close_position(profit_loss, position):
                 db: AsyncSession = TaskSessionLocal()
                 await close_position(position)

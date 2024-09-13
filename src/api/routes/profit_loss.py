@@ -63,9 +63,7 @@ async def get_profit_loss(profit_loss_request: ProfitLossRequest, db: AsyncSessi
                     f"order_type={latest_position.cumulative_order_type}, asset_type={latest_position.asset_type}")
 
         # Calculate profit/loss based on the first price
-        profit_loss = calculate_profit_loss(latest_position.entry_price, first_price,
-                                            latest_position.cumulative_leverage, latest_position.cumulative_order_type,
-                                            latest_position.asset_type)
+        profit_loss = calculate_profit_loss(latest_position, first_price)
 
         # Log the calculated profit/loss
         logger.info(f"Calculated profit/loss: {profit_loss}")

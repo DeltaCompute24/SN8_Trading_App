@@ -49,6 +49,7 @@ async def get_positions(
     positions = result.scalars().all()
 
     for position in positions:
+        position.fees = 0.00
         if position.status != "OPEN":
             logger.info("Position is Closed => Continue")
             continue
@@ -64,9 +65,7 @@ async def get_positions(
         if first_price is None:
             logger.error("Failed to fetch current price for the trade pair")
             raise HTTPException(status_code=500, detail="Failed to fetch current price for the trade pair")
-        position.profit_loss = calculate_profit_loss(position.entry_price, first_price,
-                                                     position.cumulative_leverage, position.cumulative_order_type,
-                                                     position.asset_type)
+        position.profit_loss = calculate_profit_loss(position, first_price)
         position.fees = get_open_position_return_with_fees(first_price, position)
 
     return positions
