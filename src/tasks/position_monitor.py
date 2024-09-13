@@ -8,7 +8,7 @@ from sqlalchemy.sql import text
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal
 from src.models.monitored_positions import MonitoredPosition
-from src.services.trade_service import calculate_profit_loss, get_open_position
+from src.services.trade_service import calculate_profit_loss, get_latest_position
 from src.utils.async_utils import run_async_in_sync
 from src.utils.websocket_manager import websocket_manager
 
@@ -65,7 +65,7 @@ async def monitor_position(position):
 async def close_position(position):
     try:
         db: AsyncSession = TaskSessionLocal()
-        open_position = await get_open_position(db, position.trader_id, position.trade_pair)
+        open_position = await get_latest_position(db, position.trader_id, position.trade_pair)
 
         if open_position:
             close_submitted = await websocket_manager.submit_trade(position.trader_id, position.trade_pair, "FLAT", 1)

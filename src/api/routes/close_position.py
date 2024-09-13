@@ -4,7 +4,7 @@ from sqlalchemy.sql import text
 
 from src.database import get_db
 from src.schemas.transaction import TradeResponse, ProfitLossRequest
-from src.services.trade_service import get_open_position, calculate_profit_loss, close_transaction
+from src.services.trade_service import calculate_profit_loss, close_transaction, get_latest_position
 from src.services.user_service import get_user_challenge_level
 from src.utils.logging import setup_logging
 from src.utils.websocket_manager import websocket_manager
@@ -22,7 +22,7 @@ async def close_position(position_data: ProfitLossRequest, db: AsyncSession = De
     position_data.asset_type, position_data.trade_pair = validate_trade_pair(position_data.asset_type,
                                                                              position_data.trade_pair)
 
-    position = await get_open_position(db, position_data.trader_id, position_data.trade_pair)
+    position = await get_latest_position(db, position_data.trader_id, position_data.trade_pair)
     if not position:
         logger.error("No open position found for this trade pair and trader")
         raise HTTPException(status_code=404, detail="No open position found for this trade pair and trader")
