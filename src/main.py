@@ -11,6 +11,7 @@ from src.api.routes.get_positions import router as get_positions_router
 from src.api.routes.get_users import router as get_users_router
 from src.api.routes.initiate_position import router as initiate_router
 from src.api.routes.profit_loss import router as profit_loss_router
+from src.api.routes.users import router as user_routers
 from src.database import engine, Base, DATABASE_URL
 
 app = FastAPI()
@@ -21,8 +22,9 @@ app.include_router(adjust_router, prefix="/trades")
 app.include_router(close_router, prefix="/trades")
 app.include_router(profit_loss_router, prefix="/trades")
 app.include_router(get_positions_router, prefix="/trades")
-app.include_router(create_user_router, prefix="/trades")
-app.include_router(get_users_router, prefix="/trades")
+# app.include_router(create_user_router, prefix="/trades")
+# app.include_router(get_users_router, prefix="/trades")
+app.include_router(user_routers, prefix="/users")
 
 # Enable CORS
 app.add_middleware(
