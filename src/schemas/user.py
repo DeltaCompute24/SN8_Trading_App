@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 
 from pydantic import BaseModel
 
@@ -14,6 +14,7 @@ class UsersSchema(UsersBase):
     id: int
     created_at: datetime
     updated_at: datetime
+
 
 # --------------- FirebaseUser Schemas ----------------------
 class FirebaseUserBase(BaseModel):
@@ -40,9 +41,11 @@ class ChallengeRead(ChallengeBase):
 class FirebaseUserCreate(FirebaseUserBase):
     challenges: Optional[list[ChallengeBase]] = []
 
+
 class FirebaseUserUpdate(FirebaseUserBase):
     firebase_id: Optional[str] = ""
     challenges: Optional[list[ChallengeBase]] = []
+
 
 class FirebaseUserRead(FirebaseUserBase):
     id: int
