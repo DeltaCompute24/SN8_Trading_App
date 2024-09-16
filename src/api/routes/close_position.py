@@ -29,13 +29,14 @@ async def close_position(position_data: ProfitLossRequest, db: AsyncSession = De
 
     try:
         # Submit the FLAT signal to close the position
-        close_submitted = await websocket_manager.submit_trade(position_data.trader_id,
-                                                               position_data.trade_pair, "FLAT", 1)
-        if not close_submitted:
-            logger.error("Failed to submit close signal")
-            raise HTTPException(status_code=500, detail="Failed to submit close signal")
+        if position.status != "PENDING":
+            close_submitted = await websocket_manager.submit_trade(position_data.trader_id,
+                                                                   position_data.trade_pair, "FLAT", 1)
+            if not close_submitted:
+                logger.error("Failed to submit close signal")
+                raise HTTPException(status_code=500, detail="Failed to submit close signal")
 
-        logger.info("Close signal submitted successfully")
+            logger.info("Close signal submitted successfully")
 
         # Connect and subscribe to the WebSocket
         logger.info(f"Connecting to WebSocket for asset type {position.asset_type}")
