@@ -29,12 +29,14 @@ def bulk_update(data):
 def event_listener():
     logger.info("Starting process_db_operations task")
     try:
-        logger.info(f"Pop from Queue: {redis_client.brpop('db_operations_queue')}")
-        _, data = redis_client.brpop('db_operations_queue')
-        logger.info(f"data: {data}")
-        data = json.loads(data)
+        item = redis_client.lindex('db_operations_queue', -1)
+        if not item:
+            return
+        logger.info(f"Read last item from Queue: {item}")
+        data = json.loads(item)
         logger.info(f"Processing data from Redis: {data}")
         bulk_update(data)
+        redis_client.rpop('db_operations_queue')
     except redis.ConnectionError as e:
         logger.error(f"Redis connection error: {e}")
     except Exception as e:
