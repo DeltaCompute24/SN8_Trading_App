@@ -10,7 +10,6 @@ celery_app.conf.update(
     task_routes={
         'src.tasks.subscription_manager.manage_subscriptions': {'queue': 'subscription_management'},
         'src.tasks.subscription_manager.trade_pair_worker': {'queue': 'trade_pair_workers'},
-        # 'src.tasks.position_monitor.monitor_positions': {'queue': 'position_monitoring'},
         'src.tasks.position_monitor_sync.monitor_positions': {'queue': 'position_monitoring'},
         'src.tasks.redis_listener.event_listener': {'queue': 'event_listener'},
     },
@@ -19,17 +18,13 @@ celery_app.conf.update(
             'task': 'src.tasks.subscription_manager.manage_subscriptions',
             'schedule': 10.0,  # every 10 seconds
         },
-        # 'monitor_positions-every-1-second': {
-        #     'task': 'src.tasks.position_monitor.monitor_positions',
-        #     'schedule': 1.0,  # every 1 second
-        # },
         'monitor_positions-every-1-second': {
             'task': 'src.tasks.position_monitor_sync.monitor_positions',
-            'schedule': 1.0,  # every 1 second
+            'schedule': 10.0,  # every 1 second
         },
         'redis-listener-every-15-seconds': {
             'task': 'src.tasks.redis_listener.event_listener',
-            'schedule': 20.0,  # every 15 second
+            'schedule': 20.0,  # every 20 second
         },
     },
     timezone='UTC',
