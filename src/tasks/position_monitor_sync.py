@@ -17,23 +17,29 @@ redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
 
 logger = logging.getLogger(__name__)
 
-FLUSH_INTERVAL = 15
+FLUSH_INTERVAL = 20
 last_flush_time = time.time()
 objects_to_be_updated = []
+queue_name = "db_operations_queue"
 
 
-def push_to_redis_queue(queue_name, data):
+def push_to_redis_queue(data):
     redis_client.lpush(queue_name, json.dumps(data))
 
 
 def object_exists(obj_list, new_obj):
     # Remove 'close_time' key for comparison
     new_obj_filtered = {k: v for k, v in new_obj.items() if
-                        k in ['close_time', 'close_price', 'profit_loss', 'initial_price']}
+                        k not in ['close_time', 'close_price', 'profit_loss', 'initial_price']}
+
+    raw_data = redis_client.lrange(queue_name, 0, -1)
+    for item in raw_data:
+        redis_objects = json.loads(item.decode('utf-8'))
+        obj_list.extend(redis_objects)
 
     for obj in obj_list:
         obj_filtered = {k: v for k, v in obj.items() if
-                        k in ['close_time', 'close_price', 'profit_loss', 'initial_price']}
+                        k not in ['close_time', 'close_price', 'profit_loss', 'initial_price']}
 
         if obj_filtered == new_obj_filtered:
             return True
@@ -69,7 +75,7 @@ def monitor_positions_sync():
         current_time = time.time()
         if (current_time - last_flush_time) >= FLUSH_INTERVAL:
             logger.error(f"Going to Flush previous Objects!: {str(current_time - last_flush_time)}")
-            push_to_redis_queue('db_operations_queue', objects_to_be_updated)
+            push_to_redis_queue(objects_to_be_updated)
             last_flush_time = current_time
             logger.error(f"Before: {objects_to_be_updated}")
             objects_to_be_updated = []
