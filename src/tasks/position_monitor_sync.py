@@ -26,6 +26,20 @@ def push_to_redis_queue(queue_name, data):
     redis_client.lpush(queue_name, json.dumps(data))
 
 
+def object_exists(obj_list, new_obj):
+    # Remove 'close_time' key for comparison
+    new_obj_filtered = {k: v for k, v in new_obj.items() if
+                        k in ['close_time', 'close_price', 'profit_loss', 'initial_price']}
+
+    for obj in obj_list:
+        obj_filtered = {k: v for k, v in obj.items() if
+                        k in ['close_time', 'close_price', 'profit_loss', 'initial_price']}
+
+        if obj_filtered == new_obj_filtered:
+            return True
+    return False
+
+
 @celery_app.task(name='src.tasks.position_monitor_sync.monitor_positions')
 def monitor_positions():
     logger.info("Starting monitor_positions task")
@@ -103,19 +117,23 @@ def monitor_position(position):
 def open_position(position, current_price):
     global objects_to_be_updated
     try:
+        new_object = {
+            "order_id": position.order_id,
+            "initial_price": current_price,
+            "operation_type": "open",
+            "status": "OPEN",
+            "old_status": position.status,
+            "modified_by": "system",
+        }
+        if object_exists(objects_to_be_updated, new_object):
+            logger.info("Return back as Open Position already exists in queue!")
+            return
         logger.info("Open Position Called!")
         open_submitted = asyncio.run(
             websocket_manager.submit_trade(position.trader_id, position.trade_pair, position.order_type,
                                            position.leverage))
         if open_submitted:
-            objects_to_be_updated.append({
-                "order_id": position.order_id,
-                "initial_price": current_price,
-                "operation_type": "open",
-                "status": "OPEN",
-                "old_status": position.status,
-                "modified_by": "system",
-            })
+            objects_to_be_updated.append(new_object)
     except Exception as e:
         logger.error(f"An error occurred while opening position {position.position_id}: {e}")
 
@@ -123,22 +141,26 @@ def open_position(position, current_price):
 def close_position(position, close_price, profit_loss):
     global objects_to_be_updated
     try:
+        new_object = {
+            "order_id": position.order_id,
+            "close_price": close_price,
+            "close_time": str(datetime.utcnow()),
+            "profit_loss": profit_loss,
+            "operation_type": "close",
+            "status": "CLOSED",
+            "old_status": position.status,
+            "modified_by": "system",
+            "order_type": "FLAT",
+            "leverage": 1,
+        }
+        if object_exists(objects_to_be_updated, new_object):
+            logger.info("Return back as Close Position already exists in queue!")
+            return
         logger.info("Close Position Called!")
         close_submitted = asyncio.run(
             websocket_manager.submit_trade(position.trader_id, position.trade_pair, "FLAT", 1))
         if close_submitted:
-            objects_to_be_updated.append({
-                "order_id": position.order_id,
-                "close_price": close_price,
-                "close_time": str(datetime.utcnow()),
-                "profit_loss": profit_loss,
-                "operation_type": "close",
-                "status": "CLOSED",
-                "old_status": position.status,
-                "modified_by": "system",
-                "order_type": "FLAT",
-                "leverage": 1,
-            })
+            objects_to_be_updated.append(new_object)
     except Exception as e:
         logger.error(f"An error occurred while closing position {position.position_id}: {e}")
 
