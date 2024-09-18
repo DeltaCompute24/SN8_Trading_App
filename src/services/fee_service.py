@@ -1,5 +1,15 @@
 from datetime import datetime, timedelta
 
+
+def get_assets_fee(asset_type):
+    if asset_type == "crypto":
+        return 0.001
+    elif asset_type == "forex":
+        return 0.00007
+    else:  # for indices
+        return 0.00009
+
+
 def calculate_time_difference(open_time):
     open_time = datetime.fromisoformat(open_time)
     current_time = datetime.utcnow()
@@ -45,7 +55,7 @@ def get_max_leverage(leverages: list, order_types: list):
 
 
 def calculate_fee(position, asset_type: str) -> float:
-    fix_fee = 0.00007 if asset_type == 'forex' else 0.002
+    fix_fee = get_assets_fee(asset_type)
     max_leverage = get_max_leverage(position.leverage_list or [], position.order_type_list or [])
     num_of_days_except_wed, num_of_weds = calculate_time_difference(position.open_time)
     return (fix_fee * num_of_days_except_wed * max_leverage) + (fix_fee * 3 * num_of_weds * max_leverage)
