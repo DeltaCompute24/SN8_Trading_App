@@ -5,6 +5,7 @@ from sqlalchemy.future import select
 from sqlalchemy.sql import and_, text
 from sqlalchemy.sql import func
 
+from services.fee_service import get_assets_fee
 from src.models.transaction import Transaction
 from src.schemas.monitored_position import MonitoredPositionCreate
 from src.schemas.transaction import TransactionCreate
@@ -171,7 +172,7 @@ async def get_latest_position(db: AsyncSession, trader_id: int, trade_pair: str)
 
 
 def calculate_fee(leverage: float, asset_type: str) -> float:
-    return (0.00007 * leverage) if asset_type == 'forex' else (0.002 * leverage)
+    return get_assets_fee(asset_type) * leverage
 
 
 def calculate_profit_loss(position, current_price: float) -> float:
@@ -181,7 +182,7 @@ def calculate_profit_loss(position, current_price: float) -> float:
     asset_type = position.asset_type
 
     # broker fee or commission
-    fee = calculate_fee(position.cumulative_leverage, asset_type)
+    fee = calculate_fee(position, asset_type)
     returns = 0.0
 
     for entry_price, leverage, order_type in zip(prices, leverages, order_types):
@@ -217,7 +218,7 @@ def calculate_unrealized_pnl(current_price, position):
 
 
 def calculate_return_with_fees(current_return_no_fees, position):
-    fee = calculate_fee(leverage=position.cumulative_leverage, asset_type=position.asset_type)
+    fee = calculate_fee(position, asset_type=position.asset_type)
     return current_return_no_fees * fee
 
 
