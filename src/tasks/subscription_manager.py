@@ -31,6 +31,7 @@ async def manage_subscriptions_async():
         logger.info(f"Current monitored trade pairs: {trade_pairs}")
         await manage_trade_pair_subscriptions(trade_pairs)
     else:
+        await redis_client.delete("current_prices")
         logger.info("No trade pairs to monitor.")
     logger.info("Finished manage_subscriptions_async")
 
@@ -60,6 +61,7 @@ async def manage_trade_pair_subscriptions(trade_pairs):
     for pair in removed_pairs:
         logger.info(f"Unsubscribing from trade pair: {pair}")
         await websocket_manager.unsubscribe(pair[0])
+        await redis_client.hdel("current_prices", pair[0])
         current_subscriptions.remove(pair)
         task = subscription_tasks.pop(pair, None)
         if task:
