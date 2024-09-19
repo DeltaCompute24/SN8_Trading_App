@@ -7,10 +7,10 @@ from datetime import datetime
 import redis
 from sqlalchemy.future import select
 
+from services.profit_service import get_profit_loss
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.models.transaction import Transaction
-from src.services.trade_service import calculate_profit_loss
 from src.utils.websocket_manager import websocket_manager
 
 redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
@@ -28,7 +28,6 @@ def push_to_redis_queue(data):
 
 
 def object_exists(obj_list, new_obj):
-    # Remove 'close_time' key for comparison
     new_obj_filtered = {k: v for k, v in new_obj.items() if
                         k not in ['close_time', 'close_price', 'profit_loss', 'initial_price']}
 
@@ -105,7 +104,7 @@ def monitor_position(position):
         if current_price:
             current_price = float(current_price.decode('utf-8'))
             logger.error(f"Current Price Found: {current_price}")
-            profit_loss = calculate_profit_loss(position, current_price)
+            profit_loss = get_profit_loss(position.trader_id, position.trade_pair)
 
             logger.error(f"Objects to be Updated: {objects_to_be_updated}")
             if position.status == "PENDING" and should_open_position(position, current_price):
@@ -183,20 +182,6 @@ def should_open_position(position, current_price):
 
 def should_close_position(profit_loss, position):
     try:
-        # take_profit = float('inf') if position.cumulative_take_profit == 0 else position.cumulative_take_profit
-        # stop_loss = float('inf') if position.cumulative_stop_loss == 0 else position.cumulative_stop_loss
-        #
-        # if position.cumulative_order_type == "LONG":
-        #     if (stop_loss * -1) < profit_loss < take_profit:
-        #         result = False
-        #     else:
-        #         result = (profit_loss >= take_profit) or (profit_loss <= stop_loss)
-        # else:
-        #     if (take_profit * -1) < profit_loss < stop_loss:
-        #         result = False
-        #     else:
-        #         result = (profit_loss >= stop_loss) or (profit_loss <= take_profit)
-
         take_profit = position.cumulative_take_profit
         stop_loss = position.cumulative_stop_loss
 
