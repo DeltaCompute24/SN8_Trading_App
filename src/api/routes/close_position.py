@@ -4,7 +4,8 @@ from sqlalchemy.sql import text
 
 from src.database import get_db
 from src.schemas.transaction import TradeResponse, ProfitLossRequest
-from src.services.trade_service import calculate_profit_loss, close_transaction, get_latest_position
+from src.services.api_service import get_profit_and_current_price
+from src.services.trade_service import close_transaction, get_latest_position
 from src.services.user_service import get_user_challenge_level
 from src.utils.logging import setup_logging
 from src.utils.websocket_manager import websocket_manager
@@ -38,22 +39,12 @@ async def close_position(position_data: ProfitLossRequest, db: AsyncSession = De
 
             logger.info("Close signal submitted successfully")
 
-        # Connect and subscribe to the WebSocket
-        logger.info(f"Connecting to WebSocket for asset type {position.asset_type}")
-        websocket = await websocket_manager.connect(position.asset_type)
-        subscription_response = await websocket_manager.subscribe(position.trade_pair)
-        logger.info(f"Subscription response: {subscription_response}")
-
-        # Wait for the first price to be received
-        close_price = await websocket_manager.listen_for_initial_price()
+        close_price, profit_loss = get_profit_and_current_price(position.trader_id, position.trade_pair)
         if close_price is None:
             logger.error("Failed to fetch current price for the trade pair")
             raise HTTPException(status_code=500, detail="Failed to fetch current price for the trade pair")
 
         logger.info(f"Close price for {position.trade_pair} is {close_price}")
-
-        # Calculate profit/loss
-        profit_loss = calculate_profit_loss(position, close_price)
 
         challenge_level = await get_user_challenge_level(db, position_data.trader_id)
         # Close Previous Open Position

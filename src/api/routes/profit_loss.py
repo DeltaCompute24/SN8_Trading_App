@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_db
 from src.schemas.transaction import ProfitLossRequest
+from src.services.api_service import get_position_profit_loss
 from src.services.trade_service import get_latest_position
 from src.utils.logging import setup_logging
 from src.validations.position import validate_trade_pair
@@ -51,7 +52,7 @@ async def get_profit_loss(profit_loss_request: ProfitLossRequest, db: AsyncSessi
                     f"order_type={latest_position.cumulative_order_type}, asset_type={latest_position.asset_type}")
 
         # Calculate profit/loss based on the first price
-        profit_loss = get_profit_loss(latest_position.trader_id, latest_position.trade_pair)
+        profit_loss = get_position_profit_loss(latest_position.trader_id, latest_position.trade_pair)
 
         # Log the calculated profit/loss
         logger.info(f"Calculated profit/loss: {profit_loss}")
