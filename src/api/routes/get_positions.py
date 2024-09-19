@@ -4,10 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from services.profit_service import get_profit_loss
 from src.database import get_db
 from src.models.transaction import Transaction
 from src.schemas.transaction import Transaction as TransactionSchema
+from src.services.profit_service import get_profit_loss
 from src.utils.logging import setup_logging
 
 logger = setup_logging()
