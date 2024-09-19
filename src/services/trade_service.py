@@ -5,7 +5,7 @@ from sqlalchemy.future import select
 from sqlalchemy.sql import and_, text
 from sqlalchemy.sql import func
 
-from services.fee_service import get_assets_fee
+from src.services.fee_service import get_assets_fee
 from src.models.transaction import Transaction
 from src.schemas.monitored_position import MonitoredPositionCreate
 from src.schemas.transaction import TransactionCreate
