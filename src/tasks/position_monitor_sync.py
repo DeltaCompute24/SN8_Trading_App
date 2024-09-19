@@ -7,10 +7,10 @@ from datetime import datetime
 import redis
 from sqlalchemy.future import select
 
-from services.profit_service import get_profit_loss
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.models.transaction import Transaction
+from src.services.api_service import get_profit_and_current_price
 from src.utils.websocket_manager import websocket_manager
 
 redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
@@ -99,12 +99,11 @@ def monitor_positions_sync():
 def monitor_position(position):
     global objects_to_be_updated
     try:
-        current_price = redis_client.hget('current_prices', position.trade_pair)
+        current_price, profit_loss = get_profit_and_current_price(position.trader_id, position.trade_pair)
         logger.error(f"Current Price Pair: {position.trade_pair}")
         if current_price:
             current_price = float(current_price.decode('utf-8'))
             logger.error(f"Current Price Found: {current_price}")
-            profit_loss = get_profit_loss(position.trader_id, position.trade_pair)
 
             logger.error(f"Objects to be Updated: {objects_to_be_updated}")
             if position.status == "PENDING" and should_open_position(position, current_price):

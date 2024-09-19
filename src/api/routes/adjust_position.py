@@ -2,11 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import text
 
+from src.services.api_service import get_profit_and_current_price
 from src.database import get_db
 from src.schemas.monitored_position import MonitoredPositionCreate
 from src.schemas.transaction import TransactionCreate
 from src.services.trade_service import create_transaction, get_open_position, update_monitored_positions, \
-    close_transaction, calculate_profit_loss
+    close_transaction
 from src.services.user_service import get_user_challenge_level
 from src.utils.logging import setup_logging
 from src.utils.websocket_manager import websocket_manager
@@ -55,13 +56,11 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
         cumulative_stop_loss = position_data.stop_loss
         cumulative_take_profit = position_data.take_profit
 
-        # Connect and subscribe to the WebSocket
-        logger.info(f"Connecting to WebSocket for asset type {position.asset_type}")
-        websocket = await websocket_manager.connect(position.asset_type)
-        subscription_response = await websocket_manager.subscribe(position.trade_pair)
-        logger.info(f"Subscription response: {subscription_response}")
+        realtime_price, profit_loss = get_profit_and_current_price(position.trader_id, position.trade_pair)
+        if realtime_price is None:
+            logger.error("Failed to fetch current price for the trade pair")
+            raise HTTPException(status_code=500, detail="Failed to fetch current price for the trade pair")
 
-        realtime_price = await websocket_manager.listen_for_initial_price()
         prev_avg_entry_price = position.average_entry_price if position.average_entry_price else 0.0
         if cumulative_leverage != 0:
             average_entry_price = (prev_avg_entry_price * position.cumulative_leverage
@@ -80,9 +79,6 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
             raise HTTPException(status_code=500, detail="Failed to submit adjustment")
 
         logger.info("Adjustment submitted successfully")
-
-        # Calculate profit/loss
-        profit_loss = calculate_profit_loss(position, realtime_price)
 
         challenge_level = await get_user_challenge_level(db, position_data.trader_id)
         entry_price_list = position.entry_price_list if position.entry_price_list else []

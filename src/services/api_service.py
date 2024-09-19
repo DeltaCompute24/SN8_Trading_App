@@ -33,7 +33,7 @@ def get_position(trader_id, trade_pair):
             return position
 
 
-def get_profit_loss(trader_id, trade_pair):
+def get_position_profit_loss(trader_id, trade_pair):
     position = get_position(trader_id, trade_pair)
     if position:
         return position["current_return"]
