@@ -29,7 +29,7 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
         raise HTTPException(status_code=400, detail="An open position already exists for this trade pair and trader")
 
     try:
-        first_price = get_current_price(existing_position.trader_id, existing_position.trade_pair)
+        first_price = get_current_price(position_data.trader_id, position_data.trade_pair)
         upward = -1
         if first_price is None:
             logger.error("Failed to fetch current price for the trade pair")
