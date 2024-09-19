@@ -33,3 +33,26 @@ def get_profit_loss(trader_id, trade_pair):
 
             return position["current_return"]
     return 0.00
+
+
+def get_current_price(trader_id, trade_pair):
+    response = requests.get(CHECKPOINT_URL)
+    if response.status_code != 200:
+        return
+
+    data = response.json()["positions"]
+
+    for hot_key, _data in data.items():
+        p_trade_id = ambassadors.get(hot_key, "")
+        if not p_trade_id or p_trade_id != trader_id:
+            continue
+
+        positions = _data.get("positions") or []
+        for position in positions:
+            p_trade_pair = position.get("trade_pair", [])[0]
+            if p_trade_pair != trade_pair:
+                continue
+
+            if position["orders"]:
+                order = position["orders"][-1]
+                return order["price"]
