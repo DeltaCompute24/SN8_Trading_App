@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.services.profit_service import get_current_price
 from src.database import get_db
 from src.schemas.monitored_position import MonitoredPositionCreate
 from src.schemas.transaction import TransactionCreate, TradeResponse
@@ -28,13 +29,7 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
         raise HTTPException(status_code=400, detail="An open position already exists for this trade pair and trader")
 
     try:
-        # Connect and subscribe to the WebSocket
-        websocket = await websocket_manager.connect(position_data.asset_type)
-        subscription_response = await websocket_manager.subscribe(position_data.trade_pair)
-        logger.info(f"Subscription response: {subscription_response}")
-
-        # Wait for the first price to be received
-        first_price = await websocket_manager.listen_for_initial_price()
+        first_price = get_current_price(existing_position.trader_id, existing_position.trade_pair)
         upward = -1
         if first_price is None:
             logger.error("Failed to fetch current price for the trade pair")
