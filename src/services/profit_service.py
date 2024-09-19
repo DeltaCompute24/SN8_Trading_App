@@ -1,6 +1,6 @@
 import requests
 
-from config import CHECKPOINT_URL
+from src.config import CHECKPOINT_URL
 
 ambassadors = {
     "5CRwSWfJWnMat1wtUvLTLUJ3ekTTgn1XDC8jVko2H9CmnYC1": 4040,
