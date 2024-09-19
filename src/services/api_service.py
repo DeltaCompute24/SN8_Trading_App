@@ -45,3 +45,9 @@ def get_current_price(trader_id, trade_pair):
     if position and position["orders"]:
         order = position["orders"][-1]
         return order["price"]
+
+
+def get_profit_and_current_price(trader_id, trade_pair):
+    position = get_position(trader_id, trade_pair)
+    if position and position["orders"]:
+        return position["orders"][-1]["price"], position["current_return"]
