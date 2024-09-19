@@ -4,12 +4,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
+from services.profit_service import get_profit_loss
 from src.database import get_db
 from src.models.transaction import Transaction
 from src.schemas.transaction import Transaction as TransactionSchema
-from src.services.trade_service import calculate_profit_loss, get_open_position_return_with_fees
 from src.utils.logging import setup_logging
-from src.utils.websocket_manager import websocket_manager
 
 logger = setup_logging()
 router = APIRouter()
@@ -49,23 +48,11 @@ async def get_positions(
     positions = result.scalars().all()
 
     for position in positions:
-        position.fees = 0.00
         if position.status != "OPEN":
             logger.info("Position is Closed => Continue")
             continue
 
         logger.info("Position is Open!")
-        # Connect and subscribe to the WebSocket
-        websocket = await websocket_manager.connect(position.asset_type)
-        subscription_response = await websocket_manager.subscribe(position.trade_pair)
-        logger.info(f"Subscription response: {subscription_response}")
-
-        # Wait for the first price to be received
-        first_price = await websocket_manager.listen_for_initial_price()
-        if first_price is None:
-            logger.error("Failed to fetch current price for the trade pair")
-            raise HTTPException(status_code=500, detail="Failed to fetch current price for the trade pair")
-        position.profit_loss = calculate_profit_loss(position, first_price)
-        position.fees = get_open_position_return_with_fees(first_price, position)
+        position.profit_loss = get_profit_loss(position.trader_id, position.trade_pair)
 
     return positions
