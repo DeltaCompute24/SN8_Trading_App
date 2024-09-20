@@ -56,6 +56,15 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
         cumulative_stop_loss = position_data.stop_loss
         cumulative_take_profit = position_data.take_profit
 
+        # Submit the adjustment signal
+        adjustment_submitted = await websocket_manager.submit_trade(position_data.trader_id, position_data.trade_pair,
+                                                                    position_data.order_type, position_data.leverage)
+        if not adjustment_submitted:
+            logger.error("Failed to submit adjustment")
+            raise HTTPException(status_code=500, detail="Failed to submit adjustment")
+
+        logger.info("Adjustment submitted successfully")
+
         realtime_price, profit_loss = get_profit_and_current_price(position.trader_id, position.trade_pair)
         if realtime_price is None:
             logger.error("Failed to fetch current price for the trade pair")
@@ -70,15 +79,6 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
 
         logger.info(
             f"Cumulative leverage: {cumulative_leverage}, Cumulative stop loss: {cumulative_stop_loss}, Cumulative take profit: {cumulative_take_profit}, Cumulative order type: {cumulative_order_type}")
-
-        # Submit the adjustment signal
-        adjustment_submitted = await websocket_manager.submit_trade(position_data.trader_id, position_data.trade_pair,
-                                                                    position_data.order_type, position_data.leverage)
-        if not adjustment_submitted:
-            logger.error("Failed to submit adjustment")
-            raise HTTPException(status_code=500, detail="Failed to submit adjustment")
-
-        logger.info("Adjustment submitted successfully")
 
         challenge_level = await get_user_challenge_level(db, position_data.trader_id)
         entry_price_list = position.entry_price_list if position.entry_price_list else []
