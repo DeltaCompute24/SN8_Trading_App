@@ -10,7 +10,7 @@ from sqlalchemy.future import select
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.models.transaction import Transaction
-from src.services.api_service import get_profit_and_current_price
+from src.services.api_service import get_position_profit_loss, get_current_price
 from src.utils.websocket_manager import websocket_manager
 
 redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
@@ -99,7 +99,16 @@ def monitor_positions_sync():
 def monitor_position(position):
     global objects_to_be_updated
     try:
-        current_price, profit_loss = get_profit_and_current_price(position.trader_id, position.trade_pair)
+        # For Open Position to be Closed
+        profit_loss = get_position_profit_loss(position.trader_id, position.trade_pair)
+        if position.status == "OPEN" and should_close_position(profit_loss, position):
+            logger.info(
+                f"Position shouldn't be closed: {position.position_id}: {position.trader_id}: {position.trade_pair}")
+            close_position(position, profit_loss)
+            return
+
+        # For Pending Position to be opened
+        current_price = redis_client.hget('current_prices', position.trade_pair)
         logger.error(f"Current Price Pair: {position.trade_pair}")
         if current_price:
             current_price = float(current_price.decode('utf-8'))
@@ -108,10 +117,6 @@ def monitor_position(position):
             logger.error(f"Objects to be Updated: {objects_to_be_updated}")
             if position.status == "PENDING" and should_open_position(position, current_price):
                 open_position(position, current_price)
-            elif position.status == "OPEN" and should_close_position(profit_loss, position):
-                logger.info(
-                    f"Position shouldn't be closed: {position.position_id}: {position.trader_id}: {position.trade_pair}")
-                close_position(position, current_price, profit_loss)
 
         return True
     except Exception as e:
@@ -142,12 +147,11 @@ def open_position(position, current_price):
         logger.error(f"An error occurred while opening position {position.position_id}: {e}")
 
 
-def close_position(position, close_price, profit_loss):
+def close_position(position, profit_loss):
     global objects_to_be_updated
     try:
         new_object = {
             "order_id": position.order_id,
-            "close_price": close_price,
             "close_time": str(datetime.utcnow()),
             "profit_loss": profit_loss,
             "operation_type": "close",
@@ -164,6 +168,10 @@ def close_position(position, close_price, profit_loss):
         close_submitted = asyncio.run(
             websocket_manager.submit_trade(position.trader_id, position.trade_pair, "FLAT", 1))
         if close_submitted:
+            close_price = get_current_price(position.trader_id, position.trade_pair)
+            if not close_price:
+                return
+            new_object["close_price"] = close_price
             objects_to_be_updated.append(new_object)
     except Exception as e:
         logger.error(f"An error occurred while closing position {position.position_id}: {e}")
