@@ -48,11 +48,15 @@ async def get_positions(
     positions = result.scalars().all()
 
     for position in positions:
+        position.fee = abs((position.profit_loss_with_fee or 0.0) - (position.profit_loss or 0.0))
         if position.status != "OPEN":
             logger.info("Position is Closed => Continue")
             continue
 
         logger.info("Position is Open!")
-        position.profit_loss = get_position_profit_loss(position.trader_id, position.trade_pair) or position.profit_loss
+        profit_loss, profit_loss_with_fee = get_position_profit_loss(position.trader_id, position.trade_pair)
+        position.profit_loss = profit_loss or position.profit_loss
+        position.profit_loss_with_fee = profit_loss_with_fee or position.profit_loss_with_fee
+        position.fee = abs(profit_loss_with_fee - profit_loss)
 
     return positions

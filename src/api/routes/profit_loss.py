@@ -52,7 +52,8 @@ async def get_profit_loss(profit_loss_request: ProfitLossRequest, db: AsyncSessi
                     f"order_type={latest_position.cumulative_order_type}, asset_type={latest_position.asset_type}")
 
         # Calculate profit/loss based on the first price
-        profit_loss = get_position_profit_loss(latest_position.trader_id, latest_position.trade_pair)
+        profit_loss, profit_loss_with_fee = get_position_profit_loss(latest_position.trader_id,
+                                                                     latest_position.trade_pair)
 
         # Log the calculated profit/loss
         logger.info(f"Calculated profit/loss: {profit_loss}")
@@ -65,7 +66,8 @@ async def get_profit_loss(profit_loss_request: ProfitLossRequest, db: AsyncSessi
             "cumulative_order_type": latest_position.cumulative_order_type,
             "cumulative_stop_loss": latest_position.cumulative_stop_loss,
             "cumulative_take_profit": latest_position.cumulative_take_profit,
-            "profit_loss": profit_loss
+            "profit_loss": profit_loss,
+            "profit_loss_with_fee": profit_loss_with_fee,
         }
 
     except Exception as e:
