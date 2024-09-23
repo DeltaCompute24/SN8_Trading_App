@@ -36,8 +36,8 @@ def get_position(trader_id, trade_pair):
 def get_position_profit_loss(trader_id, trade_pair):
     position = get_position(trader_id, trade_pair)
     if position:
-        return position["current_return"]
-    return 0.00
+        return position["current_return"], position["return_at_close"]
+    return 0.00, 0.00
 
 
 def get_current_price(trader_id, trade_pair):
