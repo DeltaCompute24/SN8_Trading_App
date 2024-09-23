@@ -2,10 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import text
 
-from src.services.api_service import get_profit_and_current_price
 from src.database import get_db
 from src.schemas.monitored_position import MonitoredPositionCreate
 from src.schemas.transaction import TransactionCreate
+from src.services.api_service import get_profit_and_current_price
 from src.services.trade_service import create_transaction, get_open_position, update_monitored_positions, \
     close_transaction
 from src.services.user_service import get_user_challenge_level
@@ -65,11 +65,12 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
 
         logger.info("Adjustment submitted successfully")
 
-        realtime_price, profit_loss = get_profit_and_current_price(position.trader_id, position.trade_pair)
-        if realtime_price is None:
+        result = get_profit_and_current_price(position.trader_id, position.trade_pair)
+        if result is None:
             logger.error("Failed to fetch current price for the trade pair")
             raise HTTPException(status_code=500, detail="Failed to fetch current price for the trade pair")
 
+        realtime_price, profit_loss = result
         prev_avg_entry_price = position.average_entry_price if position.average_entry_price else 0.0
         if cumulative_leverage != 0:
             average_entry_price = (prev_avg_entry_price * position.cumulative_leverage
@@ -84,6 +85,8 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
         entry_price_list = position.entry_price_list if position.entry_price_list else []
         leverage_list = position.leverage_list if position.leverage_list else []
         order_type_list = position.order_type_list if position.order_type_list else []
+        max_profit_loss = position.max_profit_loss or 0.0
+        max_profit_loss = max_profit_loss if max_profit_loss > profit_loss else profit_loss
 
         # Create a new transaction record with updated values
         new_transaction = await create_transaction(
@@ -98,6 +101,8 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
             challenge_level=challenge_level,
             modified_by=str(position_data.trader_id),
             upward=position.upward,
+            profit_loss=profit_loss,
+            max_profit_loss=max_profit_loss,
             average_entry_price=average_entry_price,
             entry_price_list=entry_price_list + [realtime_price],
             leverage_list=leverage_list + [position_data.leverage],
