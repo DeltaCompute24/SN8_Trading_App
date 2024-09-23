@@ -53,6 +53,6 @@ async def get_positions(
             continue
 
         logger.info("Position is Open!")
-        position.profit_loss = get_position_profit_loss(position.trader_id, position.trade_pair)
+        position.profit_loss = get_position_profit_loss(position.trader_id, position.trade_pair) or position.profit_loss
 
     return positions
