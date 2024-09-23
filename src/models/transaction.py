@@ -32,6 +32,7 @@ class Transaction(Base):
     close_price = Column(Float, nullable=True)
     profit_loss = Column(Float, nullable=True)
     max_profit_loss = Column(Float, nullable=True)
+    profit_loss_with_fee = Column(Float, nullable=True)
     position_id = Column(Integer, nullable=False)
     trade_order = Column(Integer, nullable=False)
     challenge_level = Column(String, nullable=True)

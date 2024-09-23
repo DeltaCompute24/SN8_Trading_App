@@ -2,13 +2,14 @@ from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.orm import Session
 from sqlalchemy.sql import and_, text
 from sqlalchemy.sql import func
 
-from src.services.fee_service import get_assets_fee
 from src.models.transaction import Transaction
 from src.schemas.monitored_position import MonitoredPositionCreate
 from src.schemas.transaction import TransactionCreate
+from src.services.fee_service import get_assets_fee
 
 
 async def create_transaction(db: AsyncSession, transaction_data: TransactionCreate, entry_price: float,
@@ -16,10 +17,11 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
                              cumulative_leverage: float = None, cumulative_stop_loss: float = None,
                              cumulative_take_profit: float = None,
                              cumulative_order_type: str = None, status: str = "OPEN", old_status: str = "OPEN",
-                             close_time: datetime = None, close_price: float = None, profit_loss: float = None,
+                             close_time: datetime = None, close_price: float = None, profit_loss: float = 0,
                              upward: float = -1, challenge_level: str = None, modified_by: str = None,
                              average_entry_price: float = None, entry_price_list: list = None,
-                             leverage_list: list = None, order_type_list: list = None):
+                             leverage_list: list = None, order_type_list: list = None, max_profit_loss: float = 0.0,
+                             profit_loss_with_fee: float = 0.0):
     if operation_type == "initiate":
         max_position_id = await db.scalar(
             select(func.max(Transaction.position_id)).filter(Transaction.trader_id == transaction_data.trader_id))
@@ -56,6 +58,8 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
         close_time=close_time,
         close_price=close_price,
         profit_loss=profit_loss,
+        max_profit_loss=max_profit_loss,
+        profit_loss_with_fee=profit_loss_with_fee,
         position_id=position_id,
         trade_order=trade_order,
         upward=upward,
@@ -72,7 +76,8 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
 
 
 async def close_transaction(db: AsyncSession, order_id, trader_id, close_price: float = None,
-                            profit_loss: float = None, old_status: str = None, challenge_level: str = None):
+                            profit_loss: float = None, old_status: str = None, challenge_level: str = None,
+                            profit_loss_with_fee: float = 0.0):
     close_time = datetime.utcnow()
     statement = text("""
             UPDATE transactions
@@ -88,6 +93,7 @@ async def close_transaction(db: AsyncSession, order_id, trader_id, close_price: 
                 order_type = :order_type,
                 modified_by = :modified_by,
                 challenge_level = :challenge_level
+                profit_loss_with_fee = :profit_loss_with_fee
             WHERE order_id = :order_id
         """)
 
@@ -106,7 +112,8 @@ async def close_transaction(db: AsyncSession, order_id, trader_id, close_price: 
             "order_type": "FLAT",
             "order_id": order_id,
             "modified_by": str(trader_id),
-            "challenge_level": challenge_level
+            "challenge_level": challenge_level,
+            "profit_loss_with_fee": profit_loss_with_fee,
         }
     )
     await db.commit()
@@ -169,6 +176,18 @@ async def get_latest_position(db: AsyncSession, trader_id: int, trade_pair: str)
         ).order_by(Transaction.trade_order.desc())
     )
     return latest_transaction
+
+
+def get_user_position(db: Session, trader_id: int):
+    open_transaction = db.scalar(
+        select(Transaction).where(
+            and_(
+                Transaction.trader_id == trader_id,
+                Transaction.status != "CLOSED"
+            )
+        ).order_by(Transaction.trade_order.desc())
+    )
+    return open_transaction
 
 
 def calculate_fee(leverage: float, asset_type: str) -> float:
