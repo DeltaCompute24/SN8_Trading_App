@@ -3,10 +3,11 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from src.services.user_service import get_firebase_user, create_firebase_user, create_or_update_challenges
+from services.trade_service import get_user_position
 from src.database_tasks import TaskSessionLocal_
 from src.models.firebase_user import FirebaseUser
 from src.schemas.user import FirebaseUserRead, FirebaseUserCreate, FirebaseUserUpdate
+from src.services.user_service import get_firebase_user, create_firebase_user, create_or_update_challenges
 from src.utils.logging import setup_logging
 
 logger = setup_logging()
@@ -44,7 +45,23 @@ def create_user(user_data: FirebaseUserCreate, db: Session = Depends(get_db)):
 @router.get("/", response_model=List[FirebaseUserRead])
 def get_users(db: Session = Depends(get_db)):
     logger.info("Fetching Firebase Users")
-    return db.query(FirebaseUser).all()
+    users = db.query(FirebaseUser).all()
+    for user in users:
+        for challenge in user.challenges:
+            if challenge.active != "1":
+                continue
+            position = get_user_position(db, challenge.trader_id)
+            if not position:
+                continue
+            _return = position.profit_loss or 0.0
+            max_return = position.max_profit_loss or 0.0
+
+            if _return == 0.02 or (0.0 < (max_return - _return) < 0.05):
+                challenge.status = "Passed"
+            else:
+                challenge.status = "Failed"
+
+    return users
 
 
 @router.get("/{firebase_id}", response_model=FirebaseUserRead)
