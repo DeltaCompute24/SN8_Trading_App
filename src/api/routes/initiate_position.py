@@ -25,8 +25,9 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
 
     existing_position = await get_latest_position(db, position_data.trader_id, position_data.trade_pair)
     if existing_position:
-        logger.error("An open position already exists for this trade pair and trader")
-        raise HTTPException(status_code=400, detail="An open position already exists for this trade pair and trader")
+        logger.error("An open or pending position already exists for this trade pair and trader")
+        raise HTTPException(status_code=400,
+                            detail="An open or pending position already exists for this trade pair and trader")
 
     try:
         upward = -1
