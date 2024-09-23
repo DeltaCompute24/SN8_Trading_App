@@ -42,13 +42,14 @@ async def close_position(position_data: ProfitLossRequest, db: AsyncSession = De
             logger.error("Failed to fetch current price for the trade pair")
             raise HTTPException(status_code=500, detail="Failed to fetch current price for the trade pair")
 
-        close_price, profit_loss = result
+        close_price, profit_loss, profit_loss_with_fee = result
         logger.info(f"Close price for {position.trade_pair} is {close_price}")
 
         challenge_level = await get_user_challenge_level(db, position_data.trader_id)
         # Close Previous Open Position
         await close_transaction(db, position.order_id, position.trader_id, close_price, profit_loss,
-                                old_status=position.status, challenge_level=challenge_level)
+                                old_status=position.status, challenge_level=challenge_level,
+                                profit_loss_with_fee=profit_loss_with_fee)
 
         # Remove closed position from the monitored_positions table
         await db.execute(

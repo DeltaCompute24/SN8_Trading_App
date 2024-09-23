@@ -70,7 +70,7 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
             logger.error("Failed to fetch current price for the trade pair")
             raise HTTPException(status_code=500, detail="Failed to fetch current price for the trade pair")
 
-        realtime_price, profit_loss = result
+        realtime_price, profit_loss, profit_loss_with_fee = result
         prev_avg_entry_price = position.average_entry_price if position.average_entry_price else 0.0
         if cumulative_leverage != 0:
             average_entry_price = (prev_avg_entry_price * position.cumulative_leverage
@@ -103,6 +103,7 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
             upward=position.upward,
             profit_loss=profit_loss,
             max_profit_loss=max_profit_loss,
+            profit_loss_with_fee=profit_loss_with_fee,
             average_entry_price=average_entry_price,
             entry_price_list=entry_price_list + [realtime_price],
             leverage_list=leverage_list + [position_data.leverage],
@@ -110,7 +111,8 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
         )
 
         await close_transaction(db, position.order_id, position.trader_id, realtime_price, profit_loss,
-                                old_status=position.status, challenge_level=challenge_level)
+                                old_status=position.status, challenge_level=challenge_level,
+                                profit_loss_with_fee=profit_loss_with_fee)
 
         # Remove old monitored position
         await db.execute(
