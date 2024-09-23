@@ -24,7 +24,8 @@ class FirebaseUserBase(BaseModel):
 class ChallengeBase(BaseModel):
     trader_id: int
     hot_key: str
-    status: str
+    active: str
+    status: Optional[str] = ""
     challenge: str
 
 
