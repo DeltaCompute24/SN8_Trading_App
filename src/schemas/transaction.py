@@ -37,6 +37,7 @@ class Transaction(TransactionBase):
     profit_loss: Optional[float]
     profit_loss_with_fee: Optional[float] or 0.0
     max_profit_loss: Optional[float] or 0.0
+    fee: Optional[float] or 0.0
     position_id: int
     trade_order: int
     modified_by: Optional[str]
