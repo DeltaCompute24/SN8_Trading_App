@@ -100,7 +100,9 @@ def monitor_position(position):
     global objects_to_be_updated
     try:
         # For Open Position to be Closed
-        profit_loss = get_position_profit_loss(position.trader_id, position.trade_pair)
+        profit_loss, profit_loss_with_fee = get_position_profit_loss(position.trader_id, position.trade_pair)
+        if profit_loss:
+            update_position_profit(position, profit_loss, profit_loss_with_fee)
         if position.status == "OPEN" and should_close_position(profit_loss, position):
             logger.info(
                 f"Position shouldn't be closed: {position.position_id}: {position.trader_id}: {position.trade_pair}")
@@ -217,3 +219,25 @@ def should_close_position(profit_loss, position):
     except Exception as e:
         logger.error(f"An error occurred while determining if position should be closed: {e}")
         return False
+
+
+def update_position_profit(position, profit_loss, profit_loss_with_fee):
+    global objects_to_be_updated
+    try:
+        max_profit_loss = position.max_profit_loss or 0.0
+        if max_profit_loss < profit_loss:
+            return
+
+        new_object = {
+            "order_id": position.order_id,
+            "profit_loss": profit_loss,
+            "max_profit_loss": max_profit_loss,
+            "profit_loss_with_fee": profit_loss_with_fee,
+        }
+        if object_exists(objects_to_be_updated, new_object):
+            logger.info("Return back as Profit Loss Position already exists in queue!")
+            return
+        logger.info("Update Position Profit Called!")
+        objects_to_be_updated.append(new_object)
+    except Exception as e:
+        logger.error(f"An error occurred while closing position {position.position_id}: {e}")
