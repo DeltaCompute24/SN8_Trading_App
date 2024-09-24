@@ -3,7 +3,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from services.trade_service import get_user_position
+from src.services.trade_service import get_user_position
 from src.database_tasks import TaskSessionLocal_
 from src.models.firebase_user import FirebaseUser
 from src.schemas.user import FirebaseUserRead, FirebaseUserCreate, FirebaseUserUpdate
