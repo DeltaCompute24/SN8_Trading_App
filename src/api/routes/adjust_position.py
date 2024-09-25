@@ -7,7 +7,6 @@ from src.schemas.monitored_position import MonitoredPositionCreate
 from src.schemas.transaction import TransactionCreate
 from src.services.trade_service import create_transaction, get_open_position, update_monitored_positions, \
     close_transaction, calculate_profit_loss
-from src.services.user_service import get_user_challenge_level
 from src.utils.logging import setup_logging
 from src.utils.websocket_manager import websocket_manager
 from src.validations.position import validate_position
@@ -83,8 +82,6 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
 
         # Calculate profit/loss
         profit_loss = calculate_profit_loss(position, realtime_price)
-
-        challenge_level = await get_user_challenge_level(db, position_data.trader_id)
         entry_price_list = position.entry_price_list if position.entry_price_list else []
         leverage_list = position.leverage_list if position.leverage_list else []
         order_type_list = position.order_type_list if position.order_type_list else []
@@ -99,7 +96,6 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
             cumulative_order_type=cumulative_order_type,
             status=position.status,
             old_status=position.old_status,
-            challenge_level=challenge_level,
             modified_by=str(position_data.trader_id),
             upward=position.upward,
             average_entry_price=average_entry_price,
@@ -109,7 +105,7 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
         )
 
         await close_transaction(db, position.order_id, position.trader_id, realtime_price, profit_loss,
-                                old_status=position.status, challenge_level=challenge_level)
+                                old_status=position.status)
 
         # Remove old monitored position
         await db.execute(
