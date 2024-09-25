@@ -1,6 +1,7 @@
 from typing import Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
@@ -43,7 +44,8 @@ async def get_positions(
         query = query.where(Transaction.status == "OPEN")
 
     # Main query to fetch all transactions
-    query = query.order_by(Transaction.position_id, Transaction.trade_order)
+    query.order_by(desc(Transaction.open_time), desc(Transaction.close_time))
+    # query = query.order_by(Transaction.position_id, Transaction.trade_order)
     result = await db.execute(query)
     positions = result.scalars().all()
 
