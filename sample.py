@@ -146,7 +146,7 @@ def populate_transactions(db: Session):
                 avg_entry_price = position["average_entry_price"]
                 cumulative_order_type = position["position_type"]
                 profit_loss = position["return_at_close"]
-                profit_loss_with_fee = position["current_return"]
+                profit_loss_without_fee = position["current_return"]
 
                 orders = position["orders"]
                 leverage = orders[0]["leverage"]
@@ -180,7 +180,7 @@ def populate_transactions(db: Session):
                     status=status,
                     old_status=status,
                     profit_loss=profit_loss,
-                    profit_loss_with_fee=profit_loss_with_fee,
+                    profit_loss_without_fee=profit_loss_without_fee,
                     position_id=position_id,
                     trade_order=trade_order,
                     entry_price_list=prices,

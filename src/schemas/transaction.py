@@ -35,7 +35,7 @@ class Transaction(TransactionBase):
     close_time: Optional[datetime]
     close_price: Optional[float]
     profit_loss: Optional[float]
-    profit_loss_with_fee: Optional[float] or 0.0
+    profit_loss_without_fee: Optional[float] or 0.0
     max_profit_loss: Optional[float] or 0.0
     fee: Optional[float] or 0.0
     position_id: int

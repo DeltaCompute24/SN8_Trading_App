@@ -21,8 +21,8 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
                              upward: float = -1, challenge_level: str = None, modified_by: str = None,
                              average_entry_price: float = None, entry_price_list: list = None,
                              leverage_list: list = None, order_type_list: list = None, max_profit_loss: float = 0.0,
-                             profit_loss_with_fee: float = 0.0, taoshi_profit_loss: float = 0.0,
-                             taoshi_profit_loss_with_fee: float = 0.0):
+                             profit_loss_without_fee: float = 0.0, taoshi_profit_loss: float = 0.0,
+                             taoshi_profit_loss_without_fee: float = 0.0):
     if operation_type == "initiate":
         max_position_id = await db.scalar(
             select(func.max(Transaction.position_id)).filter(Transaction.trader_id == transaction_data.trader_id))
@@ -60,7 +60,7 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
         close_price=close_price,
         profit_loss=profit_loss,
         max_profit_loss=max_profit_loss,
-        profit_loss_with_fee=profit_loss_with_fee,
+        profit_loss_without_fee=profit_loss_without_fee,
         position_id=position_id,
         trade_order=trade_order,
         upward=upward,
@@ -70,7 +70,7 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
         order_type_list=order_type_list,
         modified_by=modified_by,
         taoshi_profit_loss=taoshi_profit_loss,
-        taoshi_profit_loss_with_fee=taoshi_profit_loss_with_fee,
+        taoshi_profit_loss_without_fee=taoshi_profit_loss_without_fee,
     )
     db.add(new_transaction)
     await db.commit()
@@ -80,8 +80,8 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
 
 async def close_transaction(db: AsyncSession, order_id, trader_id, close_price: float = None,
                             profit_loss: float = None, old_status: str = None, challenge_level: str = None,
-                            profit_loss_with_fee: float = 0.0, taoshi_profit_loss: float = 0.0,
-                            taoshi_profit_loss_with_fee: float = 0.0, ):
+                            profit_loss_without_fee: float = 0.0, taoshi_profit_loss: float = 0.0,
+                            taoshi_profit_loss_without_fee: float = 0.0, ):
     close_time = datetime.utcnow()
     statement = text("""
             UPDATE transactions
@@ -97,9 +97,9 @@ async def close_transaction(db: AsyncSession, order_id, trader_id, close_price: 
                 order_type = :order_type,
                 modified_by = :modified_by,
                 challenge_level = :challenge_level
-                profit_loss_with_fee = :profit_loss_with_fee
+                profit_loss_without_fee = :profit_loss_without_fee
                 taoshi_profit_loss = :taoshi_profit_loss
-                taoshi_profit_loss_with_fee = :taoshi_profit_loss_with_fee
+                taoshi_profit_loss_without_fee = :taoshi_profit_loss_without_fee
             WHERE order_id = :order_id
         """)
 
@@ -119,9 +119,9 @@ async def close_transaction(db: AsyncSession, order_id, trader_id, close_price: 
             "order_id": order_id,
             "modified_by": str(trader_id),
             "challenge_level": challenge_level,
-            "profit_loss_with_fee": profit_loss_with_fee,
+            "profit_loss_without_fee": profit_loss_without_fee,
             "taoshi_profit_loss": taoshi_profit_loss,
-            "taoshi_profit_loss_with_fee": taoshi_profit_loss_with_fee,
+            "taoshi_profit_loss_without_fee": taoshi_profit_loss_without_fee,
         }
     )
     await db.commit()

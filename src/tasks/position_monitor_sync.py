@@ -100,10 +100,10 @@ def monitor_position(position):
     global objects_to_be_updated
     try:
         # For Open Position to be Closed
-        current_price, profit_loss, profit_loss_with_fee = get_profit_and_current_price(position.trader_id,
+        current_price, profit_loss, profit_loss_without_fee = get_profit_and_current_price(position.trader_id,
                                                                                         position.trade_pair)
         if profit_loss:
-            update_position_profit(position, profit_loss, profit_loss_with_fee)
+            update_position_profit(position, profit_loss, profit_loss_without_fee)
         if position.status == "OPEN" and should_close_position(profit_loss, position):
             logger.info(
                 f"Position shouldn't be closed: {position.position_id}: {position.trader_id}: {position.trade_pair}")
@@ -218,7 +218,7 @@ def should_close_position(profit_loss, position):
         return False
 
 
-def update_position_profit(position, profit_loss, profit_loss_with_fee):
+def update_position_profit(position, profit_loss, profit_loss_without_fee):
     global objects_to_be_updated
     try:
         max_profit_loss = position.max_profit_loss or 0.0
@@ -229,7 +229,7 @@ def update_position_profit(position, profit_loss, profit_loss_with_fee):
             "order_id": position.order_id,
             "profit_loss": profit_loss,
             "max_profit_loss": max_profit_loss,
-            "profit_loss_with_fee": profit_loss_with_fee,
+            "profit_loss_without_fee": profit_loss_without_fee,
         }
         if object_exists(objects_to_be_updated, new_object):
             logger.info("Return back as Profit Loss Position already exists in queue!")
