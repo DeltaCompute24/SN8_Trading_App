@@ -1,13 +1,12 @@
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Optional
 
 from pydantic import BaseModel
 
 
 class UsersBase(BaseModel):
     trader_id: int
-    current_challenge_level: str
-    hot_key: Dict
+    hot_key: str
 
 
 class UsersSchema(UsersBase):
