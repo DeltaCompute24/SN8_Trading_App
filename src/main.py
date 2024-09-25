@@ -22,8 +22,8 @@ app.include_router(adjust_router, prefix="/trades")
 app.include_router(close_router, prefix="/trades")
 app.include_router(profit_loss_router, prefix="/trades")
 app.include_router(get_positions_router, prefix="/trades")
-# app.include_router(create_user_router, prefix="/trades")
-# app.include_router(get_users_router, prefix="/trades")
+app.include_router(create_user_router, prefix="/trades")
+app.include_router(get_users_router, prefix="/trades")
 app.include_router(user_routers, prefix="/users")
 
 # Enable CORS
