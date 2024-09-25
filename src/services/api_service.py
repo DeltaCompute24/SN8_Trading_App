@@ -51,3 +51,18 @@ def get_profit_and_current_price(trader_id, trade_pair):
     position = get_position(trader_id, trade_pair)
     if position and position["orders"]:
         return position["orders"][-1]["price"], position["current_return"], position["return_at_close"]
+
+
+def call_main_net():
+    url = "https://request.wildsage.io/miner-positions"
+
+    headers = {
+        'Content-Type': 'application/json',
+        'x-taoshi-consumer-request-key': 'req_3ZR8ckpEyNZR3HjP9x8rXHj1'
+    }
+
+    response = requests.request(method="GET", url=url, headers=headers)
+    if response.status_code != 200:
+        return
+
+    return response.json()
