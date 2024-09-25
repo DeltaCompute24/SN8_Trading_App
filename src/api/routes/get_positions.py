@@ -56,8 +56,10 @@ async def get_positions(
             continue
 
         logger.info("Position is Open!")
-        current_price, profit_loss, profit_loss_with_fee = get_profit_and_current_price(position.trader_id,
+        current_price, taoshi_profit_loss, taoshi_profit_loss_with_fee = get_profit_and_current_price(position.trader_id,
                                                                                         position.trade_pair)
+        profit_loss = (taoshi_profit_loss * 100) - 100
+        profit_loss_with_fee = (taoshi_profit_loss_with_fee * 100) - 100
         position.profit_loss = profit_loss or position.profit_loss
         position.profit_loss_with_fee = profit_loss_with_fee or position.profit_loss_with_fee
         position.fee = abs(profit_loss_with_fee - profit_loss)
