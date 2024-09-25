@@ -65,12 +65,12 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
 
         logger.info("Adjustment submitted successfully")
 
-        result = get_profit_and_current_price(position.trader_id, position.trade_pair)
-        if result is None:
+        realtime_price, profit_loss, profit_loss_with_fee = get_profit_and_current_price(position.trader_id,
+                                                                                         position.trade_pair)
+        if realtime_price == 0:
             logger.error("Failed to fetch current price for the trade pair")
             raise HTTPException(status_code=500, detail="Failed to fetch current price for the trade pair")
 
-        realtime_price, profit_loss, profit_loss_with_fee = result
         prev_avg_entry_price = position.average_entry_price if position.average_entry_price else 0.0
         if cumulative_leverage != 0:
             average_entry_price = (prev_avg_entry_price * position.cumulative_leverage

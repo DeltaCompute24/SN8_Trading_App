@@ -7,7 +7,7 @@ from sqlalchemy.future import select
 from src.database import get_db
 from src.models.transaction import Transaction
 from src.schemas.transaction import Transaction as TransactionSchema
-from src.services.api_service import get_position_profit_loss
+from src.services.api_service import get_profit_and_current_price
 from src.utils.logging import setup_logging
 
 logger = setup_logging()
@@ -54,7 +54,8 @@ async def get_positions(
             continue
 
         logger.info("Position is Open!")
-        profit_loss, profit_loss_with_fee = get_position_profit_loss(position.trader_id, position.trade_pair)
+        current_price, profit_loss, profit_loss_with_fee = get_profit_and_current_price(position.trader_id,
+                                                                                        position.trade_pair)
         position.profit_loss = profit_loss or position.profit_loss
         position.profit_loss_with_fee = profit_loss_with_fee or position.profit_loss_with_fee
         position.fee = abs(profit_loss_with_fee - profit_loss)

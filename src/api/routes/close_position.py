@@ -37,12 +37,12 @@ async def close_position(position_data: ProfitLossRequest, db: AsyncSession = De
                 logger.error("Failed to submit close signal")
                 raise HTTPException(status_code=500, detail="Failed to submit close signal")
 
-        result = get_profit_and_current_price(position.trader_id, position.trade_pair)
-        if result is None:
+        close_price, profit_loss, profit_loss_with_fee = get_profit_and_current_price(position.trader_id,
+                                                                                      position.trade_pair)
+        if close_price == 0:
             logger.error("Failed to fetch current price for the trade pair")
             raise HTTPException(status_code=500, detail="Failed to fetch current price for the trade pair")
 
-        close_price, profit_loss, profit_loss_with_fee = result
         logger.info(f"Close price for {position.trade_pair} is {close_price}")
 
         challenge_level = await get_user_challenge_level(db, position_data.trader_id)

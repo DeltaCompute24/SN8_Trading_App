@@ -10,7 +10,7 @@ from sqlalchemy.future import select
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.models.transaction import Transaction
-from src.services.api_service import get_position_profit_loss, get_current_price
+from src.services.api_service import get_profit_and_current_price
 from src.utils.websocket_manager import websocket_manager
 
 redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
@@ -100,7 +100,8 @@ def monitor_position(position):
     global objects_to_be_updated
     try:
         # For Open Position to be Closed
-        profit_loss, profit_loss_with_fee = get_position_profit_loss(position.trader_id, position.trade_pair)
+        current_price, profit_loss, profit_loss_with_fee = get_profit_and_current_price(position.trader_id,
+                                                                                        position.trade_pair)
         if profit_loss:
             update_position_profit(position, profit_loss, profit_loss_with_fee)
         if position.status == "OPEN" and should_close_position(profit_loss, position):
@@ -170,7 +171,7 @@ def close_position(position, profit_loss):
         close_submitted = asyncio.run(
             websocket_manager.submit_trade(position.trader_id, position.trade_pair, "FLAT", 1))
         if close_submitted:
-            close_price = get_current_price(position.trader_id, position.trade_pair)
+            close_price = get_profit_and_current_price(position.trader_id, position.trade_pair)[0]
             if not close_price:
                 return
             new_object["close_price"] = close_price
