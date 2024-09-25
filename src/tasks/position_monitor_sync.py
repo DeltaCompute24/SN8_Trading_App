@@ -191,30 +191,26 @@ def should_open_position(position, current_price):
 
 
 def should_close_position(profit_loss, position):
+    """
+    profit_loss: Its direct
+    """
     try:
         take_profit = position.cumulative_take_profit
         stop_loss = position.cumulative_stop_loss
 
-        if position.cumulative_order_type == "LONG":
+        profit_loss *= 100
+        profit_loss -= 100
 
+        if profit_loss < 0:
             if stop_loss is not None and stop_loss != 0 and profit_loss <= -stop_loss:
-                logger.info(f"Determining whether to close position: True")
+                print(f"Determining whether to close position: True")
                 return True
-
+        else:
             if take_profit is not None and take_profit != 0 and profit_loss >= take_profit:
-                logger.info(f"Determining whether to close position: True")
-
+                print(f"Determining whether to close position: True")
                 return True
-        elif position.cumulative_order_type == "SHORT":
-            if stop_loss is not None and stop_loss != 0 and profit_loss >= stop_loss:
-                logger.info(f"Determining whether to close position: True")
 
-                return True
-            if take_profit is not None and take_profit != 0 and profit_loss <= -take_profit:
-                logger.info(f"Determining whether to close position: True")
-
-                return True
-        logger.info(f"closing position: False")
+        print(f"closing position: False")
         return False
 
     except Exception as e:
