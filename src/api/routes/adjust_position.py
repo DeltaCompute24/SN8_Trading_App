@@ -8,7 +8,6 @@ from src.schemas.transaction import TransactionCreate
 from src.services.api_service import get_profit_and_current_price
 from src.services.trade_service import create_transaction, get_open_position, update_monitored_positions, \
     close_transaction
-from src.services.user_service import get_user_challenge_level
 from src.utils.logging import setup_logging
 from src.utils.websocket_manager import websocket_manager
 from src.validations.position import validate_position
@@ -65,12 +64,15 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
 
         logger.info("Adjustment submitted successfully")
 
-        realtime_price, profit_loss, profit_loss_with_fee = get_profit_and_current_price(position.trader_id,
-                                                                                         position.trade_pair)
+        realtime_price, taoshi_profit_loss, taoshi_profit_loss_with_fee = get_profit_and_current_price(
+            position.trader_id,
+            position.trade_pair)
         if realtime_price == 0:
             logger.error("Failed to fetch current price for the trade pair")
             raise HTTPException(status_code=500, detail="Failed to fetch current price for the trade pair")
 
+        profit_loss = (taoshi_profit_loss * 100) - 100
+        profit_loss_with_fee = (taoshi_profit_loss_with_fee * 100) - 100
         prev_avg_entry_price = position.average_entry_price if position.average_entry_price else 0.0
         if cumulative_leverage != 0:
             average_entry_price = (prev_avg_entry_price * position.cumulative_leverage
@@ -81,7 +83,6 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
         logger.info(
             f"Cumulative leverage: {cumulative_leverage}, Cumulative stop loss: {cumulative_stop_loss}, Cumulative take profit: {cumulative_take_profit}, Cumulative order type: {cumulative_order_type}")
 
-        challenge_level = await get_user_challenge_level(db, position_data.trader_id)
         entry_price_list = position.entry_price_list if position.entry_price_list else []
         leverage_list = position.leverage_list if position.leverage_list else []
         order_type_list = position.order_type_list if position.order_type_list else []
@@ -98,7 +99,6 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
             cumulative_order_type=cumulative_order_type,
             status=position.status,
             old_status=position.old_status,
-            challenge_level=challenge_level,
             modified_by=str(position_data.trader_id),
             upward=position.upward,
             profit_loss=profit_loss,
@@ -108,11 +108,11 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
             entry_price_list=entry_price_list + [realtime_price],
             leverage_list=leverage_list + [position_data.leverage],
             order_type_list=order_type_list + [position_data.order_type],
-        )
+            taoshi_profit_loss=taoshi_profit_loss,
+            taoshi_profit_loss_with_fee=taoshi_profit_loss_with_fee,)
 
         await close_transaction(db, position.order_id, position.trader_id, realtime_price, profit_loss,
-                                old_status=position.status, challenge_level=challenge_level,
-                                profit_loss_with_fee=profit_loss_with_fee)
+                                old_status=position.status, profit_loss_with_fee=profit_loss_with_fee)
 
         # Remove old monitored position
         await db.execute(
