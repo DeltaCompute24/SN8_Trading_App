@@ -38,9 +38,6 @@ class Transaction(TransactionBase):
     position_id: int
     trade_order: int
     modified_by: Optional[str]
-    upward: Optional[float]
-    challenge_level: Optional[str]
-    fees: Optional[float]
     entry_price_list: Optional[list]
     leverage_list: Optional[list]
     order_type_list: Optional[list]
