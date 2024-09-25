@@ -11,7 +11,7 @@ def get_assets_fee(asset_type):
 
 
 def calculate_time_difference(open_time):
-    open_time = datetime.fromisoformat(open_time)
+    open_time = datetime.fromisoformat(str(open_time))
     current_time = datetime.utcnow()
 
     total_days = (current_time - open_time).days

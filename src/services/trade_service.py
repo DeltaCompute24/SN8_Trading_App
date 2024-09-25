@@ -5,10 +5,10 @@ from sqlalchemy.future import select
 from sqlalchemy.sql import and_, text
 from sqlalchemy.sql import func
 
-from src.services.fee_service import get_assets_fee
 from src.models.transaction import Transaction
 from src.schemas.monitored_position import MonitoredPositionCreate
 from src.schemas.transaction import TransactionCreate
+from src.services.fee_service import get_assets_fee, calculate_fee
 
 
 async def create_transaction(db: AsyncSession, transaction_data: TransactionCreate, entry_price: float,
@@ -171,8 +171,8 @@ async def get_latest_position(db: AsyncSession, trader_id: int, trade_pair: str)
     return latest_transaction
 
 
-def calculate_fee(leverage: float, asset_type: str) -> float:
-    return get_assets_fee(asset_type) * leverage
+# def calculate_fee(leverage: float, asset_type: str) -> float:
+#     return get_assets_fee(asset_type) * leverage
 
 
 def calculate_profit_loss(position, current_price: float) -> float:
@@ -182,7 +182,7 @@ def calculate_profit_loss(position, current_price: float) -> float:
     asset_type = position.asset_type
 
     # broker fee or commission
-    fee = calculate_fee(position, asset_type)
+    fee = get_assets_fee(asset_type)
     returns = 0.0
 
     for entry_price, leverage, order_type in zip(prices, leverages, order_types):
