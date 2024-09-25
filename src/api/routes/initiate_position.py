@@ -4,9 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.database import get_db
 from src.schemas.monitored_position import MonitoredPositionCreate
 from src.schemas.transaction import TransactionCreate, TradeResponse
-from src.services.api_service import get_current_price
-from src.services.trade_service import create_transaction, update_monitored_positions, \
-    get_latest_position
+from src.services.api_service import get_profit_and_current_price
+from src.services.trade_service import create_transaction, update_monitored_positions, get_latest_position
 from src.services.user_service import get_user_challenge_level
 from src.utils.logging import setup_logging
 from src.utils.websocket_manager import websocket_manager
@@ -44,7 +43,7 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
                 raise HTTPException(status_code=500, detail="Failed to submit trade")
             logger.info("Trade submitted successfully")
 
-        first_price = get_current_price(position_data.trader_id, position_data.trade_pair)
+        first_price = get_profit_and_current_price(position_data.trader_id, position_data.trade_pair)[0]
         if first_price is None:
             logger.error("Failed to fetch current price for the trade pair")
             raise HTTPException(status_code=500, detail="Failed to fetch current price for the trade pair")
