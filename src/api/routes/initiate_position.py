@@ -42,14 +42,14 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
                 raise HTTPException(status_code=500, detail="Failed to submit trade")
             logger.info("Trade submitted successfully")
 
-        first_price, taoshi_profit_loss, taoshi_profit_loss_with_fee = get_profit_and_current_price(
+        first_price, taoshi_profit_loss, taoshi_profit_loss_without_fee = get_profit_and_current_price(
             position_data.trader_id, position_data.trade_pair)
         if first_price == 0:
             logger.error("Failed to fetch current price for the trade pair")
             raise HTTPException(status_code=500, detail="Failed to fetch current price for the trade pair")
 
         profit_loss = (taoshi_profit_loss * 100) - 100
-        profit_loss_with_fee = (taoshi_profit_loss_with_fee * 100) - 100
+        profit_loss_without_fee = (taoshi_profit_loss_without_fee * 100) - 100
         initial_price = first_price
         if entry_price and entry_price != 0 and entry_price != first_price:
             # upward: 1, downward: 0
@@ -66,8 +66,8 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
                                                    leverage_list=[position_data.leverage],
                                                    order_type_list=[position_data.order_type],
                                                    profit_loss=profit_loss,
-                                                   profit_loss_with_fee=profit_loss_with_fee,
-                                                   taoshi_profit_loss_with_fee=taoshi_profit_loss_with_fee,
+                                                   profit_loss_without_fee=profit_loss_without_fee,
+                                                   taoshi_profit_loss_without_fee=taoshi_profit_loss_without_fee,
                                                    taoshi_profit_loss=taoshi_profit_loss,)
 
         # Create MonitoredPositionCreate data

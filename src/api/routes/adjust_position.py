@@ -64,7 +64,7 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
 
         logger.info("Adjustment submitted successfully")
 
-        realtime_price, taoshi_profit_loss, taoshi_profit_loss_with_fee = get_profit_and_current_price(
+        realtime_price, taoshi_profit_loss, taoshi_profit_loss_without_fee = get_profit_and_current_price(
             position.trader_id,
             position.trade_pair)
         if realtime_price == 0:
@@ -72,7 +72,7 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
             raise HTTPException(status_code=500, detail="Failed to fetch current price for the trade pair")
 
         profit_loss = (taoshi_profit_loss * 100) - 100
-        profit_loss_with_fee = (taoshi_profit_loss_with_fee * 100) - 100
+        profit_loss_without_fee = (taoshi_profit_loss_without_fee * 100) - 100
         prev_avg_entry_price = position.average_entry_price if position.average_entry_price else 0.0
         if cumulative_leverage != 0:
             average_entry_price = (prev_avg_entry_price * position.cumulative_leverage
@@ -103,16 +103,16 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
             upward=position.upward,
             profit_loss=profit_loss,
             max_profit_loss=max_profit_loss,
-            profit_loss_with_fee=profit_loss_with_fee,
+            profit_loss_without_fee=profit_loss_without_fee,
             average_entry_price=average_entry_price,
             entry_price_list=entry_price_list + [realtime_price],
             leverage_list=leverage_list + [position_data.leverage],
             order_type_list=order_type_list + [position_data.order_type],
             taoshi_profit_loss=taoshi_profit_loss,
-            taoshi_profit_loss_with_fee=taoshi_profit_loss_with_fee,)
+            taoshi_profit_loss_without_fee=taoshi_profit_loss_without_fee,)
 
         await close_transaction(db, position.order_id, position.trader_id, realtime_price, profit_loss,
-                                old_status=position.status, profit_loss_with_fee=profit_loss_with_fee)
+                                old_status=position.status, profit_loss_without_fee=profit_loss_without_fee)
 
         # Remove old monitored position
         await db.execute(
