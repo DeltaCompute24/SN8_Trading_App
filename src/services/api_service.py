@@ -74,7 +74,7 @@ def get_testing_position(trader_id, trade_pair):
 
 def get_profit_and_current_price(trader_id, trade_pair):
     if MAIN_NET:
-        position = {}
+        position = get_position(trader_id, trade_pair)
     else:
         position = get_testing_position(trader_id, trade_pair)
     if position and position["orders"]:
