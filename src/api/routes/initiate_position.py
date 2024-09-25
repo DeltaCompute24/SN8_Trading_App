@@ -6,7 +6,6 @@ from src.schemas.monitored_position import MonitoredPositionCreate
 from src.schemas.transaction import TransactionCreate, TradeResponse
 from src.services.api_service import get_profit_and_current_price
 from src.services.trade_service import create_transaction, update_monitored_positions, get_latest_position
-from src.services.user_service import get_user_challenge_level
 from src.utils.logging import setup_logging
 from src.utils.websocket_manager import websocket_manager
 from src.validations.position import validate_position
@@ -43,11 +42,14 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
                 raise HTTPException(status_code=500, detail="Failed to submit trade")
             logger.info("Trade submitted successfully")
 
-        first_price = get_profit_and_current_price(position_data.trader_id, position_data.trade_pair)[0]
-        if first_price is None:
+        first_price, taoshi_profit_loss, taoshi_profit_loss_with_fee = get_profit_and_current_price(
+            position_data.trader_id, position_data.trade_pair)
+        if first_price == 0:
             logger.error("Failed to fetch current price for the trade pair")
             raise HTTPException(status_code=500, detail="Failed to fetch current price for the trade pair")
 
+        profit_loss = (taoshi_profit_loss * 100) - 100
+        profit_loss_with_fee = (taoshi_profit_loss_with_fee * 100) - 100
         initial_price = first_price
         if entry_price and entry_price != 0 and entry_price != first_price:
             # upward: 1, downward: 0
@@ -55,17 +57,18 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
             first_price = entry_price
             status = "PENDING"
 
-        challenge_level = await get_user_challenge_level(db, position_data.trader_id)
-
         # Create the transaction with the first received price
         new_transaction = await create_transaction(db, position_data, entry_price=first_price,
                                                    initial_price=initial_price, operation_type="initiate",
                                                    status=status, upward=upward, old_status=status,
-                                                   challenge_level=challenge_level,
                                                    modified_by=str(position_data.trader_id),
                                                    average_entry_price=first_price, entry_price_list=[initial_price],
                                                    leverage_list=[position_data.leverage],
-                                                   order_type_list=[position_data.order_type])
+                                                   order_type_list=[position_data.order_type],
+                                                   profit_loss=profit_loss,
+                                                   profit_loss_with_fee=profit_loss_with_fee,
+                                                   taoshi_profit_loss_with_fee=taoshi_profit_loss_with_fee,
+                                                   taoshi_profit_loss=taoshi_profit_loss,)
 
         # Create MonitoredPositionCreate data
         monitored_position_data = MonitoredPositionCreate(
