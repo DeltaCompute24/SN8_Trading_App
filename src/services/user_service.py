@@ -23,20 +23,12 @@ async def get_user(db: AsyncSession, trader_id: int):
 async def create_user(db: AsyncSession, user_data: UsersBase):
     new_user = Users(
         trader_id=user_data.trader_id,
-        current_challenge_level=user_data.current_challenge_level,
         hot_key=user_data.hot_key,
     )
     db.add(new_user)
     await db.commit()
     await db.refresh(new_user)
     return new_user
-
-
-async def get_user_challenge_level(db: AsyncSession, trader_id: int):
-    user = await get_user(db, trader_id)
-    if not user:
-        return ""
-    return user.current_challenge_level
 
 
 # ---------------------- FIREBASE USER ------------------------------
