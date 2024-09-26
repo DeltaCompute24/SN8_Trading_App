@@ -1,14 +1,17 @@
+import redis
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_db
 from src.schemas.monitored_position import MonitoredPositionCreate
 from src.schemas.transaction import TransactionCreate, TradeResponse
-from src.services.api_service import get_profit_and_current_price
+from src.services.fee_service import get_taoshi_values
 from src.services.trade_service import create_transaction, update_monitored_positions, get_latest_position
 from src.utils.logging import setup_logging
 from src.utils.websocket_manager import websocket_manager
 from src.validations.position import validate_position
+
+redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
 
 logger = setup_logging()
 router = APIRouter()
@@ -32,7 +35,7 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
         status = "OPEN"
         entry_price = position_data.entry_price
 
-        # If entry_price == 0 or it is empty then status will be "OPEN" so we can submit trade
+        # If entry_price == 0, it is empty then status will be "OPEN" so we can submit trade
         if not entry_price or entry_price == 0:
             # Submit the trade and wait for confirmation
             trade_submitted = await websocket_manager.submit_trade(position_data.trader_id, position_data.trade_pair,
@@ -42,14 +45,12 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
                 raise HTTPException(status_code=500, detail="Failed to submit trade")
             logger.info("Trade submitted successfully")
 
-        first_price, taoshi_profit_loss, taoshi_profit_loss_without_fee = get_profit_and_current_price(
+        first_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee = get_taoshi_values(
             position_data.trader_id, position_data.trade_pair)
         if first_price == 0:
             logger.error("Failed to fetch current price for the trade pair")
             raise HTTPException(status_code=500, detail="Failed to fetch current price for the trade pair")
 
-        profit_loss = (taoshi_profit_loss * 100) - 100
-        profit_loss_without_fee = (taoshi_profit_loss_without_fee * 100) - 100
         initial_price = first_price
         if entry_price and entry_price != 0 and entry_price != first_price:
             # upward: 1, downward: 0
@@ -68,7 +69,7 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
                                                    profit_loss=profit_loss,
                                                    profit_loss_without_fee=profit_loss_without_fee,
                                                    taoshi_profit_loss_without_fee=taoshi_profit_loss_without_fee,
-                                                   taoshi_profit_loss=taoshi_profit_loss,)
+                                                   taoshi_profit_loss=taoshi_profit_loss, )
 
         # Create MonitoredPositionCreate data
         monitored_position_data = MonitoredPositionCreate(

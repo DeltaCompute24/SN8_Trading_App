@@ -5,7 +5,7 @@ from sqlalchemy.sql import text
 from src.database import get_db
 from src.schemas.monitored_position import MonitoredPositionCreate
 from src.schemas.transaction import TransactionCreate
-from src.services.api_service import get_profit_and_current_price
+from src.services.fee_service import get_taoshi_values
 from src.services.trade_service import create_transaction, get_open_position, update_monitored_positions, \
     close_transaction
 from src.utils.logging import setup_logging
@@ -64,15 +64,12 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
 
         logger.info("Adjustment submitted successfully")
 
-        realtime_price, taoshi_profit_loss, taoshi_profit_loss_without_fee = get_profit_and_current_price(
-            position.trader_id,
-            position.trade_pair)
+        realtime_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee = get_taoshi_values(
+            position_data.trader_id, position_data.trade_pair)
         if realtime_price == 0:
             logger.error("Failed to fetch current price for the trade pair")
             raise HTTPException(status_code=500, detail="Failed to fetch current price for the trade pair")
 
-        profit_loss = (taoshi_profit_loss * 100) - 100
-        profit_loss_without_fee = (taoshi_profit_loss_without_fee * 100) - 100
         prev_avg_entry_price = position.average_entry_price if position.average_entry_price else 0.0
         if cumulative_leverage != 0:
             average_entry_price = (prev_avg_entry_price * position.cumulative_leverage
@@ -109,7 +106,7 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
             leverage_list=leverage_list + [position_data.leverage],
             order_type_list=order_type_list + [position_data.order_type],
             taoshi_profit_loss=taoshi_profit_loss,
-            taoshi_profit_loss_without_fee=taoshi_profit_loss_without_fee,)
+            taoshi_profit_loss_without_fee=taoshi_profit_loss_without_fee, )
 
         await close_transaction(db, position.order_id, position.trader_id, realtime_price, profit_loss,
                                 old_status=position.status, profit_loss_without_fee=profit_loss_without_fee)
