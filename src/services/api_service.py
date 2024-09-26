@@ -31,6 +31,14 @@ def call_main_net():
     return response.json()
 
 
+def call_checkpoint_api():
+    response = requests.get(CHECKPOINT_URL)
+    if response.status_code != 200:
+        return
+
+    return response.json()["positions"]
+
+
 def get_position(trader_id, trade_pair):
     data = call_main_net()
     if not data:
