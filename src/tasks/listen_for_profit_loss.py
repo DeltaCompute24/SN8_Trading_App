@@ -1,5 +1,4 @@
 import logging
-import time
 from datetime import datetime
 
 import redis
@@ -13,11 +12,6 @@ redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
 
 logger = logging.getLogger(__name__)
 
-FLUSH_INTERVAL = 20
-last_flush_time = time.time()
-objects_to_be_updated = []
-queue_name = "db_operations_queue"
-
 
 @celery_app.task(name='src.tasks.listen_for_profit_loss.monitor_taoshi')
 def monitor_taoshi():
@@ -26,6 +20,9 @@ def monitor_taoshi():
         data = call_main_net()
     else:
         data = call_checkpoint_api()
+
+    if not data:
+        return
 
     for hot_key, content in data.items():
         trader_id = ""
@@ -41,9 +38,12 @@ def monitor_taoshi():
                     continue
 
                 trade_pair = position.get("trade_pair", [])[0]
-                price, profit_loss, profit_loss_without_fee = position["orders"][-1]["price"], position[
+                price, taoshi_profit_loss, taoshi_profit_loss_without_fee = position["orders"][-1]["price"], position[
                     "return_at_close"], position["current_return"]
-                value = [datetime.now(), price, profit_loss, profit_loss_without_fee]
+                profit_loss = (taoshi_profit_loss * 100) - 100
+                profit_loss_without_fee = (taoshi_profit_loss_without_fee * 100) - 100
+                value = [datetime.now(), price, profit_loss, profit_loss_without_fee, taoshi_profit_loss,
+                         taoshi_profit_loss_without_fee]
                 redis_client.hset('positions', f"{trade_pair}-{trader_id}", str(value))
         except Exception as ex:
             logger.error(f"An error occurred while fetching position {trade_pair}-{trader_id}: {ex}")
