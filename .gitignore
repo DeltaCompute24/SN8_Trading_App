@@ -1,5 +1,9 @@
+.idea/
 venv
 .env
-simulation.py
 *.pyc*
-trade.py
+logs/
+celerybeat-schedule.db
+celerybeat-schedule
+celery.log
+dump.rdb
