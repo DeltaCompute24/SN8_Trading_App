@@ -64,7 +64,7 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
 
         logger.info("Adjustment submitted successfully")
 
-        realtime_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee = get_taoshi_values(
+        realtime_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, *taoshi_profit_loss_without_fee = get_taoshi_values(
             position_data.trader_id, position_data.trade_pair)
         if realtime_price == 0:
             logger.error("Failed to fetch current price for the trade pair")
@@ -106,7 +106,10 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
             leverage_list=leverage_list + [position_data.leverage],
             order_type_list=order_type_list + [position_data.order_type],
             taoshi_profit_loss=taoshi_profit_loss,
-            taoshi_profit_loss_without_fee=taoshi_profit_loss_without_fee, )
+            taoshi_profit_loss_without_fee=taoshi_profit_loss_without_fee[0],
+            uuid=position.uuid,
+            hot_key=position.hot_key,
+        )
 
         await close_transaction(db, position.order_id, position.trader_id, realtime_price, profit_loss,
                                 old_status=position.status, profit_loss_without_fee=profit_loss_without_fee)
