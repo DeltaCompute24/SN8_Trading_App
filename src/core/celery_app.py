@@ -27,9 +27,9 @@ celery_app.conf.update(
         #     'task': 'src.tasks.redis_listener.event_listener',
         #     'schedule': 20.0,  # every 20 second
         # },
-        'monitor_taoshi_every_20_seconds': {
+        'monitor_taoshi_every_3_seconds': {
             'task': 'src.tasks.listen_for_profit_loss.monitor_taoshi',
-            'schedule': 20.0,  # every 20 second
+            'schedule': 3.0,  # every 3 second
         },
     },
     timezone='UTC',
