@@ -40,7 +40,11 @@ def call_checkpoint_api():
 
 
 def get_position(trader_id, trade_pair):
-    data = call_main_net()
+    if MAIN_NET:
+        data = call_main_net()
+    else:
+        data = call_checkpoint_api()
+
     if not data:
         return
 
@@ -60,34 +64,13 @@ def get_position(trader_id, trade_pair):
             return position
 
 
-def get_testing_position(trader_id, trade_pair):
-    response = requests.get(CHECKPOINT_URL)
-    if response.status_code != 200:
-        return
-
-    data = response.json()["positions"]
-
-    for hot_key, _data in data.items():
-        p_trade_id = ambassadors.get(hot_key, "")
-        if not p_trade_id or p_trade_id != trader_id:
-            continue
-
-        positions = _data.get("positions") or []
-        for position in positions:
-            if position["is_closed_position"] is True:
-                continue
-
-            p_trade_pair = position.get("trade_pair", [])[0]
-            if p_trade_pair != trade_pair:
-                continue
-            return position
-
-
 def get_profit_and_current_price(trader_id, trade_pair):
-    if MAIN_NET:
-        position = get_position(trader_id, trade_pair)
-    else:
-        position = get_testing_position(trader_id, trade_pair)
+    position = get_position(trader_id, trade_pair)
+
     if position and position["orders"]:
-        return position["orders"][-1]["price"], position["return_at_close"], position["current_return"]
-    return 0.0, 0.0, 0.0
+        price, taoshi_profit_loss, taoshi_profit_loss_without_fee = position["orders"][-1]["price"], position[
+            "return_at_close"], position["current_return"]
+        profit_loss = (taoshi_profit_loss * 100) - 100
+        profit_loss_without_fee = (taoshi_profit_loss_without_fee * 100) - 100
+        return price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee
+    return 0.0, 0.0, 0.0, 0.0, 0.0
