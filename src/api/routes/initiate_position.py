@@ -45,8 +45,10 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
                 raise HTTPException(status_code=500, detail="Failed to submit trade")
             logger.info("Trade submitted successfully")
 
-        first_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee = get_taoshi_values(
-            position_data.trader_id, position_data.trade_pair)
+        first_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee, uuid, hot_key = get_taoshi_values(
+            position_data.trader_id,
+            position_data.trade_pair
+        )
         if first_price == 0:
             logger.error("Failed to fetch current price for the trade pair")
             raise HTTPException(status_code=500, detail="Failed to fetch current price for the trade pair")
@@ -69,7 +71,10 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
                                                    profit_loss=profit_loss,
                                                    profit_loss_without_fee=profit_loss_without_fee,
                                                    taoshi_profit_loss_without_fee=taoshi_profit_loss_without_fee,
-                                                   taoshi_profit_loss=taoshi_profit_loss, )
+                                                   taoshi_profit_loss=taoshi_profit_loss,
+                                                   uuid=uuid,
+                                                   hot_key=hot_key,
+                                                   )
 
         # Create MonitoredPositionCreate data
         monitored_position_data = MonitoredPositionCreate(

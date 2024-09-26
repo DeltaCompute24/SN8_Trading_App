@@ -36,7 +36,7 @@ async def close_position(position_data: ProfitLossRequest, db: AsyncSession = De
                 logger.error("Failed to submit close signal")
                 raise HTTPException(status_code=500, detail="Failed to submit close signal")
 
-        close_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee = get_taoshi_values(
+        close_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, *taoshi_profit_loss_without_fee = get_taoshi_values(
             position_data.trader_id, position_data.trade_pair)
         if close_price == 0:
             logger.error("Failed to fetch current price for the trade pair")
@@ -48,7 +48,7 @@ async def close_position(position_data: ProfitLossRequest, db: AsyncSession = De
         await close_transaction(db, position.order_id, position.trader_id, close_price, profit_loss=profit_loss,
                                 old_status=position.status, profit_loss_without_fee=profit_loss_without_fee,
                                 taoshi_profit_loss=taoshi_profit_loss,
-                                taoshi_profit_loss_without_fee=taoshi_profit_loss_without_fee)
+                                taoshi_profit_loss_without_fee=taoshi_profit_loss_without_fee[0])
 
         # Remove closed position from the monitored_positions table
         await db.execute(

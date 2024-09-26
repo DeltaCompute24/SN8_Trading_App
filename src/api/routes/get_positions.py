@@ -56,9 +56,11 @@ async def get_positions(
             continue
 
         logger.info("Position is Open!")
-        first_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee = get_taoshi_values(
-            position.trader_id, position.trade_pair)
-        if taoshi_profit_loss == 0:
+        first_price, profit_loss, profit_loss_without_fee, *extras = get_taoshi_values(
+            position.trader_id,
+            position.trade_pair
+        )
+        if profit_loss == 0:
             continue
 
         position.profit_loss = profit_loss or position.profit_loss

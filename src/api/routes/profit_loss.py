@@ -52,8 +52,10 @@ async def get_profit_loss(profit_loss_request: ProfitLossRequest, db: AsyncSessi
                     f"order_type={latest_position.cumulative_order_type}, asset_type={latest_position.asset_type}")
 
         # Calculate profit/loss based on the first price
-        current_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee = get_taoshi_values(
-            latest_position.trader_id, latest_position.trade_pair)
+        current_price, profit_loss, profit_loss_without_fee, *extras = get_taoshi_values(
+            latest_position.trader_id,
+            latest_position.trade_pair
+        )
 
         # Log the calculated profit/loss
         logger.info(f"Calculated profit/loss: {profit_loss}")
