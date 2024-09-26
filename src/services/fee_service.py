@@ -1,3 +1,4 @@
+import ast
 from datetime import datetime, timedelta
 
 import redis
@@ -16,22 +17,23 @@ def get_assets_fee(asset_type):
         return 0.00009
 
 
-def get_taoshi_values(trade_pair, trader_id):
+def get_taoshi_values(trader_id, trade_pair):
     key = f"{trade_pair}-{trader_id}"
     position = redis_client.hget('positions', key)
     if not position:
         return 0.0, 0.0, 0.0, 0.0, 0.0
 
-    position = list(position.decode('utf-8'))
+    position = ast.literal_eval(position.decode('utf-8'))
     current_time = datetime.now()
+    position_time = datetime.strptime(position[0], '%Y-%m-%d %H:%M:%S.%f')
 
-    difference = abs(current_time - position[0])
+    difference = abs(current_time - position_time)
     if difference < timedelta(seconds=5):
         return position[1:]
 
     price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee = get_profit_and_current_price(
         trader_id, trade_pair)
-    value = [datetime.now(), price, profit_loss, profit_loss_without_fee, taoshi_profit_loss,
+    value = [str(datetime.now()), price, profit_loss, profit_loss_without_fee, taoshi_profit_loss,
              taoshi_profit_loss_without_fee]
     redis_client.hset('positions', f"{trade_pair}-{trader_id}", str(value))
     return value[1:]

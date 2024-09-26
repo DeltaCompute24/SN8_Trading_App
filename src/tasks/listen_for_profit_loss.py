@@ -42,7 +42,7 @@ def monitor_taoshi():
                     "return_at_close"], position["current_return"]
                 profit_loss = (taoshi_profit_loss * 100) - 100
                 profit_loss_without_fee = (taoshi_profit_loss_without_fee * 100) - 100
-                value = [datetime.now(), price, profit_loss, profit_loss_without_fee, taoshi_profit_loss,
+                value = [str(datetime.now()), price, profit_loss, profit_loss_without_fee, taoshi_profit_loss,
                          taoshi_profit_loss_without_fee]
                 redis_client.hset('positions', f"{trade_pair}-{trader_id}", str(value))
         except Exception as ex:
