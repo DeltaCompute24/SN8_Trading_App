@@ -3,10 +3,10 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from src.services.user_service import get_firebase_user, create_firebase_user, create_or_update_challenges
 from src.database_tasks import TaskSessionLocal_
 from src.models.firebase_user import FirebaseUser
 from src.schemas.user import FirebaseUserRead, FirebaseUserCreate, FirebaseUserUpdate
+from src.services.user_service import get_firebase_user, create_firebase_user, create_or_update_challenges
 from src.utils.logging import setup_logging
 
 logger = setup_logging()

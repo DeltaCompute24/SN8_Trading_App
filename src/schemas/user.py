@@ -5,8 +5,8 @@ from pydantic import BaseModel
 
 
 class UsersBase(BaseModel):
-    trader_id: int
-    hot_key: str
+    trader_id: int = 0
+    hot_key: str = ""
 
 
 class UsersSchema(UsersBase):
@@ -17,14 +17,15 @@ class UsersSchema(UsersBase):
 
 # --------------- FirebaseUser Schemas ----------------------
 class FirebaseUserBase(BaseModel):
-    firebase_id: str
+    firebase_id: str = ""
 
 
 class ChallengeBase(BaseModel):
-    trader_id: int
-    hot_key: str
-    status: str
-    challenge: str
+    trader_id: int = 0
+    hot_key: str = ""
+    active: str = ""
+    status: Optional[str] = ""
+    challenge: str = ""
 
 
 class ChallengeRead(ChallengeBase):
