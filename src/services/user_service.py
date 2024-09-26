@@ -58,6 +58,7 @@ def create_firebase_user(db: Session, user_data: FirebaseUserCreate):
                 trader_id=challenge_data.trader_id,
                 hot_key=challenge_data.hot_key,
                 status=challenge_data.status,
+                active=challenge_data.active,
                 challenge=challenge_data.challenge,
                 user_id=new_user.id
             )
@@ -81,12 +82,14 @@ def create_or_update_challenges(db: Session, user, challenges):
         if existing_challenge:
             existing_challenge.hot_key = challenge_data.hot_key
             existing_challenge.status = challenge_data.status
+            existing_challenge.active = challenge_data.active
             existing_challenge.challenge = challenge_data.challenge
         else:
             new_challenge = Challenge(
                 trader_id=challenge_data.trader_id,
                 hot_key=challenge_data.hot_key,
                 status=challenge_data.status,
+                active=challenge_data.active,
                 challenge=challenge_data.challenge,
                 user_id=user.id
             )
