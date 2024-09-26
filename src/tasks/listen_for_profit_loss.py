@@ -19,8 +19,8 @@ objects_to_be_updated = []
 queue_name = "db_operations_queue"
 
 
-@celery_app.task(name='src.tasks.listen_for_profit_loss.monitor_positions')
-def monitor_positions():
+@celery_app.task(name='src.tasks.listen_for_profit_loss.monitor_taoshi')
+def monitor_taoshi():
     logger.info("Starting monitor_positions task")
     if MAIN_NET:
         data = call_main_net()
