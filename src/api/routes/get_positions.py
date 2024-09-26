@@ -8,7 +8,7 @@ from sqlalchemy.future import select
 from src.database import get_db
 from src.models.transaction import Transaction
 from src.schemas.transaction import Transaction as TransactionSchema
-from src.services.api_service import get_profit_and_current_price
+from src.services.fee_service import get_taoshi_values
 from src.utils.logging import setup_logging
 
 logger = setup_logging()
@@ -56,12 +56,11 @@ async def get_positions(
             continue
 
         logger.info("Position is Open!")
-        current_price, taoshi_profit_loss, taoshi_profit_loss_without_fee = get_profit_and_current_price(
+        first_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee = get_taoshi_values(
             position.trader_id, position.trade_pair)
         if taoshi_profit_loss == 0:
             continue
-        profit_loss = (taoshi_profit_loss * 100) - 100
-        profit_loss_without_fee = (taoshi_profit_loss_without_fee * 100) - 100
+
         position.profit_loss = profit_loss or position.profit_loss
         position.profit_loss_without_fee = profit_loss_without_fee or position.profit_loss_without_fee
         position.fee = abs(profit_loss_without_fee - profit_loss)

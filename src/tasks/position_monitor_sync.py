@@ -10,7 +10,7 @@ from sqlalchemy.future import select
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.models.transaction import Transaction
-from src.services.api_service import get_profit_and_current_price
+from src.services.fee_service import get_taoshi_values
 from src.utils.websocket_manager import websocket_manager
 
 redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
@@ -100,10 +100,11 @@ def monitor_position(position):
     global objects_to_be_updated
     try:
         # For Open Position to be Closed
-        current_price, profit_loss, profit_loss_without_fee = get_profit_and_current_price(position.trader_id,
-                                                                                        position.trade_pair)
+        price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee = get_taoshi_values(
+            position.trader_id, position.trade_pair)
         if profit_loss:
-            update_position_profit(position, profit_loss, profit_loss_without_fee)
+            update_position_profit(position, profit_loss, profit_loss_without_fee, taoshi_profit_loss,
+                                   taoshi_profit_loss_without_fee)
         if position.status == "OPEN" and should_close_position(profit_loss, position):
             logger.info(
                 f"Position shouldn't be closed: {position.position_id}: {position.trader_id}: {position.trade_pair}")
@@ -171,8 +172,8 @@ def close_position(position, profit_loss):
         close_submitted = asyncio.run(
             websocket_manager.submit_trade(position.trader_id, position.trade_pair, "FLAT", 1))
         if close_submitted:
-            close_price = get_profit_and_current_price(position.trader_id, position.trade_pair)[0]
-            if not close_price:
+            close_price = get_taoshi_values(position.trader_id, position.trade_pair)[0]
+            if close_price == 0:
                 return
             new_object["close_price"] = close_price
             objects_to_be_updated.append(new_object)
@@ -198,9 +199,6 @@ def should_close_position(profit_loss, position):
         take_profit = position.cumulative_take_profit
         stop_loss = position.cumulative_stop_loss
 
-        profit_loss *= 100
-        profit_loss -= 100
-
         if profit_loss < 0:
             if stop_loss is not None and stop_loss != 0 and profit_loss <= -stop_loss:
                 print(f"Determining whether to close position: True")
@@ -218,7 +216,8 @@ def should_close_position(profit_loss, position):
         return False
 
 
-def update_position_profit(position, profit_loss, profit_loss_without_fee):
+def update_position_profit(position, profit_loss, profit_loss_without_fee, taoshi_profit_loss,
+                           taoshi_profit_loss_without_fee):
     global objects_to_be_updated
     try:
         max_profit_loss = position.max_profit_loss or 0.0
@@ -230,6 +229,8 @@ def update_position_profit(position, profit_loss, profit_loss_without_fee):
             "profit_loss": profit_loss,
             "max_profit_loss": max_profit_loss,
             "profit_loss_without_fee": profit_loss_without_fee,
+            "taoshi_profit_loss": taoshi_profit_loss,
+            "taoshi_profit_loss_without_fee": taoshi_profit_loss_without_fee,
         }
         if object_exists(objects_to_be_updated, new_object):
             logger.info("Return back as Profit Loss Position already exists in queue!")
