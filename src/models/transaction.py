@@ -41,4 +41,6 @@ class Transaction(Base):
     entry_price_list = Column(JSON, default=[])
     leverage_list = Column(JSON, default=[])
     order_type_list = Column(JSON, default=[])
+    uuid = Column(String, nullable=True)
+    hot_key = Column(String, nullable=True)
     modified_by = Column(String, default="", nullable=True)
