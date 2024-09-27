@@ -83,7 +83,6 @@ def get_profit_sum(data, challenges_data):
 
             for position in content["positions"]:
                 profit_loss = (position["return_at_close"] * 100) - 100
-                profit_loss = round(profit_loss, 2)
                 if position["is_closed_position"] is True:
                     profit_sum += profit_loss
 
@@ -102,7 +101,6 @@ def get_draw_down(data, challenges_data):
                 continue
 
             draw_down = (content["cps"][-1]["mdd"] * 100) - 100
-            draw_down = round(draw_down, 2)
             challenges_data[hot_key]["draw_down"] = draw_down
         except Exception as ex:
             logger.error(f"An error occurred while setting maximum draw_down: {hot_key} - {ex}")
@@ -139,9 +137,9 @@ def monitor_challenges():
         _data = challenges_data.get(challenge.hot_key, {})
         if not _data:
             continue
-        if _data["profit_sum"] >= 0.02:  # 2%
+        if _data["profit_sum"] >= 2:  # 2%
             update_challenge(challenge, status="Passed")
-        elif _data["draw_down"] >= 0.05:  # 5%
+        elif _data["draw_down"] <= -5:  # 5%
             update_challenge(challenge, status="Failed")
 
     logger.info("Finished monitor_challenges task")
