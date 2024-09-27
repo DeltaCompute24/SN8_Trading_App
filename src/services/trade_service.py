@@ -81,7 +81,7 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
 
 
 async def close_transaction(db: AsyncSession, order_id, trader_id, close_price: float = None,
-                            profit_loss: float = None, old_status: str = None, challenge_level: str = None,
+                            profit_loss: float = None, old_status: str = "", challenge_level: str = "",
                             profit_loss_without_fee: float = 0.0, taoshi_profit_loss: float = 0.0,
                             taoshi_profit_loss_without_fee: float = 0.0, ):
     close_time = datetime.utcnow()
@@ -98,9 +98,9 @@ async def close_transaction(db: AsyncSession, order_id, trader_id, close_price: 
                 take_profit = :take_profit,
                 order_type = :order_type,
                 modified_by = :modified_by,
-                challenge_level = :challenge_level
-                profit_loss_without_fee = :profit_loss_without_fee
-                taoshi_profit_loss = :taoshi_profit_loss
+                challenge_level = :challenge_level,
+                profit_loss_without_fee = :profit_loss_without_fee,
+                taoshi_profit_loss = :taoshi_profit_loss,
                 taoshi_profit_loss_without_fee = :taoshi_profit_loss_without_fee
             WHERE order_id = :order_id
         """)

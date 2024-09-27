@@ -43,11 +43,11 @@ async def close_position(position_data: ProfitLossRequest, db: AsyncSession = De
                 raise HTTPException(status_code=500, detail="Failed to fetch current price for the trade pair")
             taoshi_profit_loss_without_fee = taoshi_profit_loss_without_fee[0]
         else:
-            close_price = position.entry_price
-            profit_loss = position.profit_loss
-            profit_loss_without_fee = position.profit_loss_without_fee
-            taoshi_profit_loss = position.taoshi_profit_loss
-            taoshi_profit_loss_without_fee = position.taoshi_profit_loss_without_fee
+            close_price = position.entry_price or 0.0
+            profit_loss = position.profit_loss or 0.0
+            profit_loss_without_fee = position.profit_loss_without_fee or 0.0
+            taoshi_profit_loss = position.taoshi_profit_loss or 0.0
+            taoshi_profit_loss_without_fee = position.taoshi_profit_loss_without_fee or 0.0
 
         logger.info(f"Close price for {position.trade_pair} is {close_price}")
 
