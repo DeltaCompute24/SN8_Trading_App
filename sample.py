@@ -1,54 +1,3 @@
-# import json
-# from datetime import datetime
-#
-# from fastapi import Depends, HTTPException
-# from sqlalchemy import text
-# from sqlalchemy.ext.asyncio import AsyncSession
-# from sqlalchemy.future import select
-#
-# from src.database import get_db
-# from src.models.transaction import Transaction
-# from src.schemas.transaction import Transaction as TransactionSchema
-#
-#
-# class CustomJSONEncoder(json.JSONEncoder):
-#     def default(self, obj):
-#         if isinstance(obj, datetime):
-#             return obj.isoformat()  # Convert datetime to ISO 8601 string
-#         return super().default(obj)
-#
-#
-# def delete_objects(db: AsyncSession = Depends(get_db)):
-#     # Step 1: Fetch the objects based on a condition
-#     query = select(Transaction).where(Transaction.status == "CLOSED")  # Replace condition here
-#     result = db.execute(query)
-#     objects_to_delete = result.scalars().all()
-#
-#     if not objects_to_delete:
-#         raise HTTPException(status_code=404, detail="No objects found to delete")
-#
-#     # Step 2: Convert objects to JSON format
-#     objects_json = [TransactionSchema.from_orm(obj).dict() for obj in objects_to_delete]
-#
-#     # Step 3: Backup JSON (store in file, or other table)
-#     with open("backup_objects.json", "w") as backup_file:
-#         json.dump(objects_json, backup_file, cls=CustomJSONEncoder)
-#         # json.dump(objects_json, backup_file)
-#
-#     # Optional: Log backup details to another table in the database if needed
-#
-#     # Step 4: Delete objects from the database
-#     for obj in objects_to_delete:
-#         position_id = obj.position_id
-#         db.delete(obj)
-#         db.execute(
-#             text("DELETE FROM monitored_positions WHERE position_id = :position_id"),
-#             {"position_id": position_id}
-#         )
-#
-#     db.commit()
-#
-#     return {"detail": "Objects deleted successfully", "backup": objects_json}
 from datetime import datetime
 
 from sqlalchemy.future import select
@@ -217,5 +166,24 @@ def populate_transactions(db: Session):
                 print(f"Error while creating position and hot_key: {hot_key} - {position['open_ms']}")
 
 
-with TaskSessionLocal_() as _db:
-    populate_transactions(_db)
+# with TaskSessionLocal_() as _db:
+#     populate_transactions(_db)
+
+def populate_trade_users():
+    with TaskSessionLocal_() as db:
+        for hot_key, trader_id in ambassadors.items():
+            try:
+                user = get_user(db, hot_key)
+                if not user:
+                    new_user = Users(
+                        trader_id=trader_id,
+                        hot_key=hot_key,
+                    )
+                    db.add(new_user)
+                    db.commit()
+                    db.refresh(new_user)
+            except Exception as ex:
+                print(f"Error while creating trader_id and hot_key: {hot_key}")
+
+
+populate_trade_users()
