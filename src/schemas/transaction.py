@@ -40,6 +40,8 @@ class Transaction(TransactionBase):
     fee: Optional[float] or 0.0
     position_id: int
     trade_order: int
+    uuid: Optional[str]
+    hot_key: Optional[str]
     modified_by: Optional[str]
     upward: Optional[float]
     challenge_level: Optional[str]
