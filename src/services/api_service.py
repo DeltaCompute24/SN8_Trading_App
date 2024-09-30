@@ -10,9 +10,12 @@ ambassadors = {
     "5Ew171L2s9RX2wZXbPwS1kcmhyAjzEXSG5W9551bcRqsL3Pg": 4070,
     "5ERNiynJejVeK6BtHXyyBJNB6RXNzwERhgHjcK7jbNT4n9xQ": 4071,
     "5DthKaDbqEauMm25rKmKQCjJYvbshR84NzhAVT4zLq4Dz4qK": 4072,
+    "5HK2szxDvXpGzCdSvsRH4hctbVQcDneizgcqgsaWxLAA8e5f": 4073,
     "5Fc39mqXCJrkwVLTZCduUgkmkUv7Rsz2kgtkHQVMQo8ZTn5U": 4063,
     "5GCDZ6Vum2vj1YgKtw7Kv2fVXTPmV1pxoHh1YrsxqBvf9SRa": 4064,
     "5GTL7WXa4JM2yEUjFoCy2PZVLioNs1HzAGLKhuCDzzoeQCTR": 4065,
+    "5DoCFr2EoW1CGuYCEXhsuQdWRsgiUMuxGwNt4Xqb5TCptcBW": 4067,
+    "5EUTaAo7vCGxvLDWRXRrEuqctPjt9fKZmgkaeFZocWECUe9X": 4068,
 }
 
 
