@@ -57,7 +57,6 @@ from sqlalchemy.sql import and_
 from sqlalchemy.sql import func
 
 from database_tasks import TaskSessionLocal_
-from services.trade_service import get_latest_position
 from src.models.transaction import Transaction
 from src.models.users import Users
 from src.services.api_service import call_main_net, ambassadors
@@ -97,6 +96,20 @@ def get_open_position(db: Session, trader_id: int, trade_pair: str):
     )
     return open_transaction
 
+
+def get_uuid_position(db: Session, uuid: str, hot_key: str):
+    open_transaction = db.scalar(
+        select(Transaction).where(
+            and_(
+                Transaction.uuid == uuid,
+                Transaction.hot_key == hot_key,
+                Transaction.status == "OPEN"
+            )
+        ).order_by(Transaction.trade_order.desc())
+    )
+    return open_transaction
+
+
 def get_user(db: Session, hot_key: str):
     user = db.scalar(
         select(Users).where(
@@ -113,10 +126,10 @@ def populate_transactions(db: Session):
     if not data:
         return
 
-    _id = 110001
-
     for hot_key, content in data.items():
-        trader_id = ambassadors.get(hot_key, _id)
+        trader_id = ambassadors.get(hot_key, "")
+        if not trader_id:
+            continue
         try:
             user = get_user(db, hot_key)
             if not user:
@@ -137,7 +150,12 @@ def populate_transactions(db: Session):
                     continue
 
                 trade_pair = position["trade_pair"][0]
+                uuid = position["position_uuid"]
                 existing_position = get_open_position(db, trader_id, trade_pair)
+                if existing_position:
+                    continue
+
+                existing_position = get_uuid_position(db, uuid, hot_key)
                 if existing_position:
                     continue
                 status = "OPEN"
@@ -147,6 +165,7 @@ def populate_transactions(db: Session):
                 cumulative_order_type = position["position_type"]
                 profit_loss = position["return_at_close"]
                 profit_loss_without_fee = position["current_return"]
+                position_uuid = position["position_uuid"]
 
                 orders = position["orders"]
                 leverage = orders[0]["leverage"]
@@ -187,6 +206,8 @@ def populate_transactions(db: Session):
                     leverage_list=leverages,
                     order_type_list=order_types,
                     modified_by=str(trader_id),
+                    uuid=position_uuid,
+                    hot_key=hot_key,
                 )
                 db.add(new_transaction)
                 db.commit()
@@ -194,7 +215,6 @@ def populate_transactions(db: Session):
 
             except Exception as ex:
                 print(f"Error while creating position and hot_key: {hot_key} - {position['open_ms']}")
-        _id += 1
 
 
 with TaskSessionLocal_() as _db:
