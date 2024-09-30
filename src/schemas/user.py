@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 
 
 class UsersBase(BaseModel):
@@ -55,3 +55,7 @@ class FirebaseUserRead(FirebaseUserBase):
 
     class Config:
         orm_mode = True
+
+# EMAIL SCHEMA
+class EmailInput(BaseModel):
+    email: EmailStr
