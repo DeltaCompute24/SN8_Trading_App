@@ -56,6 +56,35 @@ class FirebaseUserRead(FirebaseUserBase):
     class Config:
         orm_mode = True
 
+
+# --------------- Payment Schemas ----------------------
+class PaymentBase(BaseModel):
+    amount: float
+    referral_code: Optional[str] = None
+    challenge_id: Optional[int] = None
+
+
+class PaymentCreate(PaymentBase):
+    pass  # Additional validations can be added here if needed
+
+
+class PaymentRead(PaymentBase):
+    fid: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        orm_mode = True
+
+
+class PaymentUpdate(BaseModel):
+    amount: Optional[float] = None
+    referral_code: Optional[str] = None
+
+    class Config:
+        orm_mode = True
+
+
 # EMAIL SCHEMA
 class EmailInput(BaseModel):
     email: EmailStr
