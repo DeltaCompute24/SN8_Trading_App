@@ -23,3 +23,6 @@ class Challenge(Base):
 
     # Many-to-one relationship: A challenge belongs to one user
     user = relationship("FirebaseUser", back_populates="challenges")
+
+    # One-to-one relationship with Payment
+    payment = relationship("Payment", back_populates="challenge", uselist=False)
