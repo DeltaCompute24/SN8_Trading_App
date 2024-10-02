@@ -3,7 +3,7 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import and_
 
-from database_tasks import TaskSessionLocal_
+from src.database_tasks import TaskSessionLocal_
 from src.models.challenge import Challenge
 from src.models.firebase_user import FirebaseUser
 from src.models.users import Users
