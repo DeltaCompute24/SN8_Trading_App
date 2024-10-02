@@ -1,5 +1,5 @@
-from database_tasks import TaskSessionLocal_
 from scripts.populate_transactions import get_user
+from src.database_tasks import TaskSessionLocal_
 from src.models.users import Users
 from src.services.api_service import ambassadors
 
