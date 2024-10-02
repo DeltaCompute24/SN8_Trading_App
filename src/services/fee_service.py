@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 
 import redis
 
-from services.user_service import get_challenge
+from src.services.user_service import get_challenge
 from src.services.api_service import get_profit_and_current_price
 
 redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
