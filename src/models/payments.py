@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Column, Integer, String, DateTime, Float, ForeignKey
+from sqlalchemy import Column, Integer, DateTime, Float, ForeignKey, String
 from sqlalchemy.orm import relationship
 
 from src.database import Base
@@ -9,7 +9,8 @@ from src.database import Base
 class Payment(Base):
     __tablename__ = "payments"
 
-    fid = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    fid = Column(String, nullable=False, unique=True)
     amount = Column(Float, nullable=False)
     referral_code = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
