@@ -43,4 +43,5 @@ class Transaction(Base):
     order_type_list = Column(JSON, default=[])
     uuid = Column(String, nullable=True)
     hot_key = Column(String, nullable=True)
+    source = Column(String, default="", nullable=True)
     modified_by = Column(String, default="", nullable=True)
