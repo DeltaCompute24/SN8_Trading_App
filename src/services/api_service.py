@@ -1,6 +1,6 @@
 import requests
 
-from src.config import CHECKPOINT_URL, MAIN_NET
+from src.config import CHECKPOINT_URL
 
 ambassadors = {
     "5CRwSWfJWnMat1wtUvLTLUJ3ekTTgn1XDC8jVko2H9CmnYC1": 4040,
@@ -29,7 +29,7 @@ def call_main_net():
 
     response = requests.request(method="GET", url=url, headers=headers)
     if response.status_code != 200:
-        return
+        return {}
 
     return response.json()
 
@@ -37,13 +37,13 @@ def call_main_net():
 def call_checkpoint_api():
     response = requests.get(CHECKPOINT_URL)
     if response.status_code != 200:
-        return
+        return {}
 
     return response.json()["positions"]
 
 
-def get_position(trader_id, trade_pair):
-    if MAIN_NET:
+def get_position(trader_id, trade_pair, main=True):
+    if main:
         data = call_main_net()
     else:
         data = call_checkpoint_api()
@@ -67,8 +67,8 @@ def get_position(trader_id, trade_pair):
             return position
 
 
-def get_profit_and_current_price(trader_id, trade_pair):
-    position = get_position(trader_id, trade_pair)
+def get_profit_and_current_price(trader_id, trade_pair, main=True):
+    position = get_position(trader_id, trade_pair, main)
 
     if position and position["orders"]:
         price, taoshi_profit_loss, taoshi_profit_loss_without_fee = position["orders"][-1]["price"], position[
