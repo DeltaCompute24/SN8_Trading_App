@@ -1,4 +1,4 @@
-from database_tasks import TaskSessionLocal_
+from src.database_tasks import TaskSessionLocal_
 from src.models.challenge import Challenge
 from src.services.api_service import ambassadors
 

@@ -1,6 +1,6 @@
 from sqlalchemy import text
 
-from database_tasks import TaskSessionLocal_
+from src.database_tasks import TaskSessionLocal_
 from src.models.transaction import Transaction
 
 
