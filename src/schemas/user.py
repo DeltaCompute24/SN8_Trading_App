@@ -64,14 +64,18 @@ class PaymentBase(BaseModel):
     challenge_id: Optional[int] = None
 
 
-class PaymentCreate(PaymentBase):
-    pass  # Additional validations can be added here if needed
+class PaymentCreate(BaseModel):
+    fid: str
+    amount: float
+    referral_code: Optional[str] = None
+    challenge_id: Optional[int] = None
+    challenge: Optional[ChallengeBase] = None
 
 
 class PaymentRead(PaymentBase):
-    fid: int
-    created_at: datetime
-    updated_at: datetime
+    id: int
+    fid: str
+    challenge: Optional[ChallengeRead] = None
 
     class Config:
         orm_mode = True
