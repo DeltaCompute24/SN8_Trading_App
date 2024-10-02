@@ -6,6 +6,7 @@ from sqlalchemy.sql import and_
 from sqlalchemy.sql import func
 
 from database_tasks import TaskSessionLocal_
+from src.models.challenge import Challenge
 from src.models.transaction import Transaction
 from src.models.users import Users
 from src.services.api_service import call_main_net, ambassadors
@@ -47,7 +48,7 @@ def get_open_position(db: Session, trader_id: int, trade_pair: str):
 
 
 def get_uuid_position(db: Session, uuid: str, hot_key: str):
-    open_transaction = db.scalar(
+    uuid_transaction = db.scalar(
         select(Transaction).where(
             and_(
                 Transaction.uuid == uuid,
@@ -56,7 +57,7 @@ def get_uuid_position(db: Session, uuid: str, hot_key: str):
             )
         ).order_by(Transaction.trade_order.desc())
     )
-    return open_transaction
+    return uuid_transaction
 
 
 def get_user(db: Session, hot_key: str):
@@ -186,4 +187,16 @@ def populate_trade_users():
                 print(f"Error while creating trader_id and hot_key: {hot_key}")
 
 
-populate_trade_users()
+# populate_trade_users()
+
+def trades_mapper():
+    ambassadors2 = {}
+    with TaskSessionLocal_() as db:
+        challenges = db.query(Challenge).all()
+        for challenge in challenges:
+            ambassadors2[challenge.hot_key] = challenge.trader_id
+
+    print(ambassadors2)
+
+
+trades_mapper()
