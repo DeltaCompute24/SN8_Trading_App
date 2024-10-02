@@ -5,12 +5,11 @@ import redis
 import requests
 from sqlalchemy.future import select
 
-from src.config import CHECKPOINT_URL, MAIN_NET
+from src.config import CHECKPOINT_URL
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
-from src.models import Challenge
-from src.services.api_service import call_checkpoint_api, ambassadors
-from src.services.api_service import call_main_net
+from src.models.challenge import Challenge
+from src.services.api_service import call_main_net, call_checkpoint_api, ambassadors
 
 redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
 
@@ -20,10 +19,9 @@ logger = logging.getLogger(__name__)
 @celery_app.task(name='src.tasks.listen_for_profit_loss.monitor_taoshi')
 def monitor_taoshi():
     logger.info("Starting monitor_positions task")
-    if MAIN_NET:
-        data = call_main_net()
-    else:
-        data = call_checkpoint_api()
+    main_net_data = call_main_net()
+    test_net_data = call_checkpoint_api()
+    data = test_net_data | main_net_data
 
     if not data:
         return
