@@ -53,7 +53,6 @@ def get_uuid_position(db: Session, uuid: str, hot_key: str):
             and_(
                 Transaction.uuid == uuid,
                 Transaction.hot_key == hot_key,
-                Transaction.status == "OPEN"
             )
         ).order_by(Transaction.trade_order.desc())
     )
@@ -96,8 +95,9 @@ def populate_transactions(db: Session):
         positions = content["positions"]
         for position in positions:
             try:
+                status = "OPEN"
                 if position["is_closed_position"] is True:
-                    continue
+                    status = "CLOSED"
 
                 trade_pair = position["trade_pair"][0]
                 uuid = position["position_uuid"]
@@ -108,12 +108,17 @@ def populate_transactions(db: Session):
                 existing_position = get_uuid_position(db, uuid, hot_key)
                 if existing_position:
                     continue
-                status = "OPEN"
+
                 open_time = convert_timestamp_to_datetime(position["open_ms"])
+                close_time = None
+                close_price = None
+                if status == "CLOSED":
+                    close_time = convert_timestamp_to_datetime(position["open_ms"])
+                    close_price = convert_timestamp_to_datetime(position["close_ms"])
                 net_leverage = position["net_leverage"]
                 avg_entry_price = position["average_entry_price"]
                 cumulative_order_type = position["position_type"]
-                profit_loss = position["return_at_close"]
+                profit_loss = (position["return_at_close"] * 100) - 100
                 profit_loss_without_fee = position["current_return"]
                 position_uuid = position["position_uuid"]
 
@@ -148,8 +153,10 @@ def populate_transactions(db: Session):
                     average_entry_price=avg_entry_price,
                     status=status,
                     old_status=status,
-                    profit_loss=profit_loss,
-                    profit_loss_without_fee=profit_loss_without_fee,
+                    profit_loss=((profit_loss * 100) - 100),
+                    profit_loss_without_fee=((profit_loss_without_fee * 100) - 100),
+                    taoshi_profit_loss=profit_loss,
+                    taoshi_profit_loss_without_fee=profit_loss_without_fee,
                     position_id=position_id,
                     trade_order=trade_order,
                     entry_price_list=prices,
@@ -167,36 +174,5 @@ def populate_transactions(db: Session):
                 print(f"Error while creating position and hot_key: {hot_key} - {position['open_ms']}")
 
 
-# with TaskSessionLocal_() as _db:
-#     populate_transactions(_db)
-
-def populate_trade_users():
-    with TaskSessionLocal_() as db:
-        for hot_key, trader_id in ambassadors.items():
-            try:
-                user = get_user(db, hot_key)
-                if not user:
-                    new_user = Users(
-                        trader_id=trader_id,
-                        hot_key=hot_key,
-                    )
-                    db.add(new_user)
-                    db.commit()
-                    db.refresh(new_user)
-            except Exception as ex:
-                print(f"Error while creating trader_id and hot_key: {hot_key}")
-
-
-# populate_trade_users()
-
-def trades_mapper():
-    ambassadors2 = {}
-    with TaskSessionLocal_() as db:
-        challenges = db.query(Challenge).all()
-        for challenge in challenges:
-            ambassadors2[challenge.hot_key] = challenge.trader_id
-
-    print(ambassadors2)
-
-
-trades_mapper()
+with TaskSessionLocal_() as _db:
+    populate_transactions(_db)
