@@ -3,6 +3,7 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import and_
 
+from database_tasks import TaskSessionLocal_
 from src.models.challenge import Challenge
 from src.models.firebase_user import FirebaseUser
 from src.models.users import Users
@@ -99,3 +100,20 @@ def create_or_update_challenges(db: Session, user, challenges):
         db.refresh(user)
 
     return user
+
+
+def get_challenge(trader_id: int):
+    with TaskSessionLocal_() as db:
+        challenge = db.scalar(
+            select(Challenge).where(
+                and_(
+                    Challenge.trader_id == trader_id,
+                )
+            )
+        )
+        if not challenge:
+            return True
+
+        if challenge.challenge == "main":
+            return True
+        return False
