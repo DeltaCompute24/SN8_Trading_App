@@ -5,11 +5,10 @@ from sqlalchemy.orm import Session
 from sqlalchemy.sql import and_
 from sqlalchemy.sql import func
 
-from database_tasks import TaskSessionLocal_
-from src.models.challenge import Challenge
+from src.database_tasks import TaskSessionLocal_
 from src.models.transaction import Transaction
 from src.models.users import Users
-from src.services.api_service import call_main_net, ambassadors
+from src.services.api_service import call_main_net, call_checkpoint_api, ambassadors
 from src.validations.position import forex_polygon_pairs, indices_pairs, crypto_polygon_pairs
 
 
@@ -71,7 +70,9 @@ def get_user(db: Session, hot_key: str):
 
 
 def populate_transactions(db: Session):
-    data = call_main_net()
+    main_net_data = call_main_net()
+    test_net_data = call_checkpoint_api()
+    data = test_net_data | main_net_data
     if not data:
         return
 
@@ -95,32 +96,22 @@ def populate_transactions(db: Session):
         positions = content["positions"]
         for position in positions:
             try:
-                status = "OPEN"
-                if position["is_closed_position"] is True:
-                    status = "CLOSED"
-
                 trade_pair = position["trade_pair"][0]
-                uuid = position["position_uuid"]
+                position_uuid = position["position_uuid"]
                 existing_position = get_open_position(db, trader_id, trade_pair)
                 if existing_position:
                     continue
 
-                existing_position = get_uuid_position(db, uuid, hot_key)
+                existing_position = get_uuid_position(db, position_uuid, hot_key)
                 if existing_position:
                     continue
 
                 open_time = convert_timestamp_to_datetime(position["open_ms"])
-                close_time = None
-                close_price = None
-                if status == "CLOSED":
-                    close_time = convert_timestamp_to_datetime(position["open_ms"])
-                    close_price = convert_timestamp_to_datetime(position["close_ms"])
                 net_leverage = position["net_leverage"]
                 avg_entry_price = position["average_entry_price"]
                 cumulative_order_type = position["position_type"]
-                profit_loss = (position["return_at_close"] * 100) - 100
+                profit_loss = position["return_at_close"]
                 profit_loss_without_fee = position["current_return"]
-                position_uuid = position["position_uuid"]
 
                 orders = position["orders"]
                 leverage = orders[0]["leverage"]
@@ -135,6 +126,18 @@ def populate_transactions(db: Session):
                     order_types.append(order["order_type"])
                     prices.append(order["price"])
 
+                close_time = None
+                close_price = None
+                operation_type = "initiate"
+                status = "OPEN"
+                if position["is_closed_position"] is True:
+                    status = "CLOSED"
+                    close_time = convert_timestamp_to_datetime(position["close_ms"])
+                    close_price = orders[-1]["price"]
+                    leverage = orders[-1]["leverage"]
+                    order_type = orders[-1]["order_type"]
+                    operation_type = "close"
+
                 position_id, trade_order = get_position_id_or_trade_order(db, trader_id)
                 asset_type = get_asset_type(trade_pair) or "forex"
 
@@ -147,24 +150,27 @@ def populate_transactions(db: Session):
                     leverage=leverage,
                     order_type=order_type,
                     asset_type=asset_type,
-                    operation_type="initiate",
+                    operation_type=operation_type,
                     cumulative_leverage=net_leverage,
                     cumulative_order_type=cumulative_order_type,
                     average_entry_price=avg_entry_price,
                     status=status,
-                    old_status=status,
+                    old_status="OPEN",
                     profit_loss=((profit_loss * 100) - 100),
                     profit_loss_without_fee=((profit_loss_without_fee * 100) - 100),
                     taoshi_profit_loss=profit_loss,
                     taoshi_profit_loss_without_fee=profit_loss_without_fee,
+                    close_time=close_time,
+                    close_price=close_price,
                     position_id=position_id,
                     trade_order=trade_order,
                     entry_price_list=prices,
                     leverage_list=leverages,
                     order_type_list=order_types,
-                    modified_by=str(trader_id),
+                    modified_by="taoshi",
                     uuid=position_uuid,
                     hot_key=hot_key,
+                    upward=-1,
                 )
                 db.add(new_transaction)
                 db.commit()
