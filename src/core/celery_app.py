@@ -33,7 +33,7 @@ celery_app.conf.update(
         },
         'monitor_challenges_every_3_seconds': {
             'task': 'src.tasks.listen_for_profit_loss.monitor_challenges',
-            'schedule': 3.0,  # every 3 second
+            'schedule': 10.0,  # every 10 second
         },
     },
     timezone='UTC',
