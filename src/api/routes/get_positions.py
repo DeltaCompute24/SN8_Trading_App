@@ -9,6 +9,7 @@ from src.database import get_db
 from src.models.transaction import Transaction
 from src.schemas.transaction import Transaction as TransactionSchema
 from src.services.fee_service import get_taoshi_values
+from src.services.user_service import get_challenge
 from src.utils.logging import setup_logging
 
 logger = setup_logging()
@@ -33,7 +34,8 @@ async def get_positions(
     # Base query
     query = select(Transaction)
     if trader_id:
-        query = query.where(Transaction.trader_id == trader_id)
+        source = get_challenge(trader_id)
+        query = query.where(Transaction.trader_id == trader_id, Transaction.source == source)
 
     if trade_pair:
         query = query.where(Transaction.trade_pair == trade_pair)
