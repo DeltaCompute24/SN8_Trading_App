@@ -17,6 +17,9 @@ class Challenge(Base):
     challenge = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    register_on_test_net = Column(DateTime, default=datetime.utcnow, nullable=True)
+    register_on_main_net  = Column(DateTime, nullable=True)
+    pass_the_challenge = Column(DateTime, nullable=True)
 
     # Foreign key to reference the FirebaseUser
     user_id = Column(Integer, ForeignKey("firebase_users.id"))
