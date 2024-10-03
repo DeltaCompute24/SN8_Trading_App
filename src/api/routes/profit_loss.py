@@ -28,29 +28,6 @@ async def get_profit_loss(profit_loss_request: ProfitLossRequest, db: AsyncSessi
         raise HTTPException(status_code=404, detail="No open position found for this trade pair and trader")
 
     try:
-        # Explicitly log the details of the latest position
-        logger.info(f"Latest position details: {latest_position}")
-
-        # Ensure latest_position is a dictionary for logging purposes
-        if hasattr(latest_position, "__dict__"):
-            logger.info(f"Latest position attributes: {latest_position.__dict__}")
-        else:
-            logger.warning(f"Latest position has no __dict__ attribute: {latest_position}")
-
-        # Extract and log individual attributes for better visibility
-        logger.info(f"Position ID: {latest_position.position_id}")
-        logger.info(f"Trader ID: {latest_position.trader_id}")
-        logger.info(f"Trade Pair: {latest_position.trade_pair}")
-        logger.info(f"Entry Price: {latest_position.entry_price}")
-        logger.info(f"Cumulative Leverage: {latest_position.cumulative_leverage}")
-        logger.info(f"Cumulative Order Type: {latest_position.cumulative_order_type}")
-        logger.info(f"Asset Type: {latest_position.asset_type}")
-
-        # Log the details used for profit/loss calculation
-        logger.info(f"Calculating profit/loss with details: entry_price={latest_position.entry_price}, "
-                    f"leverage={latest_position.cumulative_leverage}, "
-                    f"order_type={latest_position.cumulative_order_type}, asset_type={latest_position.asset_type}")
-
         # Calculate profit/loss based on the first price
         current_price, profit_loss, profit_loss_without_fee, *extras = get_taoshi_values(
             latest_position.trader_id,

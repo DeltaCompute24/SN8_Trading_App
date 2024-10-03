@@ -5,7 +5,6 @@ from sqlalchemy.orm import Session
 from sqlalchemy.sql import and_
 from sqlalchemy.sql import func
 
-from src.database_tasks import TaskSessionLocal_
 from src.models.transaction import Transaction
 from src.models.users import Users
 from src.services.api_service import call_main_net, call_checkpoint_api, ambassadors
@@ -69,13 +68,7 @@ def get_user(db: Session, hot_key: str):
     return user
 
 
-def populate_transactions(db: Session):
-    main_net_data = call_main_net()
-    test_net_data = call_checkpoint_api()
-    data = test_net_data | main_net_data
-    if not data:
-        return
-
+def process_data(db: Session, data, source):
     for hot_key, content in data.items():
         trader_id = ambassadors.get(hot_key, "")
         if not trader_id:
@@ -171,6 +164,7 @@ def populate_transactions(db: Session):
                     uuid=position_uuid,
                     hot_key=hot_key,
                     upward=-1,
+                    source=source,
                 )
                 db.add(new_transaction)
                 db.commit()
@@ -180,5 +174,9 @@ def populate_transactions(db: Session):
                 print(f"Error while creating position and hot_key: {hot_key} - {position['open_ms']}")
 
 
-with TaskSessionLocal_() as _db:
-    populate_transactions(_db)
+def populate_transactions(db: Session):
+    main_net_data = call_main_net()
+    test_net_data = call_checkpoint_api()
+
+    process_data(db, main_net_data, source="main")
+    process_data(db, test_net_data, source="test")
