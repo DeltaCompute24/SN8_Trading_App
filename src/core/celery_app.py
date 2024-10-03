@@ -11,7 +11,7 @@ celery_app.conf.update(
         'src.tasks.subscription_manager.manage_subscriptions': {'queue': 'subscription_management'},
         'src.tasks.position_monitor_sync.monitor_positions': {'queue': 'position_monitoring'},
         'src.tasks.listen_for_profit_loss.monitor_taoshi': {'queue': 'monitor_taoshi'},
-        'src.tasks.listen_for_profit_loss.monitor_challenges': {'queue': 'monitor_challenges'},
+        'src.tasks.monitor_challenges.monitor_challenges': {'queue': 'monitor_challenges'},
         'src.tasks.redis_listener.event_listener': {'queue': 'event_listener'},
     },
     beat_schedule={
@@ -31,8 +31,8 @@ celery_app.conf.update(
             'task': 'src.tasks.listen_for_profit_loss.monitor_taoshi',
             'schedule': 3.0,  # every 3 second
         },
-        'monitor_challenges_every_3_seconds': {
-            'task': 'src.tasks.listen_for_profit_loss.monitor_challenges',
+        'monitor_challenges_every_10_seconds': {
+            'task': 'src.tasks.monitor_challenges.monitor_challenges',
             'schedule': 10.0,  # every 10 second
         },
     },
@@ -46,3 +46,4 @@ import src.tasks.subscription_manager
 import src.tasks.position_monitor_sync
 import src.tasks.redis_listener
 import src.tasks.listen_for_profit_loss
+import src.tasks.monitor_challenges
