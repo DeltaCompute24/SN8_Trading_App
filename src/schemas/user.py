@@ -33,6 +33,9 @@ class ChallengeRead(ChallengeBase):
     user_id: int
     created_at: datetime
     updated_at: datetime
+    register_on_test_net: Optional[datetime]
+    register_on_main_net: Optional[datetime]
+    pass_the_challenge: Optional[datetime]
 
     class Config:
         orm_mode = True
