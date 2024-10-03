@@ -92,3 +92,4 @@ class PaymentUpdate(BaseModel):
 # EMAIL SCHEMA
 class EmailInput(BaseModel):
     email: EmailStr
+    type: str
