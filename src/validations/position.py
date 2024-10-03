@@ -317,16 +317,12 @@ def validate_trade_pair(asset_type, trade_pair):
     trade_pair = trade_pair.upper()
 
     if asset_type not in ["crypto", "forex", "indices"]:
-        logger.error("Invalid asset type, It should be crypto or forex!")
         raise HTTPException(status_code=400, detail="Invalid asset type, It should be crypto or forex!")
     if asset_type == "crypto" and trade_pair not in crypto_pairs:
-        logger.error("Invalid trade pair for asset type crypto!")
         raise HTTPException(status_code=400, detail="Invalid trade pair for asset type crypto!")
     if asset_type == "forex" and trade_pair not in forex_pairs:
-        logger.error("Invalid trade pair for asset type forex!")
         raise HTTPException(status_code=400, detail="Invalid trade pair for asset type forex!")
     if asset_type == "indices" and trade_pair not in indices_pairs:
-        logger.error("Invalid trade pair for asset type indices!")
         raise HTTPException(status_code=400, detail="Invalid trade pair for asset type indices!")
 
     return asset_type, trade_pair
@@ -336,7 +332,6 @@ def validate_order_type(order_type):
     order_type = order_type.upper()
 
     if order_type not in ["LONG", "SHORT", "FLAT"]:
-        logger.error("Invalid order type, It should be long, short or flat")
         raise HTTPException(status_code=400, detail="Invalid order type, It should be long, short or flat")
 
     return order_type
