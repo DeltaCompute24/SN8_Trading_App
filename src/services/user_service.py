@@ -112,8 +112,5 @@ def get_challenge(trader_id: int):
             )
         )
         if not challenge:
-            return True
-
-        if challenge.challenge == "main":
-            return True
-        return False
+            return "main"
+        return challenge.challenge
