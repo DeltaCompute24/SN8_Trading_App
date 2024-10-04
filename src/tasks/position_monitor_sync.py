@@ -104,14 +104,14 @@ def monitor_position(position):
             position.trader_id,
             position.trade_pair
         )
-        if profit_loss:
-            update_position_profit(
-                position,
-                profit_loss,
-                profit_loss_without_fee,
-                taoshi_profit_loss,
-                taoshi_profit_loss_without_fee[0]
-            )
+        # if profit_loss:
+        #     update_position_profit(
+        #         position,
+        #         profit_loss,
+        #         profit_loss_without_fee,
+        #         taoshi_profit_loss,
+        #         taoshi_profit_loss_without_fee[0]
+        #     )
         if position.status == "OPEN" and should_close_position(profit_loss, position):
             logger.info(
                 f"Position shouldn't be closed: {position.position_id}: {position.trader_id}: {position.trade_pair}")
