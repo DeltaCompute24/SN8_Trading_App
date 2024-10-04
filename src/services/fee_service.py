@@ -31,6 +31,8 @@ def get_taoshi_values(trader_id, trade_pair, initiate=False):
 
         difference = abs(current_time - position_time)
         if difference < timedelta(seconds=5):
+            if initiate:
+                return [challenge, *position[1:]]
             return position[1:]
 
     # if position doesn't exist and belongs to main net
