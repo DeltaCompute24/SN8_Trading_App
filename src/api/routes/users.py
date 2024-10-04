@@ -46,21 +46,20 @@ def create_user(user_data: FirebaseUserCreate, db: Session = Depends(get_db)):
 def get_users(db: Session = Depends(get_db)):
     logger.info("Fetching Firebase Users")
     users = db.query(FirebaseUser).all()
-    for user in users:
-        for challenge in user.challenges:
-            if challenge.active != "1":
-                continue
-            position = get_user_position(db, challenge.trader_id)
-            if not position:
-                continue
-            _return = position.profit_loss or 0.0
-            max_return = position.max_profit_loss or 0.0
-
-            if _return == 0.02 or (0.0 < (max_return - _return) < 0.05):
-                challenge.status = "Passed"
-            else:
-                challenge.status = "Failed"
-
+    # for user in users:
+    #     for challenge in user.challenges:
+    #         if challenge.active != "1":
+    #             continue
+    #         position = get_user_position(db, challenge.trader_id)
+    #         if not position:
+    #             continue
+    #         _return = position.profit_loss or 0.0
+    #         max_return = position.max_profit_loss or 0.0
+    #
+    #         if _return == 0.02 or (0.0 < (max_return - _return) < 0.05):
+    #             challenge.status = "Passed"
+    #         else:
+    #             challenge.status = "Failed"
     return users
 
 
