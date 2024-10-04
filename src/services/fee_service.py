@@ -45,5 +45,5 @@ def get_taoshi_values(trader_id, trade_pair, initiate=False):
              taoshi_profit_loss_without_fee, uuid, hot_key]
     redis_client.hset('positions', f"{trade_pair}-{trader_id}", str(value))
     if initiate:
-        return challenge, value[1:]
+        return [challenge, *value[1:]]
     return value[1:]
