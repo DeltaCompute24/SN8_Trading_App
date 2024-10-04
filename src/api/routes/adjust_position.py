@@ -109,6 +109,7 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
             taoshi_profit_loss_without_fee=taoshi_profit_loss_without_fee[0],
             uuid=position.uuid,
             hot_key=position.hot_key,
+            source=position.source,
         )
 
         await close_transaction(db, position.order_id, position.trader_id, realtime_price, profit_loss,
