@@ -5,7 +5,7 @@ import redis
 
 from src.core.celery_app import celery_app
 from src.services.api_service import call_main_net, call_checkpoint_api
-from src.services.user_service import get_challenge
+from src.services.user_service import get_challenge_for_hotkey
 
 redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
 
@@ -26,7 +26,7 @@ def monitor_taoshi():
         trader_id = ""
         trade_pair = ""
         try:
-            challenge = get_challenge(hot_key)
+            challenge = get_challenge_for_hotkey(hot_key)
             if not challenge:
                 continue
             trader_id = challenge.trader_id

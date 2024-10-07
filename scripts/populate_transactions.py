@@ -8,7 +8,7 @@ from sqlalchemy.sql import func
 from src.models.transaction import Transaction
 from src.models.users import Users
 from src.services.api_service import call_main_net, call_checkpoint_api
-from src.services.user_service import get_challenge
+from src.services.user_service import get_challenge_for_hotkey
 from src.validations.position import forex_polygon_pairs, indices_pairs, crypto_polygon_pairs
 
 
@@ -71,7 +71,7 @@ def get_user(db: Session, hot_key: str):
 
 def process_data(db: Session, data, source):
     for hot_key, content in data.items():
-        challenge = get_challenge(hot_key)
+        challenge = get_challenge_for_hotkey(hot_key)
         if not challenge:
             continue
         trader_id = challenge.trader_id

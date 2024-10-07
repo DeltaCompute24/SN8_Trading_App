@@ -3,7 +3,7 @@ from sqlalchemy import select
 from src.database_tasks import TaskSessionLocal_
 from src.models.transaction import Transaction
 from src.services.api_service import call_checkpoint_api, call_main_net
-from src.services.user_service import get_challenge
+from src.services.user_service import get_challenge_for_hotkey
 
 ambassadors = {
     "5CRwSWfJWnMat1wtUvLTLUJ3ekTTgn1XDC8jVko2H9CmnYC1": 4040,
@@ -24,7 +24,7 @@ ambassadors = {
 
 def process_data(data, mapper, uuid_list, source):
     for hot_key, content in data.items():
-        challenge = get_challenge(hot_key)
+        challenge = get_challenge_for_hotkey(hot_key)
         if not challenge:
             continue
 
