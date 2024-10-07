@@ -1,22 +1,7 @@
 import requests
 
 from src.config import CHECKPOINT_URL
-
-ambassadors = {
-    "5CRwSWfJWnMat1wtUvLTLUJ3ekTTgn1XDC8jVko2H9CmnYC1": 4040,
-    "5ERQp6a5Cd5MsTNnmXQsfrrRoiFvXy6ojE734Z4NxTmaEiiZ": 4041,
-    "5DUdBHPKqwB3Pv85suEZxSyf8EVfcV9V4iPyZaEAMfvzBkp6": 4042,
-    "5FKqNPgDrZCwo4GgMAjTo77L4KRTNcQgpzMWASvDGPRJGZRP": 4043,
-    "5Ew171L2s9RX2wZXbPwS1kcmhyAjzEXSG5W9551bcRqsL3Pg": 4070,
-    "5ERNiynJejVeK6BtHXyyBJNB6RXNzwERhgHjcK7jbNT4n9xQ": 4071,
-    "5DthKaDbqEauMm25rKmKQCjJYvbshR84NzhAVT4zLq4Dz4qK": 4072,
-    "5HK2szxDvXpGzCdSvsRH4hctbVQcDneizgcqgsaWxLAA8e5f": 4073,
-    "5Fc39mqXCJrkwVLTZCduUgkmkUv7Rsz2kgtkHQVMQo8ZTn5U": 4063,
-    "5GCDZ6Vum2vj1YgKtw7Kv2fVXTPmV1pxoHh1YrsxqBvf9SRa": 4064,
-    "5GTL7WXa4JM2yEUjFoCy2PZVLioNs1HzAGLKhuCDzzoeQCTR": 4065,
-    "5DoCFr2EoW1CGuYCEXhsuQdWRsgiUMuxGwNt4Xqb5TCptcBW": 4067,
-    "5EUTaAo7vCGxvLDWRXRrEuqctPjt9fKZmgkaeFZocWECUe9X": 4068,
-}
+from src.services.user_service import get_challenge
 
 
 def call_main_net():
@@ -52,8 +37,8 @@ def get_position(trader_id, trade_pair, main=True):
         return
 
     for hot_key, content in data.items():
-        p_trade_id = ambassadors.get(hot_key, "")
-        if not p_trade_id or p_trade_id != trader_id:
+        challenge = get_challenge(hot_key)
+        if not challenge or challenge.trader_id != trader_id:
             continue
 
         positions = content["positions"]
