@@ -27,7 +27,7 @@ def call_checkpoint_api():
     return response.json()["positions"]
 
 
-def get_position(trader_id, trade_pair, main=True):
+def get_position(trader_id, trade_pair, main=True, position_uuid=None):
     if main:
         data = call_main_net()
     else:
@@ -43,6 +43,9 @@ def get_position(trader_id, trade_pair, main=True):
 
         positions = content["positions"]
         for position in positions:
+            if position_uuid and position["position_uuid"] == position_uuid:
+                return position
+
             if position["is_closed_position"] is True:
                 continue
 
@@ -52,8 +55,8 @@ def get_position(trader_id, trade_pair, main=True):
             return position
 
 
-def get_profit_and_current_price(trader_id, trade_pair, main=True):
-    position = get_position(trader_id, trade_pair, main)
+def get_profit_and_current_price(trader_id, trade_pair, main=True, position_uuid=None):
+    position = get_position(trader_id, trade_pair, main, position_uuid=position_uuid)
 
     if position and position["orders"]:
         price, taoshi_profit_loss, taoshi_profit_loss_without_fee = position["orders"][-1]["price"], position[
