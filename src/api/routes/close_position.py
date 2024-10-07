@@ -43,6 +43,7 @@ async def close_position(position_data: ProfitLossRequest, db: AsyncSession = De
                 close_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, *taoshi_profit_loss_without_fee = get_taoshi_values(
                     position_data.trader_id,
                     position_data.trade_pair,
+                    position_uuid=position.uuid,
                 )
 
                 # 6 times

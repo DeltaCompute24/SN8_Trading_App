@@ -71,7 +71,10 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
         while True:
             time.sleep(1)
             realtime_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, *taoshi_profit_loss_without_fee = get_taoshi_values(
-                position_data.trader_id, position_data.trade_pair)
+                position_data.trader_id,
+                position_data.trade_pair,
+                position_uuid=position.uuid,
+            )
 
             # 6 times
             if realtime_price != 0 or i > 7:
