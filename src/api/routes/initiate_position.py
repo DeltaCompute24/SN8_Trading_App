@@ -46,15 +46,20 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
                 raise HTTPException(status_code=500, detail="Failed to submit trade")
             logger.info("Trade submitted successfully")
 
-        for i in range(3):
-            time.sleep(1)
+        # do while loop to get the current price
+        i = 1
+        while True:
             source, first_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee, uuid, hot_key = get_taoshi_values(
                 position_data.trader_id,
                 position_data.trade_pair,
                 initiate=True,
             )
-            if first_price != 0:
+
+            # 6 times
+            if first_price != 0 or i > 7:
                 break
+
+            i += 1
 
         if first_price == 0:
             logger.error("Failed to fetch current price for the trade pair")

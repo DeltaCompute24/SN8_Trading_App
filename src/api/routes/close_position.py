@@ -36,8 +36,21 @@ async def close_position(position_data: ProfitLossRequest, db: AsyncSession = De
                 logger.error("Failed to submit close signal")
                 raise HTTPException(status_code=500, detail="Failed to submit close signal")
 
-            close_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, *taoshi_profit_loss_without_fee = get_taoshi_values(
-                position_data.trader_id, position_data.trade_pair)
+            # do while loop to get the current price
+            i = 1
+            while True:
+                source, close_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee, uuid, hot_key = get_taoshi_values(
+                    position_data.trader_id,
+                    position_data.trade_pair,
+                    initiate=True,
+                )
+
+                # 6 times
+                if close_price != 0 or i > 7:
+                    break
+
+                i += 1
+
             if close_price == 0:
                 logger.error("Failed to fetch current price for the trade pair")
                 raise HTTPException(status_code=500, detail="Failed to fetch current price for the trade pair")
