@@ -1,4 +1,3 @@
-from sqlalchemy import or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import Session
@@ -103,18 +102,25 @@ def create_or_update_challenges(db: Session, user, challenges):
     return user
 
 
-def get_challenge(value, source=False):
+def get_challenge(trader_id: int, source=False):
     with TaskSessionLocal_() as db:
         challenge = db.scalar(
             select(Challenge).where(
-                or_(
-                    Challenge.trader_id == value,
-                    Challenge.hot_key == value,
-                )
+                and_(Challenge.trader_id == trader_id, )
             )
         )
         if not challenge:
             return
         if source:
             return challenge.challenge
+        return challenge
+
+
+def get_challenge_for_hotkey(hot_key):
+    with TaskSessionLocal_() as db:
+        challenge = db.scalar(
+            select(Challenge).where(
+                and_(Challenge.hot_key == hot_key, )
+            )
+        )
         return challenge
