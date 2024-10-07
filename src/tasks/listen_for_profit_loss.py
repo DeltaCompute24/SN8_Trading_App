@@ -4,7 +4,8 @@ from datetime import datetime
 import redis
 
 from src.core.celery_app import celery_app
-from src.services.api_service import call_main_net, call_checkpoint_api, ambassadors
+from src.services.api_service import call_main_net, call_checkpoint_api
+from src.services.user_service import get_challenge
 
 redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
 
@@ -25,9 +26,10 @@ def monitor_taoshi():
         trader_id = ""
         trade_pair = ""
         try:
-            trader_id = ambassadors.get(hot_key, "")
-            if not trader_id:
+            challenge = get_challenge(hot_key)
+            if not challenge:
                 continue
+            trader_id = challenge.trader_id
 
             positions = content["positions"]
             for position in positions:

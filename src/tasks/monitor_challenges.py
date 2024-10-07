@@ -12,7 +12,7 @@ from src.config import CHECKPOINT_URL
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.models.challenge import Challenge
-from src.services.api_service import ambassadors
+from src.services.user_service import get_challenge
 
 redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
 
@@ -69,8 +69,8 @@ def get_profit_sum(data, challenges_data):
     for hot_key, content in data.items():
         profit_sum = 0
         try:
-            trader_id = ambassadors.get(hot_key, "")
-            if not trader_id:
+            challenge = get_challenge(hot_key)
+            if not challenge:
                 continue
 
             for position in content["positions"]:
@@ -88,8 +88,8 @@ def get_profit_sum(data, challenges_data):
 def get_draw_down(data, challenges_data):
     for hot_key, content in data.items():
         try:
-            trader_id = ambassadors.get(hot_key, "")
-            if not trader_id:
+            challenge = get_challenge(hot_key)
+            if not challenge:
                 continue
 
             draw_down = (content["cps"][-1]["mdd"] * 100) - 100
