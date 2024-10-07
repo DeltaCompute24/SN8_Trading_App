@@ -12,7 +12,7 @@ from src.config import CHECKPOINT_URL
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.models.challenge import Challenge
-from src.services.user_service import get_challenge
+from src.services.user_service import get_challenge_for_hotkey
 
 redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
 
@@ -69,7 +69,7 @@ def get_profit_sum(data, challenges_data):
     for hot_key, content in data.items():
         profit_sum = 0
         try:
-            challenge = get_challenge(hot_key)
+            challenge = get_challenge_for_hotkey(hot_key)
             if not challenge:
                 continue
 
@@ -88,7 +88,7 @@ def get_profit_sum(data, challenges_data):
 def get_draw_down(data, challenges_data):
     for hot_key, content in data.items():
         try:
-            challenge = get_challenge(hot_key)
+            challenge = get_challenge_for_hotkey(hot_key)
             if not challenge:
                 continue
 
