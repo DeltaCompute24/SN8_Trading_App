@@ -1,7 +1,7 @@
 import requests
 
 from src.config import CHECKPOINT_URL
-from src.services.user_service import get_challenge
+from src.services.user_service import get_challenge_for_hotkey
 
 
 def call_main_net():
@@ -37,7 +37,7 @@ def get_position(trader_id, trade_pair, main=True):
         return
 
     for hot_key, content in data.items():
-        challenge = get_challenge(hot_key)
+        challenge = get_challenge_for_hotkey(hot_key)
         if not challenge or challenge.trader_id != trader_id:
             continue
 

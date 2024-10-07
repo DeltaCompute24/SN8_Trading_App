@@ -1,3 +1,5 @@
+import time
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import text
@@ -16,9 +18,7 @@ router = APIRouter()
 
 @router.post("/close-position/", response_model=TradeResponse)
 async def close_position(position_data: ProfitLossRequest, db: AsyncSession = Depends(get_db)):
-    logger.info(
-        f"Closing position for trader_id={position_data.trader_id} and trade_pair={position_data.trade_pair}")
-
+    logger.info(f"Closing position for trader_id={position_data.trader_id} and trade_pair={position_data.trade_pair}")
     position_data.asset_type, position_data.trade_pair = validate_trade_pair(position_data.asset_type,
                                                                              position_data.trade_pair)
 
@@ -39,6 +39,7 @@ async def close_position(position_data: ProfitLossRequest, db: AsyncSession = De
             # do while loop to get the current price
             i = 1
             while True:
+                time.sleep(1)
                 close_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, *taoshi_profit_loss_without_fee = get_taoshi_values(
                     position_data.trader_id,
                     position_data.trade_pair,
