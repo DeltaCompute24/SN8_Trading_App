@@ -11,7 +11,7 @@ class TransactionBase(BaseModel):
     asset_type: str
     stop_loss: Optional[float]
     take_profit: Optional[float]
-    entry_price: Optional[float]
+    entry_price: Optional[float] = 0.0
     order_type: str
 
 
