@@ -1,5 +1,3 @@
-import time
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import text
@@ -66,13 +64,20 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
 
         logger.info("Adjustment submitted successfully")
 
-        for i in range(3):
-            time.sleep(1)
-            realtime_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, *taoshi_profit_loss_without_fee = get_taoshi_values(
-                position_data.trader_id, position_data.trade_pair)
+        # do while loop to get the current price
+        i = 1
+        while True:
+            source, realtime_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee, uuid, hot_key = get_taoshi_values(
+                position_data.trader_id,
+                position_data.trade_pair,
+                initiate=True,
+            )
 
-            if realtime_price != 0:
+            # 6 times
+            if realtime_price != 0 or i > 7:
                 break
+
+            i += 1
 
         if realtime_price == 0:
             logger.error("Failed to fetch current price for the trade pair")
