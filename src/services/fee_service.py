@@ -19,7 +19,7 @@ def get_assets_fee(asset_type):
 
 
 def get_taoshi_values(trader_id, trade_pair, initiate=False):
-    challenge = get_challenge(trader_id)
+    challenge = get_challenge(trader_id, source=True) or "main"
 
     key = f"{trade_pair}-{trader_id}"
     position = redis_client.hget('positions', key)

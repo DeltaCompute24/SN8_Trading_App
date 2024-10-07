@@ -34,7 +34,7 @@ async def get_positions(
     # Base query
     query = select(Transaction)
     if trader_id:
-        source = get_challenge(trader_id)
+        source = get_challenge(trader_id, source=True) or "main"
         query = query.where(Transaction.trader_id == trader_id, Transaction.source == source)
 
     if trade_pair:
