@@ -65,5 +65,6 @@ def get_profit_and_current_price(trader_id, trade_pair, main=True, position_uuid
         profit_loss_without_fee = (taoshi_profit_loss_without_fee * 100) - 100
         position_uuid = position["position_uuid"]
         hot_key = position["miner_hotkey"]
-        return price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee, position_uuid, hot_key
-    return 0.0, 0.0, 0.0, 0.0, 0.0, "", ""
+        return price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee, position_uuid, hot_key, len(
+            position["orders"])
+    return 0.0, 0.0, 0.0, 0.0, 0.0, "", "", 0
