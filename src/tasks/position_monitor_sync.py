@@ -102,7 +102,7 @@ def monitor_position(position):
         # For Open Position to be Closed
         price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, *taoshi_profit_loss_without_fee = get_taoshi_values(
             position.trader_id,
-            position.trade_pair
+            position.trade_pair,
         )
         # if profit_loss:
         #     update_position_profit(
@@ -179,7 +179,7 @@ def close_position(position, profit_loss):
         close_submitted = asyncio.run(
             websocket_manager.submit_trade(position.trader_id, position.trade_pair, "FLAT", 1))
         if close_submitted:
-            close_price = get_taoshi_values(position.trader_id, position.trade_pair)[0]
+            close_price = get_taoshi_values(position.trader_id, position.trade_pair, position_uuid=position.uuid)[0]
             if close_price == 0:
                 return
             new_object["close_price"] = close_price
