@@ -44,7 +44,6 @@ class Transaction(TransactionBase):
     hot_key: Optional[str]
     modified_by: Optional[str]
     upward: Optional[float]
-    challenge_level: Optional[str]
     entry_price_list: Optional[list]
     leverage_list: Optional[list]
     order_type_list: Optional[list]
