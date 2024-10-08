@@ -18,7 +18,7 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
                              cumulative_take_profit: float = None,
                              cumulative_order_type: str = None, status: str = "OPEN", old_status: str = "OPEN",
                              close_time: datetime = None, close_price: float = None, profit_loss: float = 0,
-                             upward: float = -1, challenge_level: str = None, modified_by: str = None,
+                             upward: float = -1, order_level: int = 0, modified_by: str = None,
                              average_entry_price: float = None, entry_price_list: list = None,
                              leverage_list: list = None, order_type_list: list = None, max_profit_loss: float = 0.0,
                              profit_loss_without_fee: float = 0.0, taoshi_profit_loss: float = 0.0,
@@ -65,7 +65,7 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
         position_id=position_id,
         trade_order=trade_order,
         upward=upward,
-        challenge_level=challenge_level,
+        order_level=order_level,
         entry_price_list=entry_price_list,
         leverage_list=leverage_list,
         order_type_list=order_type_list,
@@ -83,7 +83,7 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
 
 
 async def close_transaction(db: AsyncSession, order_id, trader_id, close_price: float = None,
-                            profit_loss: float = None, old_status: str = "", challenge_level: str = "",
+                            profit_loss: float = None, old_status: str = "", order_level: int = 0,
                             profit_loss_without_fee: float = 0.0, taoshi_profit_loss: float = 0.0,
                             taoshi_profit_loss_without_fee: float = 0.0, ):
     close_time = datetime.utcnow()
@@ -100,7 +100,7 @@ async def close_transaction(db: AsyncSession, order_id, trader_id, close_price: 
                 take_profit = :take_profit,
                 order_type = :order_type,
                 modified_by = :modified_by,
-                challenge_level = :challenge_level,
+                order_level = :order_level,
                 profit_loss_without_fee = :profit_loss_without_fee,
                 taoshi_profit_loss = :taoshi_profit_loss,
                 taoshi_profit_loss_without_fee = :taoshi_profit_loss_without_fee
@@ -122,7 +122,7 @@ async def close_transaction(db: AsyncSession, order_id, trader_id, close_price: 
             "order_type": "FLAT",
             "order_id": order_id,
             "modified_by": str(trader_id),
-            "challenge_level": challenge_level,
+            "order_level": order_level,
             "profit_loss_without_fee": profit_loss_without_fee,
             "taoshi_profit_loss": taoshi_profit_loss,
             "taoshi_profit_loss_without_fee": taoshi_profit_loss_without_fee,
