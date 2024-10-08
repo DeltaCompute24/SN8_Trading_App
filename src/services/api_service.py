@@ -1,7 +1,7 @@
 import requests
 
 from src.config import CHECKPOINT_URL
-from src.services.user_service import get_challenge_for_hotkey
+from src.services.user_service import get_hot_key
 
 
 def call_main_net():
@@ -36,23 +36,23 @@ def get_position(trader_id, trade_pair, main=True, position_uuid=None):
     if not data:
         return
 
-    for hot_key, content in data.items():
-        challenge = get_challenge_for_hotkey(hot_key)
-        if not challenge or challenge.trader_id != trader_id:
+    hot_key = get_hot_key(trader_id)
+    content = data.get(hot_key)
+    if not content:
+        return
+
+    positions = content["positions"]
+    for position in positions:
+        if position_uuid and position["position_uuid"] == position_uuid:
+            return position
+
+        if position["is_closed_position"] is True:
             continue
 
-        positions = content["positions"]
-        for position in positions:
-            if position_uuid and position["position_uuid"] == position_uuid:
-                return position
-
-            if position["is_closed_position"] is True:
-                continue
-
-            p_trade_pair = position.get("trade_pair", [])[0]
-            if p_trade_pair != trade_pair:
-                continue
-            return position
+        p_trade_pair = position.get("trade_pair", [])[0]
+        if p_trade_pair != trade_pair:
+            continue
+        return position
 
 
 def get_profit_and_current_price(trader_id, trade_pair, main=True, position_uuid=None):

@@ -12,7 +12,6 @@ from src.config import CHECKPOINT_URL
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.models.challenge import Challenge
-from src.services.user_service import get_challenge_for_hotkey
 
 redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
 
@@ -65,39 +64,6 @@ def get_monitored_challenges():
         return []
 
 
-def get_profit_sum(data, challenges_data):
-    for hot_key, content in data.items():
-        profit_sum = 0
-        try:
-            challenge = get_challenge_for_hotkey(hot_key)
-            if not challenge:
-                continue
-
-            for position in content["positions"]:
-                profit_loss = (position["return_at_close"] * 100) - 100
-                if position["is_closed_position"] is True:
-                    profit_sum += profit_loss
-
-            challenges_data[hot_key] = {
-                "profit_sum": profit_sum,
-            }
-        except Exception as ex:
-            logger.error(f"An error occurred while setting profit_loss: {hot_key} - {ex}")
-
-
-def get_draw_down(data, challenges_data):
-    for hot_key, content in data.items():
-        try:
-            challenge = get_challenge_for_hotkey(hot_key)
-            if not challenge:
-                continue
-
-            draw_down = (content["cps"][-1]["mdd"] * 100) - 100
-            challenges_data[hot_key]["draw_down"] = draw_down
-        except Exception as ex:
-            logger.error(f"An error occurred while setting maximum draw_down: {hot_key} - {ex}")
-
-
 @celery_app.task(name='src.tasks.monitor_challenges.monitor_challenges')
 def monitor_challenges():
     logger.info("Starting monitor_challenges task")
@@ -119,19 +85,28 @@ def monitor_challenges():
     if not data:
         return
 
-    challenges_data = {}
-    get_profit_sum(data["positions"], challenges_data)
-    get_draw_down(data["perf_ledgers"], challenges_data)
+    positions = data["positions"]
+    perf_ledgers = data["perf_ledgers"]
 
     for challenge in get_monitored_challenges():
-        _data = challenges_data.get(challenge.hot_key, {})
-        if not _data:
+        hot_key = challenge.hot_key
+        p_content = positions.get(hot_key)
+        l_content = perf_ledgers.get(hot_key)
+        if not (p_content or l_content):
             continue
 
+        profit_sum = 0
+        for position in p_content["positions"]:
+            profit_loss = (position["return_at_close"] * 100) - 100
+            if position["is_closed_position"] is True:
+                profit_sum += profit_loss
+
+        draw_down = (l_content["cps"][-1]["mdd"] * 100) - 100
+
         new_object = {}
-        if _data["profit_sum"] >= 2:  # 2%
+        if profit_sum >= 2:  # 2%
             new_object = {"id": challenge.id, "pass_the_challenge": datetime.utcnow(), "status": "Passed"}
-        elif _data["draw_down"] <= -5:  # 5%
+        elif draw_down <= -5:  # 5%
             new_object = {"id": challenge.id, "status": "Failed"}
 
         if new_object != {} and (not object_exists(objects_to_be_updated, new_object)):
