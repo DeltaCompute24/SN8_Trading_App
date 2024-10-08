@@ -4,8 +4,9 @@ from datetime import datetime
 import redis
 
 from src.core.celery_app import celery_app
+from src.database_tasks import TaskSessionLocal_
+from src.models.challenge import Challenge
 from src.services.api_service import call_main_net, call_checkpoint_api
-from src.services.user_service import get_challenge_for_hotkey
 
 redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
 
@@ -22,28 +23,31 @@ def monitor_taoshi():
     if not data:
         return
 
-    for hot_key, content in data.items():
-        trader_id = ""
-        trade_pair = ""
-        try:
-            challenge = get_challenge_for_hotkey(hot_key)
-            if not challenge:
-                continue
+    with TaskSessionLocal_() as db:
+        challenges = db.query(Challenge).all()
+        for challenge in challenges:
+            hot_key = challenge.hot_key
             trader_id = challenge.trader_id
+
+            content = data.get(challenge.hot_key)
+            if not content:
+                continue
 
             positions = content["positions"]
             for position in positions:
-                if position["is_closed_position"] is True:
-                    continue
+                try:
+                    if position["is_closed_position"] is True:
+                        continue
 
-                trade_pair = position.get("trade_pair", [])[0]
-                price, taoshi_profit_loss, taoshi_profit_loss_without_fee = position["orders"][-1]["price"], position[
-                    "return_at_close"], position["current_return"]
-                profit_loss = (taoshi_profit_loss * 100) - 100
-                profit_loss_without_fee = (taoshi_profit_loss_without_fee * 100) - 100
-                position_uuid = position["position_uuid"]
-                value = [str(datetime.now()), price, profit_loss, profit_loss_without_fee, taoshi_profit_loss,
-                         taoshi_profit_loss_without_fee, position_uuid, hot_key]
-                redis_client.hset('positions', f"{trade_pair}-{trader_id}", str(value))
-        except Exception as ex:
-            logger.error(f"An error occurred while fetching position {trade_pair}-{trader_id}: {ex}")
+                    trade_pair = position.get("trade_pair", [])[0]
+                    price, taoshi_profit_loss, taoshi_profit_loss_without_fee = position["orders"][-1]["price"], \
+                    position[
+                        "return_at_close"], position["current_return"]
+                    profit_loss = (taoshi_profit_loss * 100) - 100
+                    profit_loss_without_fee = (taoshi_profit_loss_without_fee * 100) - 100
+                    position_uuid = position["position_uuid"]
+                    value = [str(datetime.now()), price, profit_loss, profit_loss_without_fee, taoshi_profit_loss,
+                             taoshi_profit_loss_without_fee, position_uuid, hot_key]
+                    redis_client.hset('positions', f"{trade_pair}-{trader_id}", str(value))
+                except Exception as ex:
+                    logger.error(f"An error occurred while fetching position {trade_pair}-{trader_id}: {ex}")
