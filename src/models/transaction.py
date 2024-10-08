@@ -38,6 +38,7 @@ class Transaction(Base):
     position_id = Column(Integer, nullable=False)
     trade_order = Column(Integer, nullable=False)
     challenge_level = Column(String, nullable=True)
+    order_level = Column(Integer, nullable=True)
     entry_price_list = Column(JSON, default=[])
     leverage_list = Column(JSON, default=[])
     order_type_list = Column(JSON, default=[])
