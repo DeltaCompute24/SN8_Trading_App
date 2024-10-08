@@ -4,12 +4,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.sql import and_
 
 from src.database import get_db
 from src.models.transaction import Transaction
 from src.schemas.transaction import Transaction as TransactionSchema
-from src.services.fee_service import get_taoshi_values
-from src.services.user_service import get_challenge
+from src.services.api_service import call_main_net, call_checkpoint_api
+from src.services.user_service import get_challenge, get_hot_key
 from src.utils.logging import setup_logging
 
 logger = setup_logging()
@@ -21,29 +22,30 @@ router = APIRouter()
 async def get_positions(
         trader_id: Optional[int] = None,
         db: AsyncSession = Depends(get_db),
-        trade_pair: Optional[str] = None,
+        trade_pair: Optional[str] = "",
         only_open: Optional[bool] = False,
-        status: Optional[str] = None
+        status: Optional[str] = "",
 ):
     logger.info(f"Fetching positions for trader_id={trader_id}, trade_pair={trade_pair}, status={status}")
 
-    if status and status.strip().upper() not in ["OPEN", "PENDING", "CLOSED"]:
+    status = status.strip().upper()
+    if status and status not in ["OPEN", "PENDING", "CLOSED"]:
         logger.error("A status can only be open, pending and closed")
         raise HTTPException(status_code=400, detail="A status can only be open, pending and closed!")
+
+    source = get_challenge(trader_id, source=True) or "main"
 
     # Base query
     query = select(Transaction)
     if trader_id:
-        source = get_challenge(trader_id, source=True) or "main"
-        query = query.where(Transaction.trader_id == trader_id, Transaction.source == source)
+        query = query.where(and_(Transaction.trader_id == trader_id, Transaction.source == source))
 
     if trade_pair:
-        query = query.where(Transaction.trade_pair == trade_pair)
+        query = query.where(and_(Transaction.trade_pair == trade_pair))
     if status:
-        status = status.strip().upper()
-        query = query.where(Transaction.status == status)
+        query = query.where(and_(Transaction.status == status))
     elif only_open:
-        query = query.where(Transaction.status == "OPEN")
+        query = query.where(and_(Transaction.status == "OPEN"))
 
     # Main query to fetch all transactions
     query.order_by(desc(Transaction.open_time), desc(Transaction.close_time))
@@ -51,22 +53,35 @@ async def get_positions(
     result = await db.execute(query)
     positions = result.scalars().all()
 
+    if status in ["PENDING", "CLOSED"]:
+        for position in positions:
+            position.fee = abs((position.profit_loss_without_fee or 0.0) - (position.profit_loss or 0.0))
+        return positions
+
+    if source == "main":
+        data = call_main_net()
+    else:
+        data = call_checkpoint_api()
+
     for position in positions:
         position.fee = abs((position.profit_loss_without_fee or 0.0) - (position.profit_loss or 0.0))
         if position.status != "OPEN":
-            logger.info("Position is Closed => Continue")
             continue
 
-        logger.info("Position is Open!")
-        first_price, profit_loss, profit_loss_without_fee, *extras = get_taoshi_values(
-            position.trader_id,
-            position.trade_pair
-        )
-        if profit_loss == 0:
+        hot_key = get_hot_key(position.trader_id)
+        content = data.get(hot_key)
+        if not content:
             continue
 
-        position.profit_loss = profit_loss or position.profit_loss
-        position.profit_loss_without_fee = profit_loss_without_fee or position.profit_loss_without_fee
-        position.fee = abs(profit_loss_without_fee - profit_loss)
+        for pos in content["positions"]:
+            if pos["position_uuid"] != position.uuid:
+                continue
+
+            price, taoshi_profit_loss, taoshi_profit_loss_without_fee = pos["orders"][-1]["price"], pos[
+                "return_at_close"], pos["current_return"]
+            position.profit_loss = (taoshi_profit_loss * 100) - 100
+            position.profit_loss_without_fee = (taoshi_profit_loss_without_fee * 100) - 100
+            position.fee = abs(position.profit_loss_without_fee - position.profit_loss)
+            break
 
     return positions
