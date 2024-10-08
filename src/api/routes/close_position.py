@@ -45,6 +45,10 @@ async def close_position(position_data: ProfitLossRequest, db: AsyncSession = De
                     position_data.trade_pair,
                     position_uuid=position.uuid,
                 )
+                len_order = taoshi_profit_loss_without_fee[-1]
+                if position.order_level <= len_order:
+                    i += 1
+                    continue
 
                 # 6 times
                 if close_price != 0 or i > 7:
@@ -62,6 +66,7 @@ async def close_position(position_data: ProfitLossRequest, db: AsyncSession = De
             profit_loss_without_fee = position.profit_loss_without_fee or 0.0
             taoshi_profit_loss = position.taoshi_profit_loss or 0.0
             taoshi_profit_loss_without_fee = position.taoshi_profit_loss_without_fee or 0.0
+            len_order = position.order_level
 
         logger.info(f"Close price for {position.trade_pair} is {close_price}")
 
@@ -69,7 +74,7 @@ async def close_position(position_data: ProfitLossRequest, db: AsyncSession = De
         await close_transaction(db, position.order_id, position.trader_id, close_price, profit_loss=profit_loss,
                                 old_status=position.status, profit_loss_without_fee=profit_loss_without_fee,
                                 taoshi_profit_loss=taoshi_profit_loss,
-                                taoshi_profit_loss_without_fee=taoshi_profit_loss_without_fee)
+                                taoshi_profit_loss_without_fee=taoshi_profit_loss_without_fee, order_level=len_order)
 
         # Remove closed position from the monitored_positions table
         await db.execute(

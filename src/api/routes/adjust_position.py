@@ -75,6 +75,10 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
                 position_data.trade_pair,
                 position_uuid=position.uuid,
             )
+            len_order = taoshi_profit_loss_without_fee[-1]
+            if position.order_level <= len_order:
+                i += 1
+                continue
 
             # 6 times
             if realtime_price != 0 or i > 7:
@@ -126,10 +130,12 @@ async def adjust_position_endpoint(position_data: TransactionCreate, db: AsyncSe
             uuid=position.uuid,
             hot_key=position.hot_key,
             source=position.source,
+            order_level=len_order,
         )
 
         await close_transaction(db, position.order_id, position.trader_id, realtime_price, profit_loss,
-                                old_status=position.status, profit_loss_without_fee=profit_loss_without_fee)
+                                old_status=position.status, profit_loss_without_fee=profit_loss_without_fee,
+                                order_level=position.order_level)
 
         # Remove old monitored position
         await db.execute(

@@ -57,7 +57,7 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
         i = 1
         while True:
             time.sleep(1)
-            source, first_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee, uuid, hot_key = get_taoshi_values(
+            source, first_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee, uuid, hot_key, len_order = get_taoshi_values(
                 position_data.trader_id,
                 position_data.trade_pair,
                 initiate=True,
@@ -95,6 +95,7 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
                                                    uuid=uuid,
                                                    hot_key=hot_key,
                                                    source=source,
+                                                   order_level=len_order,
                                                    )
 
         # Create MonitoredPositionCreate data
