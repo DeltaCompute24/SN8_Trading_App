@@ -1,42 +1,62 @@
 import asyncio
 import json
-
+from typing import List
 import aiohttp
 import redis
+from redis import asyncio as aioredis
+
 import websockets
 from throttler import Throttler
-
+from src.utils.constants import forex_pairs
 from src.config import POLYGON_API_KEY, SIGNAL_API_KEY, SIGNAL_API_BASE_URL
 from src.utils.logging import setup_logging
+import os
 
-logger = setup_logging()
+
 
 # Set the rate limit: max 10 requests per second
 throttler = Throttler(rate_limit=10, period=1.0)
-redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
+# Use the REDIS_URL from environment variables
+redis_url = os.getenv('REDIS_URL', 'redis://redis:6379/0')
+redis_client = aioredis.from_url(redis_url, decode_responses=True)
+logger = setup_logging()
 
 
 class WebSocketManager:
     def __init__(self):
+        
         self.websocket = None
         self.asset_type = None
         self.trade_pair = None
         self.current_prices = {}  # Store current prices
         self.reconnect_interval = 5  # seconds
         self._recv_lock = asyncio.Lock()  # Lock to ensure single access to recv
-
+        self.trade_pairs =  [self.format_pair_updated(pair['value']) for pair in forex_pairs]
+    
     async def connect(self, asset_type):
         self.asset_type = asset_type
         self.websocket_url = f"wss://socket.polygon.io/{self.asset_type}"
-        while True:
-            try:
-                self.websocket = await websockets.connect(self.websocket_url)
-                await self.authenticate()
-                return self.websocket
-            except Exception as e:
-                logger.error(f"Connection failed: {e}. Retrying in {self.reconnect_interval} seconds...")
-                await asyncio.sleep(self.reconnect_interval)
+        try:
+            self.websocket = await websockets.connect(self.websocket_url)
+            await self.authenticate()
+            return self.websocket
+        except Exception as e:
+            logger.error(f"Connection failed: {e}. Retrying in {self.reconnect_interval} seconds...")
+            await asyncio.sleep(self.reconnect_interval)
 
+
+    async def listen_for_prices_multiple(self):
+        asset_type = "forex"
+        try:
+            logger.info("Starting to listen for prices multiple...")
+            await self.connect(asset_type)
+            await self.subscribe_multiple(self.trade_pairs)
+            await self.receive_and_log()
+        except Exception as e:
+            print(f"WebSocket error: {e}. Reconnecting...")
+            await asyncio.sleep(5)
+                
+                
     async def authenticate(self):
         logger.info("Authenticating WebSocket connection...")
         async with throttler:
@@ -50,6 +70,55 @@ class WebSocketManager:
         else:
             raise Exception("WebSocket authentication failed")
 
+    async def subscribe_multiple(self, trade_pairs: List[str]):
+        subscribe_message= {
+            "action": "subscribe",
+            "params": ",".join(trade_pairs)
+        }
+        async with throttler:
+            await self.websocket.send(json.dumps(subscribe_message))
+        response = await self.websocket.recv()
+        logger.info(f"Subscription response: {response}")
+
+    async def receive_and_log(self):
+        print("Displaying prices for all trade pairs...")
+        while True:
+            try:
+                message = await self.websocket.recv()
+                data = json.loads(message)
+  
+                for item in data:
+                   
+                    if item.get("ev") != "CAS": 
+                        print(f"Skipping non-CAS event: {item}")
+                        continue
+                    trade_pair = item.get("pair")
+                    item.pop("ev", None)
+                   
+                    try:
+                        serialized_item = json.dumps(item)
+                        await redis_client.hset('live_prices', trade_pair, serialized_item)
+                       
+                    except Exception as e:
+                        print(f"Failed to add to Redis: {e}")
+            except websockets.ConnectionClosed:
+                print("WebSocket connection closed. Reconnecting...")
+                await self.connect("forex")
+                await self.subscribe_multiple(self.trade_pairs)
+            except Exception as e:
+                print(f"Unexpected error in receive_and_log: {e}")
+    
+    async def unsubscribe_multiple(self):
+        unsubscribe_message = {
+            "action": "unsubscribe",
+            "params": ",".join(self.trade_pairs)
+        }
+        async with throttler:
+            await self.websocket.send(json.dumps(unsubscribe_message))
+        response = await self.websocket.recv()
+        logger.info(f"Unsubscription response: {response}")
+       
+    
     async def subscribe(self, trade_pair):
         if not self.websocket or self.websocket.closed:
             raise Exception("WebSocket is not connected")
@@ -166,5 +235,14 @@ class WebSocketManager:
             formatted_pair = f"{pair[:-3]}{separator}{pair[-3:]}"
         return f"{ev}.{formatted_pair}"
 
+    
+    def format_pair_updated(self, pair , asset_type = "forex"):
+        prefix = "CAS." if asset_type == "forex" else "XAS."
+
+        if pair in ["SPX", "DJI", "FTSE", "GDAXI"]:
+            formatted_pair = pair
+        else:
+            formatted_pair = f"{pair[:-3]}-{pair[-3:]}"
+        return f"{prefix}{formatted_pair}"
 
 websocket_manager = WebSocketManager()
