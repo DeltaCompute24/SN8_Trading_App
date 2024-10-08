@@ -9,6 +9,8 @@ from src.models.firebase_user import FirebaseUser
 from src.models.users import Users
 from src.schemas.user import UsersBase, FirebaseUserCreate
 
+ambassadors = {}
+
 
 async def get_user(db: AsyncSession, trader_id: int):
     user = await db.scalar(
@@ -124,3 +126,20 @@ def get_challenge_for_hotkey(hot_key):
             )
         )
         return challenge
+
+
+def populate_ambassadors():
+    global ambassadors
+    with TaskSessionLocal_() as db:
+        challenges = db.query(Challenge).all()
+        for challenge in challenges:
+            ambassadors[challenge.trader_id] = challenge.hot_key
+
+
+def get_hot_key(trader_id: int):
+    global ambassadors
+    hot_key = ambassadors.get(trader_id)
+    if not hot_key:
+        populate_ambassadors()
+        hot_key = ambassadors.get(trader_id)
+    return hot_key
