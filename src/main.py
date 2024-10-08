@@ -4,7 +4,7 @@ from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.sql import text
 
-from services.user_service import populate_ambassadors
+from src.services.user_service import populate_ambassadors
 from src.api.routes.adjust_position import router as adjust_router
 from src.api.routes.close_position import router as close_router
 from src.api.routes.create_users import router as create_user_router
