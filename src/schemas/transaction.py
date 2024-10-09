@@ -19,6 +19,10 @@ class TransactionCreate(TransactionBase):
     pass
 
 
+class TransactionUpdate(TransactionBase):
+    leverage: Optional[float] = 0.0
+
+
 class Transaction(TransactionBase):
     order_id: int
     open_time: datetime
