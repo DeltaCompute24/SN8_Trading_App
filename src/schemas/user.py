@@ -73,7 +73,6 @@ class PaymentCreate(BaseModel):
     fid: str
     amount: float
     referral_code: Optional[str] = None
-    challenge_id: Optional[int] = None
     challenge: Optional[ChallengeBase] = None
 
 
