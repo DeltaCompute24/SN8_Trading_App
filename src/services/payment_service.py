@@ -2,7 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import and_
 
-from src.models import Challenge
+from src.models import Challenge, FirebaseUser
 from src.models.payments import Payment
 from src.schemas.user import PaymentCreate, PaymentUpdate
 
@@ -19,6 +19,12 @@ def get_payment(db: Session, payment_id: int):
 
 
 def create_payment(db: Session, payment_data: PaymentCreate):
+    # Check if a payment with the same fid already exists
+    existing_payment = db.query(Payment).filter(Payment.fid == payment_data.fid).first()
+
+    if existing_payment:
+        raise ValueError(f"Payment with fid {payment_data.fid} already exists.")
+
     # Create the Payment object
     new_payment = Payment(
         fid=payment_data.fid,
@@ -29,15 +35,20 @@ def create_payment(db: Session, payment_data: PaymentCreate):
     db.commit()
     db.refresh(new_payment)
 
+    firebase_user = db.query(FirebaseUser).filter(FirebaseUser.firebase_id == payment_data.fid).first()
+
+    if not firebase_user:
+        raise ValueError(f"No FirebaseUser found with firebase_id {payment_data.fid}")
+
     # Check if challenge data exists in payment_data and create challenge if necessary
     if payment_data.challenge:
         challenge_data = payment_data.challenge
         new_challenge = Challenge(
-            trader_id=challenge_data['trader_id'],
-            hot_key=challenge_data['hot_key'],
-            status=challenge_data['status'],
-            active=challenge_data['active'],
-            challenge=challenge_data['challenge']
+            trader_id=challenge_data.trader_id,
+            hot_key=challenge_data.hot_key,
+            user_id=firebase_user.id,
+            active=challenge_data.active,
+            challenge=challenge_data.challenge
         )
         db.add(new_challenge)
 
@@ -56,9 +67,6 @@ def update_payment(db: Session, payment_id: int, payment_data: PaymentUpdate):
     if not payment:
         return None
 
-    # Update the payment fields if provided
-    if payment_data.fid is not None:
-        payment.fid = payment_data.fid
     if payment_data.amount is not None:
         payment.amount = payment_data.amount
     if payment_data.referral_code is not None:
