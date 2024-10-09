@@ -18,8 +18,9 @@ def get_assets_fee(asset_type):
         return 0.00009
 
 
-def get_taoshi_values(trader_id, trade_pair, initiate=False, position_uuid=None):
-    challenge = get_challenge(trader_id, source=True) or "main"
+def get_taoshi_values(trader_id, trade_pair, position_uuid=None, challenge=""):
+    if not challenge:
+        challenge = get_challenge(trader_id, source=True) or "main"
 
     key = f"{trade_pair}-{trader_id}"
     position = redis_client.hget('positions', key)
@@ -31,8 +32,6 @@ def get_taoshi_values(trader_id, trade_pair, initiate=False, position_uuid=None)
 
         difference = abs(current_time - position_time)
         if difference < timedelta(seconds=5):
-            if initiate:
-                return [challenge, *position[1:]]
             return position[1:]
 
     # if position doesn't exist and belongs to main net
@@ -42,7 +41,4 @@ def get_taoshi_values(trader_id, trade_pair, initiate=False, position_uuid=None)
     value = [str(datetime.now()), price, profit_loss, profit_loss_without_fee, taoshi_profit_loss,
              taoshi_profit_loss_without_fee, uuid, hot_key, len_orders]
     redis_client.hset('positions', f"{trade_pair}-{trader_id}", str(value))
-
-    if initiate:
-        return [challenge, *value[1:]]
     return value[1:]
