@@ -103,7 +103,7 @@ def monitor_challenges():
 
         draw_down = (l_content["cps"][-1]["mdd"] * 100) - 100
 
-        new_object = {}
+        new_object = {"draw_down": draw_down, "profit_sum": profit_sum}
         if profit_sum >= 2:  # 2%
             new_object = {"id": challenge.id, "pass_the_challenge": datetime.utcnow(), "status": "Passed"}
         elif draw_down <= -5:  # 5%
