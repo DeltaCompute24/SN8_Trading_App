@@ -38,7 +38,7 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
         status = "OPEN"
         entry_price = position_data.entry_price
 
-        challenge = get_challenge(position_data.trader_id)
+        challenge = get_challenge(position_data.trader_id, source=True)
         if not challenge:
             raise HTTPException(status_code=400,
                                 detail=f"Given Trader ID {position_data.trader_id} does not exist in the system!")
@@ -53,17 +53,28 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
                 raise HTTPException(status_code=500, detail="Failed to submit trade")
             logger.info("Trade submitted successfully")
 
-        # loop to get the current price
-        for i in range(7):
-            time.sleep(1)
-            source, first_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee, uuid, hot_key, len_order = get_taoshi_values(
-                position_data.trader_id,
-                position_data.trade_pair,
-                initiate=True,
-            )
-            # 6 times
-            if first_price != 0:
-                break
+            # loop to get the current price
+            for i in range(7):
+                time.sleep(1)
+                first_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee, uuid, hot_key, len_order = get_taoshi_values(
+                    position_data.trader_id,
+                    position_data.trade_pair,
+                    challenge=challenge
+                )
+                # 6 times
+                if first_price != 0:
+                    break
+        else:
+            await websocket_manager.connect(position_data.asset_type)
+            await websocket_manager.subscribe(position_data.trade_pair)
+            first_price = await websocket_manager.listen_for_initial_price()
+            profit_loss = 0.0
+            profit_loss_without_fee = 0.0
+            taoshi_profit_loss = 0.0
+            taoshi_profit_loss_without_fee = 0.0
+            len_order = 0
+            uuid = ""
+            hot_key = ""
 
         if first_price == 0:
             logger.error("Failed to fetch current price for the trade pair")
@@ -90,7 +101,7 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
                                                    taoshi_profit_loss=taoshi_profit_loss,
                                                    uuid=uuid,
                                                    hot_key=hot_key,
-                                                   source=source,
+                                                   source=challenge,
                                                    order_level=len_order,
                                                    )
 
