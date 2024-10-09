@@ -57,7 +57,7 @@ def get_all_payments(db: Session = Depends(get_db)):
 
 
 # Update Payment
-@router.put("/{payment_id}", response_model=PaymentRead)
+# @router.put("/{payment_id}", response_model=PaymentRead)
 def update_payment_endpoint(payment_id: int, payment_data: PaymentUpdate, db: Session = Depends(get_db)):
     logger.info(f"Updating payment with fid={payment_id}")
 
