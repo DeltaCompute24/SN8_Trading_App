@@ -103,6 +103,7 @@ def monitor_position(position):
         price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, *taoshi_profit_loss_without_fee = get_taoshi_values(
             position.trader_id,
             position.trade_pair,
+            challenge=position.source,
         )
         # if profit_loss:
         #     update_position_profit(
@@ -121,13 +122,14 @@ def monitor_position(position):
         # For Pending Position to be opened
         current_price = redis_client.hget('current_prices', position.trade_pair)
         logger.error(f"Current Price Pair: {position.trade_pair}")
-        if current_price:
-            current_price = float(current_price.decode('utf-8'))
-            logger.error(f"Current Price Found: {current_price}")
+        if not current_price:
+            return
+        current_price = float(current_price.decode('utf-8'))
+        logger.error(f"Current Price Found: {current_price}")
 
-            logger.error(f"Objects to be Updated: {objects_to_be_updated}")
-            if position.status == "PENDING" and should_open_position(position, current_price):
-                open_position(position, current_price)
+        logger.error(f"Objects to be Updated: {objects_to_be_updated}")
+        if position.status == "PENDING" and should_open_position(position, current_price):
+            open_position(position, current_price)
 
         return True
     except Exception as e:
@@ -152,8 +154,22 @@ def open_position(position, current_price):
         open_submitted = asyncio.run(
             websocket_manager.submit_trade(position.trader_id, position.trade_pair, position.order_type,
                                            position.leverage))
-        if open_submitted:
-            objects_to_be_updated.append(new_object)
+        if not open_submitted:
+            return
+        first_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee, uuid, hot_key, len_order = get_taoshi_values(
+            position.trader_id,
+            position.trade_pair,
+            challenge=position.source,
+        )
+        new_object["hot_key"] = hot_key
+        new_object["uuid"] = uuid
+        new_object["initial_price"] = first_price
+        new_object["profit_loss"] = profit_loss
+        new_object["profit_loss_without_fee"] = profit_loss_without_fee
+        new_object["taoshi_profit_loss"] = taoshi_profit_loss
+        new_object["taoshi_profit_loss_without_fee"] = taoshi_profit_loss_without_fee
+        new_object["order_level"] = len_order
+        objects_to_be_updated.append(new_object)
     except Exception as e:
         logger.error(f"An error occurred while opening position {position.position_id}: {e}")
 
