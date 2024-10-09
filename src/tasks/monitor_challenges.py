@@ -28,7 +28,7 @@ def push_to_redis_queue(data):
 
 
 def object_exists(obj_list, new_obj):
-    new_obj_filtered = {k: v for k, v in new_obj.items() if k not in ['pass_the_challenge']}
+    new_obj_filtered = {k: v for k, v in new_obj.items() if k not in ['pass_the_challenge', 'draw_down', 'profit_sum']}
 
     raw_data = redis_client.lrange(queue_name, 0, -1)
     for item in raw_data:
@@ -36,7 +36,7 @@ def object_exists(obj_list, new_obj):
         obj_list.extend(redis_objects)
 
     for obj in obj_list:
-        obj_filtered = {k: v for k, v in obj.items() if k not in ['pass_the_challenge']}
+        obj_filtered = {k: v for k, v in obj.items() if k not in ['pass_the_challenge', 'draw_down', 'profit_sum']}
         if obj_filtered == new_obj_filtered:
             return True
     return False
@@ -103,13 +103,15 @@ def monitor_challenges():
 
         draw_down = (l_content["cps"][-1]["mdd"] * 100) - 100
 
-        new_object = {"draw_down": draw_down, "profit_sum": profit_sum}
+        new_object = {}
         if profit_sum >= 2:  # 2%
             new_object = {"id": challenge.id, "pass_the_challenge": datetime.utcnow(), "status": "Passed"}
         elif draw_down <= -5:  # 5%
             new_object = {"id": challenge.id, "status": "Failed"}
 
         if new_object != {} and (not object_exists(objects_to_be_updated, new_object)):
+            new_object["draw_down"] = draw_down
+            new_object["profit_sum"] = profit_sum
             objects_to_be_updated.append(new_object)
 
     logger.info("Finished monitor_challenges task")
