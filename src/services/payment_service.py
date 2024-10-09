@@ -24,16 +24,14 @@ def create_payment(db: Session, payment_data: PaymentCreate):
         fid=payment_data.fid,
         amount=payment_data.amount,
         referral_code=payment_data.referral_code,
-        challenge_id=payment_data.challenge_id  # This will be updated with the actual challenge created below
     )
-
     db.add(new_payment)
     db.commit()
     db.refresh(new_payment)
 
     # Check if challenge data exists in payment_data and create challenge if necessary
     if payment_data.challenge:
-        challenge_data = payment_data.challenge  # Assume this is a dictionary containing challenge data
+        challenge_data = payment_data.challenge
         new_challenge = Challenge(
             trader_id=challenge_data['trader_id'],
             hot_key=challenge_data['hot_key'],
@@ -50,7 +48,6 @@ def create_payment(db: Session, payment_data: PaymentCreate):
     # Commit the transaction and refresh the payment object
     db.commit()
     db.refresh(new_payment)
-
     return new_payment
 
 
