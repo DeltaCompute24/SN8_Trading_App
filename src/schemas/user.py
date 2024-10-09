@@ -88,6 +88,7 @@ class PaymentRead(PaymentBase):
 class PaymentUpdate(BaseModel):
     amount: Optional[float] = None
     referral_code: Optional[str] = None
+    challenge: Optional[ChallengeRead] = None
 
     class Config:
         orm_mode = True
