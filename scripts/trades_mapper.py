@@ -1,6 +1,6 @@
+from scripts.populate_trade_users import ambassadors
 from src.database_tasks import TaskSessionLocal_
 from src.models.challenge import Challenge
-from src.services.api_service import ambassadors
 
 challenges_dict = {
     '5CRwSWfJWnMat1wtUvLTLUJ3ekTTgn1XDC8jVko2H9CmnYC1': 4040,
