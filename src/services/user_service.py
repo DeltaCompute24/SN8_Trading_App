@@ -7,7 +7,7 @@ from src.database_tasks import TaskSessionLocal_
 from src.models.challenge import Challenge
 from src.models.firebase_user import FirebaseUser
 from src.models.users import Users
-from src.schemas.user import UsersBase, FirebaseUserCreate
+from src.schemas.user import UsersBase
 
 ambassadors = {}
 
@@ -47,29 +47,18 @@ def get_firebase_user(db: Session, firebase_id: str):
     return user
 
 
-def create_firebase_user(db: Session, user_data: FirebaseUserCreate):
-    new_user = FirebaseUser(
-        firebase_id=user_data.firebase_id,
-    )
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
+def create_firebase_user(db: Session, firebase_id: str):
+    firebase_user = get_firebase_user(db, firebase_id)
 
-    if user_data.challenges:
-        for challenge_data in user_data.challenges:
-            challenge = Challenge(
-                trader_id=challenge_data.trader_id,
-                hot_key=challenge_data.hot_key,
-                status=challenge_data.status,
-                active=challenge_data.active,
-                challenge=challenge_data.challenge,
-                user_id=new_user.id
-            )
-            db.add(challenge)
+    if not firebase_user:
+        firebase_user = FirebaseUser(
+            firebase_id=firebase_id,
+        )
+        db.add(firebase_user)
         db.commit()
-    db.refresh(new_user)
+        db.refresh(firebase_user)
 
-    return new_user
+    return firebase_user
 
 
 def create_or_update_challenges(db: Session, user, challenges):
