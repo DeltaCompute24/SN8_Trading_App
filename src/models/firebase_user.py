@@ -11,6 +11,7 @@ class FirebaseUser(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     firebase_id = Column(String, nullable=False, unique=True)
+    email = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
