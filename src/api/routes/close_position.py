@@ -53,7 +53,7 @@ async def close_position(position_data: ProfitLossRequest, db: AsyncSession = De
                     position_uuid=position.uuid,
                 )
                 len_order = taoshi_profit_loss_without_fee[-2]
-                if position.order_level <= len_order and close_price != 0:
+                if position.order_level < len_order and close_price != 0:
                     break
 
             if close_price == 0:
