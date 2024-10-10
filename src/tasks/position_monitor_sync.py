@@ -105,14 +105,6 @@ def monitor_position(position):
             position.trade_pair,
             challenge=position.source,
         )
-        # if profit_loss:
-        #     update_position_profit(
-        #         position,
-        #         profit_loss,
-        #         profit_loss_without_fee,
-        #         taoshi_profit_loss,
-        #         taoshi_profit_loss_without_fee[0]
-        #     )
         if position.status == "OPEN" and should_close_position(profit_loss, position):
             logger.info(
                 f"Position shouldn't be closed: {position.position_id}: {position.trader_id}: {position.trade_pair}")
@@ -156,7 +148,7 @@ def open_position(position, current_price):
                                            position.leverage))
         if not open_submitted:
             return
-        first_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee, uuid, hot_key, len_order = get_taoshi_values(
+        first_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee, uuid, hot_key, len_order, average_entry_price = get_taoshi_values(
             position.trader_id,
             position.trade_pair,
             challenge=position.source,
@@ -169,6 +161,7 @@ def open_position(position, current_price):
         new_object["taoshi_profit_loss"] = taoshi_profit_loss
         new_object["taoshi_profit_loss_without_fee"] = taoshi_profit_loss_without_fee
         new_object["order_level"] = len_order
+        new_object["average_entry_price"] = average_entry_price
         objects_to_be_updated.append(new_object)
     except Exception as e:
         logger.error(f"An error occurred while opening position {position.position_id}: {e}")
@@ -195,10 +188,17 @@ def close_position(position, profit_loss):
         close_submitted = asyncio.run(
             websocket_manager.submit_trade(position.trader_id, position.trade_pair, "FLAT", 1))
         if close_submitted:
-            close_price = get_taoshi_values(position.trader_id, position.trade_pair, position_uuid=position.uuid)[0]
+            close_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee, uuid, hot_key, len_order, average_entry_price = \
+                get_taoshi_values(position.trader_id, position.trade_pair, position_uuid=position.uuid)[0]
             if close_price == 0:
                 return
             new_object["close_price"] = close_price
+            new_object["profit_loss"] = profit_loss
+            new_object["profit_loss_without_fee"] = profit_loss_without_fee
+            new_object["taoshi_profit_loss"] = taoshi_profit_loss
+            new_object["taoshi_profit_loss_without_fee"] = taoshi_profit_loss_without_fee
+            new_object["order_level"] = len_order
+            new_object["average_entry_price"] = average_entry_price
             objects_to_be_updated.append(new_object)
     except Exception as e:
         logger.error(f"An error occurred while closing position {position.position_id}: {e}")

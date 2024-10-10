@@ -46,7 +46,8 @@ def monitor_taoshi():
                     profit_loss_without_fee = (taoshi_profit_loss_without_fee * 100) - 100
                     position_uuid = position["position_uuid"]
                     value = [str(datetime.now()), price, profit_loss, profit_loss_without_fee, taoshi_profit_loss,
-                             taoshi_profit_loss_without_fee, position_uuid, hot_key, len(position["orders"])]
+                             taoshi_profit_loss_without_fee, position_uuid, hot_key, len(position["orders"]),
+                             position["average_entry_price"]]
                     redis_client.hset('positions', f"{trade_pair}-{trader_id}", str(value))
                 except Exception as ex:
                     logger.error(f"An error occurred while fetching position {trade_pair}-{trader_id}: {ex}")
