@@ -16,7 +16,7 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
                              operation_type: str, initial_price: float, position_id: int = None,
                              cumulative_leverage: float = None, cumulative_stop_loss: float = None,
                              cumulative_take_profit: float = None,
-                             cumulative_order_type: str = None, status: str = "OPEN", old_status: str = "OPEN",
+                             order_type: str = None, cumulative_order_type: str = None, status: str = "OPEN", old_status: str = "OPEN",
                              close_time: datetime = None, close_price: float = None, profit_loss: float = 0,
                              upward: float = -1, order_level: int = 0, modified_by: str = None,
                              average_entry_price: float = None, entry_price_list: list = None,
@@ -32,7 +32,7 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
         cumulative_leverage = transaction_data.leverage
         cumulative_stop_loss = transaction_data.stop_loss
         cumulative_take_profit = transaction_data.take_profit
-        cumulative_order_type = transaction_data.order_type
+        cumulative_order_type = order_type
     else:
         max_trade_order = await db.scalar(
             select(func.max(Transaction.trade_order)).filter(Transaction.position_id == position_id))
@@ -47,7 +47,7 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
         leverage=transaction_data.leverage,
         stop_loss=transaction_data.stop_loss,
         take_profit=transaction_data.take_profit,
-        order_type=transaction_data.order_type,
+        order_type=order_type,
         asset_type=transaction_data.asset_type,
         operation_type=operation_type,
         cumulative_leverage=cumulative_leverage,

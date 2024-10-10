@@ -91,6 +91,7 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
 
         # Create the transaction with the first received price
         new_transaction = await create_transaction(db, position_data, entry_price=first_price,
+                                                   order_type=position_data.order_type,
                                                    initial_price=initial_price, operation_type="initiate",
                                                    status=status, upward=upward, old_status=status,
                                                    modified_by=str(position_data.trader_id),
