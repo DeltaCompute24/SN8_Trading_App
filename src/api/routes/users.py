@@ -3,7 +3,6 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from src.services.trade_service import get_user_position
 from src.database_tasks import TaskSessionLocal_
 from src.models.firebase_user import FirebaseUser
 from src.schemas.user import FirebaseUserRead, FirebaseUserCreate, FirebaseUserUpdate
@@ -26,17 +25,10 @@ def get_db():
 @router.post("/", response_model=FirebaseUserRead)
 def create_user(user_data: FirebaseUserCreate, db: Session = Depends(get_db)):
     logger.info(f"Create User for trader_id={user_data.firebase_id}")
-
-    existing_user = get_firebase_user(db, user_data.firebase_id)
-    if existing_user:
-        logger.error("A user already exists for this firebase_id")
-        raise HTTPException(status_code=400, detail="A user already exists for this firebase_id")
-
     try:
-        new_user = create_firebase_user(db, user_data)
-        logger.info(f"User created successfully with firebase id {user_data.firebase_id}")
+        new_user = create_firebase_user(db, user_data.firebase_id)
+        new_user = create_or_update_challenges(db, new_user, user_data.challenges)
         return new_user
-
     except Exception as e:
         logger.error(f"Error creating user: {e}")
         raise HTTPException(status_code=500, detail=str(e))
