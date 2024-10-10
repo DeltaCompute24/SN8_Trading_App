@@ -1,8 +1,9 @@
-from typing import List
+from typing import Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from sqlalchemy.sql import and_
 
 from src.database_tasks import TaskSessionLocal_
 from src.models.payments import Payment
@@ -44,7 +45,14 @@ def get_payment_endpoint(payment_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/", response_model=List[PaymentRead])
-def get_all_payments(db: Session = Depends(get_db)):
+def get_all_payments(
+        db: Session = Depends(get_db),
+        firebase_id: Optional[str] = "",
+):
     logger.info("Fetching all payments")
-    payments = db.execute(select(Payment))
-    return payments.scalars().all()
+    query = select(Payment)
+    if firebase_id:
+        query = query.where(and_(Payment.firebase_id == firebase_id))
+
+    result = db.execute(query)
+    return result.scalars().all()
