@@ -22,7 +22,7 @@ router = APIRouter()
 async def adjust_position_endpoint(position_data: TransactionUpdate, db: AsyncSession = Depends(get_db)):
     logger.info(f"Adjusting position for trader_id={position_data.trader_id} and trade_pair={position_data.trade_pair}")
 
-    position_data = validate_position(position_data)
+    position_data = validate_position(position_data, adjust=True)
 
     # Get the latest transaction record for the given trader and trade pair
     position = await get_open_position(db, position_data.trader_id, position_data.trade_pair)
