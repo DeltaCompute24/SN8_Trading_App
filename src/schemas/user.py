@@ -28,6 +28,11 @@ class ChallengeBase(BaseModel):
     challenge: str = ""
 
 
+class ChallengeUpdate(BaseModel):
+    trader_id: int = 0
+    hot_key: str = ""
+
+
 class ChallengeRead(ChallengeBase):
     id: int
     user_id: int
