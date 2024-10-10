@@ -76,7 +76,7 @@ async def adjust_position_endpoint(position_data: TransactionUpdate, db: AsyncSe
                     position_uuid=position.uuid,
                 )
                 len_order = taoshi_profit_loss_without_fee[-2]
-                if position.order_level <= len_order:
+                if len_order <= position.order_level:
                     continue
                 # 6 times
                 if realtime_price != 0:
