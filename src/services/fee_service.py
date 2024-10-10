@@ -36,9 +36,9 @@ def get_taoshi_values(trader_id, trade_pair, position_uuid=None, challenge=""):
 
     # if position doesn't exist and belongs to main net
     main = (challenge.lower() == "main")
-    price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee, uuid, hot_key, len_orders = get_profit_and_current_price(
+    price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee, uuid, hot_key, len_orders, avg_entry_price = get_profit_and_current_price(
         trader_id, trade_pair, main=main, position_uuid=position_uuid)
     value = [str(datetime.now()), price, profit_loss, profit_loss_without_fee, taoshi_profit_loss,
-             taoshi_profit_loss_without_fee, uuid, hot_key, len_orders]
+             taoshi_profit_loss_without_fee, uuid, hot_key, len_orders, avg_entry_price]
     redis_client.hset('positions', f"{trade_pair}-{trader_id}", str(value))
     return value[1:]
