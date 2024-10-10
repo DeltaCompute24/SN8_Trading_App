@@ -70,15 +70,14 @@ class PaymentBase(BaseModel):
 
 
 class PaymentCreate(BaseModel):
-    fid: str
+    firebase_id: str
     amount: float
     referral_code: Optional[str] = None
-    challenge: Optional[ChallengeBase] = None
 
 
 class PaymentRead(PaymentBase):
     id: int
-    fid: str
+    firebase_id: str
     challenge: Optional[ChallengeRead] = None
 
     class Config:
