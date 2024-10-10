@@ -7,6 +7,7 @@ import redis
 import requests
 from sqlalchemy import or_
 from sqlalchemy.future import select
+from sqlalchemy.sql import and_
 
 from src.config import CHECKPOINT_URL
 from src.core.celery_app import celery_app
@@ -48,12 +49,13 @@ def get_monitored_challenges():
         with TaskSessionLocal_() as db:
             result = db.execute(
                 select(Challenge).where(
-                    or_(
-                        Challenge.status == None,  # status is null
-                        Challenge.status == ""  # status is an empty string
-                    ),
-                    Challenge.active == "1",  # active is "1"
-                    Challenge.challenge == "test"  # challenge is "test"
+                    and_(
+                        or_(
+                            Challenge.status == "In Challenge",
+                        ),
+                        Challenge.active == "1",
+                        Challenge.challenge == "test"
+                    )
                 )
             )
             challenges = result.scalars().all()
