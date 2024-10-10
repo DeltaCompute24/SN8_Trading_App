@@ -85,7 +85,7 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
 async def close_transaction(db: AsyncSession, order_id, trader_id, close_price: float = None,
                             profit_loss: float = None, old_status: str = "", order_level: int = 0,
                             profit_loss_without_fee: float = 0.0, taoshi_profit_loss: float = 0.0,
-                            taoshi_profit_loss_without_fee: float = 0.0, ):
+                            taoshi_profit_loss_without_fee: float = 0.0, average_entry_price: float = 0.0):
     close_time = datetime.utcnow()
     statement = text("""
             UPDATE transactions
@@ -103,7 +103,8 @@ async def close_transaction(db: AsyncSession, order_id, trader_id, close_price: 
                 order_level = :order_level,
                 profit_loss_without_fee = :profit_loss_without_fee,
                 taoshi_profit_loss = :taoshi_profit_loss,
-                taoshi_profit_loss_without_fee = :taoshi_profit_loss_without_fee
+                taoshi_profit_loss_without_fee = :taoshi_profit_loss_without_fee,
+                average_entry_price = :average_entry_price
             WHERE order_id = :order_id
         """)
 
@@ -126,6 +127,7 @@ async def close_transaction(db: AsyncSession, order_id, trader_id, close_price: 
             "profit_loss_without_fee": profit_loss_without_fee,
             "taoshi_profit_loss": taoshi_profit_loss,
             "taoshi_profit_loss_without_fee": taoshi_profit_loss_without_fee,
+            "average_entry_price": average_entry_price,
         }
     )
     await db.commit()
