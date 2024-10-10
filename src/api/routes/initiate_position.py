@@ -43,6 +43,15 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
             raise HTTPException(status_code=400,
                                 detail=f"Given Trader ID {position_data.trader_id} does not exist in the system!")
 
+        profit_loss = 0.0
+        profit_loss_without_fee = 0.0
+        taoshi_profit_loss = 0.0
+        taoshi_profit_loss_without_fee = 0.0
+        len_order = 0
+        uuid = ""
+        hot_key = ""
+        average_entry_price = 0.0
+
         # If entry_price == 0, it is empty then status will be "OPEN" so we can submit trade
         if not entry_price or entry_price == 0:
             # Submit the trade and wait for confirmation
@@ -56,7 +65,7 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
             # loop to get the current price
             for i in range(7):
                 time.sleep(1)
-                first_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee, uuid, hot_key, len_order = get_taoshi_values(
+                first_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee, uuid, hot_key, len_order, average_entry_price = get_taoshi_values(
                     position_data.trader_id,
                     position_data.trade_pair,
                     challenge=challenge
@@ -68,13 +77,6 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
             await websocket_manager.connect(position_data.asset_type)
             await websocket_manager.subscribe(position_data.trade_pair)
             first_price = await websocket_manager.listen_for_initial_price()
-            profit_loss = 0.0
-            profit_loss_without_fee = 0.0
-            taoshi_profit_loss = 0.0
-            taoshi_profit_loss_without_fee = 0.0
-            len_order = 0
-            uuid = ""
-            hot_key = ""
 
         if first_price == 0:
             logger.error("Failed to fetch current price for the trade pair")
@@ -92,9 +94,7 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
                                                    initial_price=initial_price, operation_type="initiate",
                                                    status=status, upward=upward, old_status=status,
                                                    modified_by=str(position_data.trader_id),
-                                                   average_entry_price=first_price, entry_price_list=[initial_price],
-                                                   leverage_list=[position_data.leverage],
-                                                   order_type_list=[position_data.order_type],
+                                                   average_entry_price=average_entry_price,
                                                    profit_loss=profit_loss,
                                                    profit_loss_without_fee=profit_loss_without_fee,
                                                    taoshi_profit_loss_without_fee=taoshi_profit_loss_without_fee,
