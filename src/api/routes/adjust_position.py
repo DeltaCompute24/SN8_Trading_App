@@ -76,18 +76,15 @@ async def adjust_position_endpoint(position_data: TransactionUpdate, db: AsyncSe
                     position_uuid=position.uuid,
                 )
                 len_order = taoshi_profit_loss_without_fee[-2]
-                if len_order <= position.order_level:
-                    continue
-                # 6 times
-                if realtime_price != 0:
+                if position.order_level <= len_order and realtime_price != 0:
                     break
 
             if realtime_price == 0:
                 logger.error("Failed to fetch current price for the trade pair")
                 raise HTTPException(status_code=500, detail="Failed to fetch current price for the trade pair")
 
-            taoshi_profit_loss_without_fee = taoshi_profit_loss_without_fee[0]
             average_entry_price = taoshi_profit_loss_without_fee[-1]
+            taoshi_profit_loss_without_fee = taoshi_profit_loss_without_fee[0]
 
         # Create a new transaction record with updated values
         new_transaction = await create_transaction(
