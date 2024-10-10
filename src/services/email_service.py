@@ -1,9 +1,9 @@
 import smtplib
+import threading
 from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-from fastapi import HTTPException
 from jinja2 import Environment, FileSystemLoader
 
 from src.config import EMAIL_HOST, EMAIL_PORT, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD
@@ -56,9 +56,15 @@ def send_mail(receiver, subject, content):
         server.sendmail(EMAIL_HOST_USER, receiver, text)
 
     except Exception as exp:
-        raise HTTPException(status_code=400, detail=f"Email not sent successfully! Error: {str(exp)}")
+        pass
+        # raise HTTPException(status_code=400, detail=f"Email not sent successfully! Error: {str(exp)}")
 
     finally:
         # Close the server connection
         if server:
             server.quit()
+
+
+def send_mail_in_thread(receiver, subject, content):
+    email_thread = threading.Thread(target=send_mail, args=(receiver, subject, content))
+    email_thread.start()
