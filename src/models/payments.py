@@ -10,7 +10,7 @@ class Payment(Base):
     __tablename__ = "payments"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    fid = Column(String, nullable=False, unique=True)
+    firebase_id = Column(String, nullable=False)
     amount = Column(Float, nullable=False)
     referral_code = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
