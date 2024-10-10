@@ -297,12 +297,13 @@ forex_pairs = ["AUDCAD", "AUDUSD", "AUDJPY", "CADCHF", "CADJPY", "CHFJPY", "EURC
 indices_pairs = ["GDAXI", "NDX", "VIX"]
 
 
-def validate_position(position):
+def validate_position(position, adjust=False):
     asset_type, trade_pair = validate_trade_pair(position.asset_type, position.trade_pair)
-    order_type = validate_order_type(position.order_type)
+    if not adjust:
+        order_type = validate_order_type(position.order_type)
+        position.order_type = order_type
     position.asset_type = asset_type
     position.trade_pair = trade_pair
-    position.order_type = order_type
 
     if position.stop_loss is None:
         position.stop_loss = 0
