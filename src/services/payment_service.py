@@ -21,13 +21,7 @@ def get_payment(db: Session, payment_id: int):
 
 
 def create_payment(db: Session, payment_data: PaymentCreate):
-    # Check if a payment with the same fid already exists
-    existing_payment = db.query(Payment).filter(Payment.fid == payment_data.fid).first()
-
-    if existing_payment:
-        raise ValueError(f"Payment with fid {payment_data.fid} already exists.")
-
-    firebase_user = create_firebase_user(db, payment_data.fid)
+    firebase_user = create_firebase_user(db, payment_data.firebase_id)
 
     new_challenge = Challenge(
         trader_id=0,
@@ -42,7 +36,7 @@ def create_payment(db: Session, payment_data: PaymentCreate):
 
     # Create the Payment object
     new_payment = Payment(
-        fid=payment_data.fid,
+        firebase_id=payment_data.firebase_id,
         amount=payment_data.amount,
         referral_code=payment_data.referral_code,
         challenge=new_challenge,
