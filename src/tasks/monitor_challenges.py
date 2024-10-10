@@ -13,6 +13,7 @@ from src.config import CHECKPOINT_URL
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.models.challenge import Challenge
+from src.services.email_service import send_mail
 
 redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
 
@@ -66,6 +67,20 @@ def get_monitored_challenges():
         return []
 
 
+def update_challenge(challenge, status, draw_down, profit_sum, subject, content, pass_the_challenge=None):
+    with TaskSessionLocal_() as db:
+        challenge.pass_the_challenge = pass_the_challenge
+        challenge.status = status
+        challenge.draw_down = draw_down
+        challenge.profit_sum = profit_sum
+        db.commit()
+        db.refresh(challenge)
+    email = challenge.user.email
+    if not email:
+        return
+    send_mail(email, subject, content)
+
+
 @celery_app.task(name='src.tasks.monitor_challenges.monitor_challenges')
 def monitor_challenges():
     logger.info("Starting monitor_challenges task")
@@ -105,15 +120,18 @@ def monitor_challenges():
 
         draw_down = (l_content["cps"][-1]["mdd"] * 100) - 100
 
-        new_object = {}
         if profit_sum >= 2:  # 2%
-            new_object = {"id": challenge.id, "pass_the_challenge": datetime.utcnow(), "status": "Passed"}
+            # new_object = {"id": challenge.id, "pass_the_challenge": datetime.utcnow(), "status": "Passed"}
+            update_challenge(challenge, "Passed", draw_down, profit_sum, "Challenge Passed",
+                             "Congratulations! You have entered to Phase 2 from Phase 1!", datetime.utcnow())
         elif draw_down <= -5:  # 5%
-            new_object = {"id": challenge.id, "status": "Failed"}
+            # new_object = {"id": challenge.id, "status": "Failed"}
+            update_challenge(challenge, "Failed", draw_down, profit_sum, "Challenge Failed",
+                             "Unfortunately! You have Failed!")
 
-        if new_object != {} and (not object_exists(objects_to_be_updated, new_object)):
-            new_object["draw_down"] = draw_down
-            new_object["profit_sum"] = profit_sum
-            objects_to_be_updated.append(new_object)
+        # if new_object != {} and (not object_exists(objects_to_be_updated, new_object)):
+        #     new_object["draw_down"] = draw_down
+        #     new_object["profit_sum"] = profit_sum
+        #     objects_to_be_updated.append(new_object)
 
     logger.info("Finished monitor_challenges task")
