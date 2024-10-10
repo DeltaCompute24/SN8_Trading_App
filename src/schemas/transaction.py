@@ -19,8 +19,13 @@ class TransactionCreate(TransactionBase):
     pass
 
 
-class TransactionUpdate(TransactionBase):
-    leverage: Optional[float] = 0.0
+class TransactionUpdate(BaseModel):
+    trader_id: int
+    trade_pair: str
+    leverage: float
+    asset_type: str
+    stop_loss: Optional[float]
+    take_profit: Optional[float]
 
 
 class Transaction(TransactionBase):
@@ -40,7 +45,6 @@ class Transaction(TransactionBase):
     close_price: Optional[float]
     profit_loss: Optional[float]
     profit_loss_without_fee: Optional[float] or 0.0
-    max_profit_loss: Optional[float] or 0.0
     fee: Optional[float] or 0.0
     position_id: int
     trade_order: int
@@ -48,9 +52,6 @@ class Transaction(TransactionBase):
     hot_key: Optional[str]
     modified_by: Optional[str]
     upward: Optional[float]
-    entry_price_list: Optional[list]
-    leverage_list: Optional[list]
-    order_type_list: Optional[list]
     source: Optional[str]
 
     class Config:

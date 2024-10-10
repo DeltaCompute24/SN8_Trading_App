@@ -31,38 +31,36 @@ async def adjust_position_endpoint(position_data: TransactionUpdate, db: AsyncSe
         raise HTTPException(status_code=404, detail="No open position found for this trade pair and trader")
 
     try:
-        logger.info(f"Latest position: {position}")
+        prev_leverage = position.leverage
+        new_leverage = position_data.leverage
 
-        # Calculate new leverage based on the cumulative order type
-        if (position.cumulative_order_type == 'LONG' and position_data.order_type.upper() == 'LONG') or \
-                (position.cumulative_order_type == 'SHORT' and position_data.order_type.upper() == 'SHORT'):
-            new_leverage = position.cumulative_leverage + position_data.leverage
-        else:
-            new_leverage = position.cumulative_leverage - position_data.leverage
-
-        # Determine the new cumulative order type
-        if new_leverage == 0:
-            cumulative_order_type = 'FLAT'
-            new_leverage = 0
-        elif new_leverage < 0:
-            cumulative_order_type = 'SHORT'
-            new_leverage = abs(new_leverage)
-        else:  # new_leverage > 0
-            cumulative_order_type = 'LONG'
-
-        logger.info(f"New leverage: {new_leverage}, Updated cumulative order type: {cumulative_order_type}")
-
-        # Update cumulative values based on the latest position
-        cumulative_leverage = abs(new_leverage)  # Ensure cumulative leverage is always positive
         cumulative_stop_loss = position_data.stop_loss
         cumulative_take_profit = position_data.take_profit
+        realtime_price = position.entry_price or 0.0
+        profit_loss = position.profit_loss or 0.0
+        profit_loss_without_fee = position.profit_loss_without_fee or 0.0
+        taoshi_profit_loss = position.taoshi_profit_loss or 0.0
+        taoshi_profit_loss_without_fee = position.taoshi_profit_loss_without_fee or 0.0
+        len_order = position.order_level
+        position_data.leverage = position.leverage
+        cumulative_leverage = position.cumulative_leverage
+        average_entry_price = position.average_entry_price
 
-        if position_data.leverage != 0:
+        if new_leverage != prev_leverage:
+            # Calculate new leverage based on the cumulative order type
+            leverage = new_leverage - prev_leverage
+            order_type = position.order_type
+            if leverage < 0:
+                order_type = "SHORT" if position.order_type == "LONG" else "LONG"
+                leverage = abs(leverage)
+            position_data.leverage = leverage
+            cumulative_leverage = abs(new_leverage)
+
             # Submit the adjustment signal
             adjustment_submitted = await websocket_manager.submit_trade(position_data.trader_id,
                                                                         position_data.trade_pair,
-                                                                        position_data.order_type,
-                                                                        position_data.leverage)
+                                                                        order_type,
+                                                                        leverage, )
             if not adjustment_submitted:
                 logger.error("Failed to submit adjustment")
                 raise HTTPException(status_code=500, detail="Failed to submit adjustment")
@@ -77,7 +75,7 @@ async def adjust_position_endpoint(position_data: TransactionUpdate, db: AsyncSe
                     position_data.trade_pair,
                     position_uuid=position.uuid,
                 )
-                len_order = taoshi_profit_loss_without_fee[-1]
+                len_order = taoshi_profit_loss_without_fee[-2]
                 if position.order_level <= len_order:
                     continue
                 # 6 times
@@ -88,30 +86,8 @@ async def adjust_position_endpoint(position_data: TransactionUpdate, db: AsyncSe
                 logger.error("Failed to fetch current price for the trade pair")
                 raise HTTPException(status_code=500, detail="Failed to fetch current price for the trade pair")
 
-            entry_price_list = position.entry_price_list + [realtime_price]
-            leverage_list = position.leverage_list + [position_data.leverage]
-            order_type_list = position.order_type_list + [position_data.order_type]
             taoshi_profit_loss_without_fee = taoshi_profit_loss_without_fee[0]
-        else:
-            realtime_price = position.entry_price or 0.0
-            profit_loss = position.profit_loss or 0.0
-            profit_loss_without_fee = position.profit_loss_without_fee or 0.0
-            taoshi_profit_loss = position.taoshi_profit_loss or 0.0
-            taoshi_profit_loss_without_fee = position.taoshi_profit_loss_without_fee or 0.0
-            entry_price_list = position.entry_price_list
-            leverage_list = position.leverage_list
-            order_type_list = position.order_type_list
-            len_order = position.order_level
-            position_data.leverage = position.leverage
-            cumulative_leverage = position.cumulative_leverage
-            cumulative_order_type = position.cumulative_order_type
-
-        prev_avg_entry_price = position.average_entry_price if position.average_entry_price else 0.0
-        if cumulative_leverage != 0:
-            average_entry_price = (prev_avg_entry_price * position.cumulative_leverage
-                                   + realtime_price * position_data.leverage) / cumulative_leverage
-        else:
-            average_entry_price = prev_avg_entry_price
+            average_entry_price = taoshi_profit_loss_without_fee[-1]
 
         # Create a new transaction record with updated values
         new_transaction = await create_transaction(
@@ -120,7 +96,7 @@ async def adjust_position_endpoint(position_data: TransactionUpdate, db: AsyncSe
             cumulative_leverage=cumulative_leverage,
             cumulative_stop_loss=cumulative_stop_loss,
             cumulative_take_profit=cumulative_take_profit,
-            cumulative_order_type=cumulative_order_type,
+            cumulative_order_type=position.cumulative_order_type,
             status=position.status,
             old_status=position.old_status,
             modified_by=str(position_data.trader_id),
@@ -128,9 +104,6 @@ async def adjust_position_endpoint(position_data: TransactionUpdate, db: AsyncSe
             profit_loss=profit_loss,
             profit_loss_without_fee=profit_loss_without_fee,
             average_entry_price=average_entry_price,
-            entry_price_list=entry_price_list,
-            leverage_list=leverage_list,
-            order_type_list=order_type_list,
             taoshi_profit_loss=taoshi_profit_loss,
             taoshi_profit_loss_without_fee=taoshi_profit_loss_without_fee,
             uuid=position.uuid,
@@ -141,7 +114,9 @@ async def adjust_position_endpoint(position_data: TransactionUpdate, db: AsyncSe
 
         await close_transaction(db, position.order_id, position.trader_id, realtime_price, profit_loss,
                                 old_status=position.status, profit_loss_without_fee=profit_loss_without_fee,
-                                order_level=position.order_level)
+                                order_level=position.order_level, average_entry_price=average_entry_price,
+                                taoshi_profit_loss=taoshi_profit_loss,
+                                taoshi_profit_loss_without_fee=taoshi_profit_loss_without_fee)
 
         # Remove old monitored position
         await db.execute(
@@ -167,7 +142,6 @@ async def adjust_position_endpoint(position_data: TransactionUpdate, db: AsyncSe
             )
         )
 
-        logger.info("Position adjusted successfully")
         return {
             "message": "Position adjusted successfully",
             "data": {

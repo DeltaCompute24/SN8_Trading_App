@@ -29,6 +29,14 @@ async def close_position(position_data: ProfitLossRequest, db: AsyncSession = De
 
     try:
         # Submit the FLAT signal to close the position
+        close_price = position.entry_price or 0.0
+        profit_loss = position.profit_loss or 0.0
+        profit_loss_without_fee = position.profit_loss_without_fee or 0.0
+        taoshi_profit_loss = position.taoshi_profit_loss or 0.0
+        taoshi_profit_loss_without_fee = position.taoshi_profit_loss_without_fee or 0.0
+        len_order = position.order_level
+        average_entry_price = position.average_entry_price
+
         if position.status != "PENDING":
             close_submitted = await websocket_manager.submit_trade(position_data.trader_id,
                                                                    position_data.trade_pair, "FLAT", 1)
@@ -44,7 +52,7 @@ async def close_position(position_data: ProfitLossRequest, db: AsyncSession = De
                     position_data.trade_pair,
                     position_uuid=position.uuid,
                 )
-                len_order = taoshi_profit_loss_without_fee[-1]
+                len_order = taoshi_profit_loss_without_fee[-2]
                 if position.order_level <= len_order:
                     continue
                 # 6 times
@@ -55,13 +63,7 @@ async def close_position(position_data: ProfitLossRequest, db: AsyncSession = De
                 logger.error("Failed to fetch current price for the trade pair")
                 raise HTTPException(status_code=500, detail="Failed to fetch current price for the trade pair")
             taoshi_profit_loss_without_fee = taoshi_profit_loss_without_fee[0]
-        else:
-            close_price = position.entry_price or 0.0
-            profit_loss = position.profit_loss or 0.0
-            profit_loss_without_fee = position.profit_loss_without_fee or 0.0
-            taoshi_profit_loss = position.taoshi_profit_loss or 0.0
-            taoshi_profit_loss_without_fee = position.taoshi_profit_loss_without_fee or 0.0
-            len_order = position.order_level
+            average_entry_price = taoshi_profit_loss_without_fee[-1]
 
         logger.info(f"Close price for {position.trade_pair} is {close_price}")
 
@@ -69,7 +71,8 @@ async def close_position(position_data: ProfitLossRequest, db: AsyncSession = De
         await close_transaction(db, position.order_id, position.trader_id, close_price, profit_loss=profit_loss,
                                 old_status=position.status, profit_loss_without_fee=profit_loss_without_fee,
                                 taoshi_profit_loss=taoshi_profit_loss,
-                                taoshi_profit_loss_without_fee=taoshi_profit_loss_without_fee, order_level=len_order)
+                                taoshi_profit_loss_without_fee=taoshi_profit_loss_without_fee, order_level=len_order,
+                                average_entry_price=average_entry_price)
 
         # Remove closed position from the monitored_positions table
         await db.execute(
