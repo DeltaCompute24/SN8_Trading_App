@@ -5,8 +5,10 @@ from sqlalchemy.orm import Session
 
 from src.database_tasks import TaskSessionLocal_
 from src.models.firebase_user import FirebaseUser
+from src.schemas.user import ChallengeRead, ChallengeUpdate
 from src.schemas.user import FirebaseUserRead, FirebaseUserCreate, FirebaseUserUpdate
-from src.services.user_service import get_firebase_user, create_firebase_user, create_or_update_challenges
+from src.services.user_service import get_firebase_user, create_firebase_user, create_or_update_challenges, \
+    get_challenge_by_id
 from src.utils.logging import setup_logging
 
 logger = setup_logging()
@@ -38,20 +40,6 @@ def create_user(user_data: FirebaseUserCreate, db: Session = Depends(get_db)):
 def get_users(db: Session = Depends(get_db)):
     logger.info("Fetching Firebase Users")
     users = db.query(FirebaseUser).all()
-    # for user in users:
-    #     for challenge in user.challenges:
-    #         if challenge.active != "1":
-    #             continue
-    #         position = get_user_position(db, challenge.trader_id)
-    #         if not position:
-    #             continue
-    #         _return = position.profit_loss or 0.0
-    #         max_return = position.max_profit_loss or 0.0
-    #
-    #         if _return == 0.02 or (0.0 < (max_return - _return) < 0.05):
-    #             challenge.status = "Passed"
-    #         else:
-    #             challenge.status = "Failed"
     return users
 
 
@@ -85,3 +73,27 @@ def update_user(firebase_id: str, user_data: FirebaseUserUpdate, db: Session = D
     user = create_or_update_challenges(db, user, user_data.challenges)
     logger.info(f"User updated successfully with firebase_id={user_data.firebase_id}")
     return user
+
+
+@router.put("/challenge/{challenge_id}", response_model=ChallengeRead)
+def update_challenge(
+        challenge_id: int,
+        challenge_data: ChallengeUpdate,
+        db: Session = Depends(get_db),
+):
+    try:
+        challenge = get_challenge_by_id(db, challenge_id)
+        if not challenge:
+            raise HTTPException(status_code=404, detail="Challenge Not Found!")
+
+        challenge.hot_key = challenge_data.hot_key
+        challenge.trader_id = challenge_data.trader_id
+        challenge.active = "1"
+        challenge.status = "In Challenge"
+
+        db.commit()
+        db.refresh(challenge)
+        return challenge
+    except Exception as e:
+        logger.error(f"Error creating payment: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

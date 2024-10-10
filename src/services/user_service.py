@@ -107,6 +107,17 @@ def get_challenge(trader_id: int, source=False):
         return challenge
 
 
+def get_challenge_by_id(db: Session, challenge_id: int):
+    challenge = db.scalar(
+        select(Challenge).where(
+            and_(
+                Challenge.id == challenge_id,
+            )
+        )
+    )
+    return challenge
+
+
 def get_challenge_for_hotkey(hot_key):
     with TaskSessionLocal_() as db:
         challenge = db.scalar(
