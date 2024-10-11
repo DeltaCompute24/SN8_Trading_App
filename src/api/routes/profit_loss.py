@@ -33,6 +33,7 @@ async def get_profit_loss(profit_loss_request: ProfitLossRequest, db: AsyncSessi
             latest_position.trader_id,
             latest_position.trade_pair,
             position_uuid=latest_position.uuid,
+            challenge=latest_position.source,
         )
 
         # Log the calculated profit/loss

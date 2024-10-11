@@ -189,7 +189,8 @@ def close_position(position, profit_loss):
             websocket_manager.submit_trade(position.trader_id, position.trade_pair, "FLAT", 1))
         if close_submitted:
             close_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee, uuid, hot_key, len_order, average_entry_price = \
-                get_taoshi_values(position.trader_id, position.trade_pair, position_uuid=position.uuid)[0]
+                get_taoshi_values(position.trader_id, position.trade_pair, position_uuid=position.uuid,
+                                  challenge=position.source)[0]
             if close_price == 0:
                 return
             new_object["close_price"] = close_price
