@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 import redis
 
 from src.services.api_service import get_profit_and_current_price
-from src.services.user_service import get_challenge
 
 redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
 
@@ -18,10 +17,7 @@ def get_assets_fee(asset_type):
         return 0.00009
 
 
-def get_taoshi_values(trader_id, trade_pair, position_uuid=None, challenge=""):
-    if not challenge:
-        challenge = get_challenge(trader_id, source=True) or "main"
-
+def get_taoshi_values(trader_id, trade_pair, position_uuid=None, challenge="main"):
     key = f"{trade_pair}-{trader_id}"
     position = redis_client.hget('positions', key)
     # if position exist in redis
@@ -40,5 +36,6 @@ def get_taoshi_values(trader_id, trade_pair, position_uuid=None, challenge=""):
         trader_id, trade_pair, main=main, position_uuid=position_uuid)
     value = [str(datetime.now()), price, profit_loss, profit_loss_without_fee, taoshi_profit_loss,
              taoshi_profit_loss_without_fee, uuid, hot_key, len_orders, avg_entry_price]
-    redis_client.hset('positions', f"{trade_pair}-{trader_id}", str(value))
+    if price != 0:
+        redis_client.hset('positions', f"{trade_pair}-{trader_id}", str(value))
     return value[1:]
