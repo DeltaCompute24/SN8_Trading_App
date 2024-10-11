@@ -7,6 +7,7 @@ from src.database_tasks import TaskSessionLocal_
 from src.models.firebase_user import FirebaseUser
 from src.schemas.user import ChallengeRead, ChallengeUpdate
 from src.schemas.user import FirebaseUserRead, FirebaseUserCreate, FirebaseUserUpdate
+from src.services.email_service import send_mail_in_thread
 from src.services.user_service import get_firebase_user, create_firebase_user, create_or_update_challenges, \
     get_challenge_by_id
 from src.utils.logging import setup_logging
@@ -93,6 +94,9 @@ def update_challenge(
 
         db.commit()
         db.refresh(challenge)
+        if challenge.user.email:
+            send_mail_in_thread(challenge.user.email, "Issuance of trader_id and hot_key",
+                                "Congratulations! Your trader_id and hot_key is ready. Now, you can use your system.")
         return challenge
     except Exception as e:
         logger.error(f"Error creating payment: {e}")
