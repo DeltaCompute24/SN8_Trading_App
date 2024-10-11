@@ -74,9 +74,10 @@ async def adjust_position_endpoint(position_data: TransactionUpdate, db: AsyncSe
                     position_data.trader_id,
                     position_data.trade_pair,
                     position_uuid=position.uuid,
+                    challenge=position.source,
                 )
                 len_order = taoshi_profit_loss_without_fee[-2]
-                if position.order_level < len_order and realtime_price != 0:
+                if realtime_price != 0 and position.order_level < len_order:
                     break
 
             if realtime_price == 0:

@@ -68,7 +68,7 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
                 first_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee, uuid, hot_key, len_order, average_entry_price = get_taoshi_values(
                     position_data.trader_id,
                     position_data.trade_pair,
-                    challenge=challenge
+                    challenge=challenge,
                 )
                 # 6 times
                 if first_price != 0:
