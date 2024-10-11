@@ -7,6 +7,7 @@ import redis
 import requests
 from sqlalchemy import or_
 from sqlalchemy.future import select
+from sqlalchemy.orm import Session
 from sqlalchemy.sql import and_
 
 from src.config import CHECKPOINT_URL
@@ -44,22 +45,21 @@ def object_exists(obj_list, new_obj):
     return False
 
 
-def get_monitored_challenges():
+def get_monitored_challenges(db: Session):
     try:
         logger.info("Fetching monitored challenges from database")
-        with TaskSessionLocal_() as db:
-            result = db.execute(
-                select(Challenge).where(
-                    and_(
-                        or_(
-                            Challenge.status == "In Challenge",
-                        ),
-                        Challenge.active == "1",
-                        Challenge.challenge == "test"
-                    )
+        result = db.execute(
+            select(Challenge).where(
+                and_(
+                    or_(
+                        Challenge.status == "In Challenge",
+                    ),
+                    Challenge.active == "1",
+                    Challenge.challenge == "test"
                 )
             )
-            challenges = result.scalars().all()
+        )
+        challenges = result.scalars().all()
         logger.info(f"Retrieved {len(challenges)} monitored challenges")
         return challenges
     except Exception as e:
@@ -67,14 +67,14 @@ def get_monitored_challenges():
         return []
 
 
-def update_challenge(challenge, status, draw_down, profit_sum, subject, content, pass_the_challenge=None):
-    with TaskSessionLocal_() as db:
-        challenge.pass_the_challenge = pass_the_challenge
-        challenge.status = status
-        challenge.draw_down = draw_down
-        challenge.profit_sum = profit_sum
-        db.commit()
-        db.refresh(challenge)
+def update_challenge(db: Session, challenge, status, draw_down, profit_sum, subject, content, pass_the_challenge=None):
+    logger.info(f"Updating monitored challenge: {challenge.trader_id} - {challenge.hot_key}")
+    challenge.pass_the_challenge = pass_the_challenge
+    challenge.status = status
+    challenge.draw_down = draw_down
+    challenge.profit_sum = profit_sum
+    db.commit()
+    db.refresh(challenge)
     email = challenge.user.email
     if not email:
         return
@@ -85,13 +85,13 @@ def update_challenge(challenge, status, draw_down, profit_sum, subject, content,
 def monitor_challenges():
     logger.info("Starting monitor_challenges task")
 
-    global objects_to_be_updated, last_flush_time
-
-    current_time = time.time()
-    if (current_time - last_flush_time) >= FLUSH_INTERVAL:
-        push_to_redis_queue(objects_to_be_updated)
-        last_flush_time = current_time
-        objects_to_be_updated = []
+    # global objects_to_be_updated, last_flush_time
+    #
+    # current_time = time.time()
+    # if (current_time - last_flush_time) >= FLUSH_INTERVAL:
+    #     push_to_redis_queue(objects_to_be_updated)
+    #     last_flush_time = current_time
+    #     objects_to_be_updated = []
 
     response = requests.get(CHECKPOINT_URL)
     if response.status_code != 200:
@@ -105,33 +105,35 @@ def monitor_challenges():
     positions = data["positions"]
     perf_ledgers = data["perf_ledgers"]
 
-    for challenge in get_monitored_challenges():
-        hot_key = challenge.hot_key
-        p_content = positions.get(hot_key)
-        l_content = perf_ledgers.get(hot_key)
-        if not (p_content or l_content):
-            continue
+    with TaskSessionLocal_() as db:
+        for challenge in get_monitored_challenges(db):
+            logger.info(f"Monitor first Challenge!")
+            hot_key = challenge.hot_key
+            p_content = positions.get(hot_key)
+            l_content = perf_ledgers.get(hot_key)
+            if not (p_content or l_content):
+                continue
 
-        profit_sum = 0
-        for position in p_content["positions"]:
-            profit_loss = (position["return_at_close"] * 100) - 100
-            if position["is_closed_position"] is True:
-                profit_sum += profit_loss
+            profit_sum = 0
+            for position in p_content["positions"]:
+                profit_loss = (position["return_at_close"] * 100) - 100
+                if position["is_closed_position"] is True:
+                    profit_sum += profit_loss
 
-        draw_down = (l_content["cps"][-1]["mdd"] * 100) - 100
+            draw_down = (l_content["cps"][-1]["mdd"] * 100) - 100
 
-        if profit_sum >= 2:  # 2%
-            # new_object = {"id": challenge.id, "pass_the_challenge": datetime.utcnow(), "status": "Passed"}
-            update_challenge(challenge, "Passed", draw_down, profit_sum, "Challenge Passed",
-                             "Congratulations! You have entered to Phase 2 from Phase 1!", datetime.utcnow())
-        elif draw_down <= -5:  # 5%
-            # new_object = {"id": challenge.id, "status": "Failed"}
-            update_challenge(challenge, "Failed", draw_down, profit_sum, "Challenge Failed",
-                             "Unfortunately! You have Failed!")
+            if profit_sum >= 2:  # 2%
+                # new_object = {"id": challenge.id, "pass_the_challenge": datetime.utcnow(), "status": "Passed"}
+                update_challenge(db, challenge, "Passed", draw_down, profit_sum, "Challenge Passed",
+                                 "Congratulations! You have entered to Phase 2 from Phase 1!", datetime.utcnow())
+            elif draw_down <= -5:  # 5%
+                # new_object = {"id": challenge.id, "status": "Failed"}
+                update_challenge(db, challenge, "Failed", draw_down, profit_sum, "Challenge Failed",
+                                 "Unfortunately! You have Failed!")
 
-        # if new_object != {} and (not object_exists(objects_to_be_updated, new_object)):
-        #     new_object["draw_down"] = draw_down
-        #     new_object["profit_sum"] = profit_sum
-        #     objects_to_be_updated.append(new_object)
+            # if new_object != {} and (not object_exists(objects_to_be_updated, new_object)):
+            #     new_object["draw_down"] = draw_down
+            #     new_object["profit_sum"] = profit_sum
+            #     objects_to_be_updated.append(new_object)
 
     logger.info("Finished monitor_challenges task")
