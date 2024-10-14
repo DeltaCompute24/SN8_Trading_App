@@ -3,6 +3,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.sql import text
+from src.utils.websocket_manager import websocket_manager
+import asyncio
 
 from src.services.user_service import populate_ambassadors
 from src.api.routes.adjust_position import router as adjust_router
@@ -16,7 +18,7 @@ from src.api.routes.profit_loss import router as profit_loss_router
 from src.api.routes.send_email import router as send_email
 from src.api.routes.users import router as user_routers
 from src.database import engine, Base, DATABASE_URL
-
+from src.api.routes.websocket import router as prices_websocket
 app = FastAPI()
 
 # Include routes
@@ -30,7 +32,7 @@ app.include_router(get_users_router, prefix="/trades")
 app.include_router(user_routers, prefix="/users")
 app.include_router(payment_routers, prefix="/payments")
 app.include_router(send_email, prefix="/send-email")
-
+app.include_router(prices_websocket, prefix="/live-prices")
 # Enable CORS
 app.add_middleware(
     CORSMiddleware,
@@ -43,12 +45,17 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup_event():
+    print("Starting to listen for prices multiple...")
+    asyncio.create_task(websocket_manager.listen_for_prices_multiple())
+    
     print("Populate Ambassadors dict!")
-    populate_ambassadors()
-
-    # Create the monitoring database if it doesn't exist
+    # populate_ambassadors()
+ 
     default_db_url = DATABASE_URL.rsplit('/', 1)[0] + "/postgres"
     default_engine = create_async_engine(default_db_url, echo=True)
+ 
+    
+    
 
     async with default_engine.connect() as conn:
         await conn.execute(text("commit"))  # Ensure any previous transaction is closed
@@ -63,6 +70,8 @@ async def startup_event():
 
     await default_engine.dispose()
 
-    # Create the tables in the monitoring database
+    #Create the tables in the monitoring database
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    
+   
