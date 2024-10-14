@@ -29,9 +29,7 @@ class WebSocketManager:
         self.current_prices = {}  # Store current prices
         self.reconnect_interval = 5  # seconds
         self._recv_lock = asyncio.Lock()  # Lock to ensure single access to recv
-        self.forex_trade_pairs = [self.format_pair_updated(pair['value']) for pair in forex_pairs]
-        self.crypto_trade_pairs = [self.format_pair_updated(pair['value']) for pair in forex_pairs]
-        self.indices_trade_pairs = [self.format_pair_updated(pair['value']) for pair in forex_pairs]
+        self.trade_pairs = [self.format_pair_updated(pair['value']) for pair in forex_pairs]
 
     async def connect(self, asset_type):
         self.asset_type = asset_type
@@ -216,6 +214,12 @@ class WebSocketManager:
     def get_event_code(self, asset_type):
         return "CAS" if asset_type == "forex" else "XAS"
 
+    # def format_pair(self, pair):
+    #     separator = '/' if self.asset_type == "forex" else '-'
+    #     base = pair[:-3]
+    #     quote = pair[-3:]
+    #     return f"{base}{separator}{quote}"
+
     def format_pair(self, pair):
         ev = "CAS" if self.asset_type == "forex" else "XAS"
         separator = '/' if self.asset_type == "forex" else '-'
@@ -227,22 +231,12 @@ class WebSocketManager:
         return f"{ev}.{formatted_pair}"
 
     def format_pair_updated(self, pair, asset_type="forex"):
-        prefixes = {
-            "forex": "CAS.",
-            "crypto": "XAS.",
-            "indices": "A.",
-        }
-        separators = {
-            "forex": "/",
-            "crypto": "-",
-        }
-        prefix = prefixes.get(asset_type)
-        separator = separators.get(asset_type)
+        prefix = "CAS." if asset_type == "forex" else "XAS."
 
-        if pair in ["SPX", "DJI", "FTSE", "GDAXI", "VIX", "NDX"]:
+        if pair in ["SPX", "DJI", "FTSE", "GDAXI"]:
             formatted_pair = pair
         else:
-            formatted_pair = f"{pair[:-3]}{separator}{pair[-3:]}"
+            formatted_pair = f"{pair[:-3]}-{pair[-3:]}"
         return f"{prefix}{formatted_pair}"
 
 
