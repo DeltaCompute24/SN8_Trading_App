@@ -1,6 +1,5 @@
 import asyncio
 import json
-import os
 from typing import List
 
 import aiohttp
@@ -9,14 +8,14 @@ from redis import asyncio as aioredis
 from throttler import Throttler
 
 from src.config import POLYGON_API_KEY, SIGNAL_API_KEY, SIGNAL_API_BASE_URL
+from src.config import REDIS_URL
 from src.utils.constants import forex_pairs
 from src.utils.logging import setup_logging
 
 # Set the rate limit: max 10 requests per second
 throttler = Throttler(rate_limit=10, period=1.0)
 # Use the REDIS_URL from environment variables
-redis_url = os.getenv('REDIS_URL', 'redis://redis:6379/0')
-redis_client = aioredis.from_url(redis_url, decode_responses=True)
+redis_client = aioredis.from_url(REDIS_URL, decode_responses=True)
 logger = setup_logging()
 
 

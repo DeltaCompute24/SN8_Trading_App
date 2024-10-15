@@ -1,11 +1,12 @@
 import ast
 from datetime import datetime, timedelta
 
-import redis
+from redis import asyncio as aioredis
 
+from src.config import REDIS_URL
 from src.services.api_service import get_profit_and_current_price
 
-redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
+redis_client = aioredis.from_url(REDIS_URL, decode_responses=True)
 
 
 def get_assets_fee(asset_type):

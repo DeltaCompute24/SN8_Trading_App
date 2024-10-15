@@ -1,14 +1,15 @@
 import logging
 from datetime import datetime
 
-import redis
+from redis import asyncio as aioredis
 
+from src.config import REDIS_URL
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.models.challenge import Challenge
 from src.services.api_service import call_main_net, call_checkpoint_api
 
-redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
+redis_client = aioredis.from_url(REDIS_URL, decode_responses=True)
 
 logger = logging.getLogger(__name__)
 

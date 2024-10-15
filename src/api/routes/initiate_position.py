@@ -1,6 +1,5 @@
 import time
 
-import redis
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,8 +12,6 @@ from src.services.user_service import get_challenge
 from src.utils.logging import setup_logging
 from src.utils.websocket_manager import websocket_manager
 from src.validations.position import validate_position
-
-redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
 
 logger = setup_logging()
 router = APIRouter()

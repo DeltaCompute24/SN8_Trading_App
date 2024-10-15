@@ -3,20 +3,21 @@ import logging
 import time
 from datetime import datetime
 
-import redis
 import requests
+from redis import asyncio as aioredis
 from sqlalchemy import or_
 from sqlalchemy.future import select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import and_
 
 from src.config import CHECKPOINT_URL
+from src.config import REDIS_URL
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.models.challenge import Challenge
 from src.services.email_service import send_mail
 
-redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
+redis_client = aioredis.from_url(REDIS_URL, decode_responses=True)
 
 logger = logging.getLogger(__name__)
 
@@ -111,7 +112,7 @@ def monitor_challenges():
             hot_key = challenge.hot_key
             p_content = positions.get(hot_key)
             l_content = perf_ledgers.get(hot_key)
-            if not (p_content or l_content):
+            if not p_content or not l_content:
                 continue
 
             profit_sum = 0

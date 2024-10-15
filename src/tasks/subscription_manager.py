@@ -1,7 +1,6 @@
 import asyncio
 import logging
 
-import redis
 from sqlalchemy.future import select
 
 from src.core.celery_app import celery_app
@@ -11,7 +10,10 @@ from src.utils.websocket_manager import websocket_manager
 
 logger = logging.getLogger(__name__)
 
-redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
+from redis import asyncio as aioredis
+from src.config import REDIS_URL
+
+redis_client = aioredis.from_url(REDIS_URL, decode_responses=True)
 
 current_subscriptions = set()
 subscription_tasks = {}
@@ -39,7 +41,7 @@ async def manage_subscriptions_async():
 async def get_unique_trade_pairs():
     logger.info("Fetching unique trade pairs from database")
     async with get_task_db() as db:
-        #need to create a const list of trade pairs and retreive them form here as we are monitoring all those trade pairs/
+        # need to create a const list of trade pairs and retreive them form here as we are monitoring all those trade pairs/
         result = await db.execute(
             select(Transaction.trade_pair, Transaction.asset_type).where(Transaction.status != "CLOSED").distinct())
         trade_pairs = [(row.trade_pair, row.asset_type) for row in result.all()]
