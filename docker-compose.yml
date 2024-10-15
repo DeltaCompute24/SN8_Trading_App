@@ -2,82 +2,101 @@ version: "3.8"
 
 services:
   fastapi:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: .
+    #      context: .
+    #      dockerfile: Dockerfile
     ports:
       - "8000:8000"
-    environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - DATABASE_URL_SYNC=${DATABASE_URL_SYNC}
-      - POLYGON_API_KEY=${POLYGON_API_KEY}
-      - SIGNAL_API_BASE_URL=${SIGNAL_API_BASE_URL}
-      - TRADE_API_KEY=${TRADE_API_KEY}
-      - CHECKPOINT_URL=${CHECKPOINT_URL}
-      - MAIN_NET=${MAIN_NET}
-      - REDIS_URL=redis://redis:6379/0
-      - EMAIL_HOST=${EMAIL_HOST}
-      - EMAIL_PORT=${EMAIL_PORT}
-      - EMAIL_USE_TLS=${EMAIL_USE_TLS}
-      - EMAIL_HOST_USER=${EMAIL_HOST_USER}
-      - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    #    environment:
+    #      - DATABASE_URL=${DATABASE_URL}
+    #      - DATABASE_URL_SYNC=${DATABASE_URL_SYNC}
+    #      - POLYGON_API_KEY=${POLYGON_API_KEY}
+    #      - SIGNAL_API_BASE_URL=${SIGNAL_API_BASE_URL}
+    #      - TRADE_API_KEY=${TRADE_API_KEY}
+    #      - CHECKPOINT_URL=${CHECKPOINT_URL}
+    #      - MAIN_NET=${MAIN_NET}
+    #      - REDIS_URL=redis://redis:6379/0
+    #      - EMAIL_HOST=${EMAIL_HOST}
+    #      - EMAIL_PORT=${EMAIL_PORT}
+    #      - EMAIL_USE_TLS=${EMAIL_USE_TLS}
+    #      - EMAIL_HOST_USER=${EMAIL_HOST_USER}
+    #      - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
     depends_on:
       - redis
-    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+  #    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
 
   redis:
     image: redis:6.2-alpine
     ports:
       - "6380:6379"
+    restart: always
 
-#  celery_worker:
-#    build:
-#      context: .
-#      dockerfile: Dockerfile
-#    environment:
-#      - DATABASE_URL=${DATABASE_URL}
-#      - DATABASE_URL_SYNC=${DATABASE_URL_SYNC}
-#      - POLYGON_API_KEY=${POLYGON_API_KEY}
-#      - SIGNAL_API_BASE_URL=${SIGNAL_API_BASE_URL}
-#      - TRADE_API_KEY=${TRADE_API_KEY}
-#      - CHECKPOINT_URL=${CHECKPOINT_URL}
-#      - MAIN_NET=${MAIN_NET}
-#      - REDIS_URL=redis://redis:6379/0
-#    depends_on:
-#      - redis
-#    command: celery -A src.core.celery_app worker --loglevel=info
-#    command: >
-#      sh -c "celery -A src.core.celery_app worker --loglevel=info -Q position_monitoring &
-#               celery -A src.core.celery_app worker --loglevel=info -Q subscription_management &
-#               celery -A src.core.celery_app worker --loglevel=info -Q monitor_taoshi &
-#               celery -A src.core.celery_app worker --loglevel=info -Q monitor_challenges &
-#               celery -A src.core.celery_app worker --loglevel=info -Q event_listener "
+  celery_worker:
+    build: .
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    #      context: .
+    #      dockerfile: Dockerfile
+    #    environment:
+    #      - DATABASE_URL=${DATABASE_URL}
+    #      - DATABASE_URL_SYNC=${DATABASE_URL_SYNC}
+    #      - POLYGON_API_KEY=${POLYGON_API_KEY}
+    #      - SIGNAL_API_BASE_URL=${SIGNAL_API_BASE_URL}
+    #      - TRADE_API_KEY=${TRADE_API_KEY}
+    #      - CHECKPOINT_URL=${CHECKPOINT_URL}
+    #      - MAIN_NET=${MAIN_NET}
+    #      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+    restart: always
+    #    command: celery -A src.core.celery_app worker --loglevel=info
+    command: >
+      sh -c "celery -A src.core.celery_app worker -n position_worker --loglevel=info -Q position_monitoring &
+               celery -A src.core.celery_app worker -n subscription_worker --loglevel=info -Q subscription_management &
+               celery -A src.core.celery_app worker -n taoshi_worker --loglevel=info -Q monitor_taoshi &
+               celery -A src.core.celery_app worker -n challenges_worker --loglevel=info -Q monitor_challenges &
+               celery -A src.core.celery_app worker -n redis_worker --loglevel=info -Q event_listener "
 
-#  celery_beat:
-#    build:
-#      context: .
-#      dockerfile: Dockerfile
-#    environment:
-#      - DATABASE_URL=${DATABASE_URL}
-#      - DATABASE_URL_SYNC=${DATABASE_URL_SYNC}
-#      - POLYGON_API_KEY=${POLYGON_API_KEY}
-#      - SIGNAL_API_BASE_URL=${SIGNAL_API_BASE_URL}
-#      - TRADE_API_KEY=${TRADE_API_KEY}
-#      - CHECKPOINT_URL=${CHECKPOINT_URL}
-#      - MAIN_NET=${MAIN_NET}
-#      - REDIS_URL=redis://redis:6379/0
-#    depends_on:
-#      - redis
-#    command: celery -A src.core.celery_app beat --loglevel=info
-#
-#  flower:
-#    image: mher/flower:0.9.7
-#    ports:
-#      - "5555:5555"
-#    environment:
-#      - CELERY_BROKER_URL=redis://redis:6379/0
-#      - CELERY_RESULT_BACKEND=redis://redis:6379/0
-#    depends_on:
-#      - redis
-#      - celery_worker
-#    command: celery flower --broker=redis://redis:6379/0 --port=5555
+  celery_beat:
+    build: .
+    #      context: .
+    #      dockerfile: Dockerfile
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    restart: always
+    #    environment:
+    #      - DATABASE_URL=${DATABASE_URL}
+    #      - DATABASE_URL_SYNC=${DATABASE_URL_SYNC}
+    #      - POLYGON_API_KEY=${POLYGON_API_KEY}
+    #      - SIGNAL_API_BASE_URL=${SIGNAL_API_BASE_URL}
+    #      - TRADE_API_KEY=${TRADE_API_KEY}
+    #      - CHECKPOINT_URL=${CHECKPOINT_URL}
+    #      - MAIN_NET=${MAIN_NET}
+    #      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+    command: celery -A src.core.celery_app beat --loglevel=info
+
+  flower:
+    image: mher/flower:0.9.7
+    ports:
+      - "5555:5555"
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    #    environment:
+    #      - CELERY_BROKER_URL=redis://redis:6379/0
+    #      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - redis
+      - celery_worker
+    command: celery flower --broker=redis://redis:6379/0 --port=5555
