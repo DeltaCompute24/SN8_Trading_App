@@ -88,7 +88,7 @@ services:
   flower:
     image: mher/flower:0.9.7
     ports:
-      - "5555:5555"
+      - "5002:5002"
     volumes:
       - .:/app
     env_file:
@@ -99,4 +99,4 @@ services:
     depends_on:
       - redis
       - celery_worker
-    command: celery flower --broker=redis://redis:6379/0 --port=5555
+    command: celery flower --broker=redis://redis:6379/0 --port=5002
