@@ -95,6 +95,8 @@ def register_and_update_challenge(challenge: Challenge, network: str, user_name:
         if response.status_code == 200:
             challenge.trader_id = data.get("trader_id")
             challenge.hot_key = data.get("hot_key")
+            challenge.active = "1"
+            challenge.status = "In Challenge"
             challenge.message = "Challenge Updated Successfully!"
             challenge.hotkey_status = "Success"
             db.commit()
