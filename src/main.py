@@ -19,7 +19,7 @@ from src.api.routes.users import router as user_routers
 from src.api.routes.websocket import router as prices_websocket
 from src.database import engine, Base, DATABASE_URL
 from src.services.user_service import populate_ambassadors
-from src.utils.websocket_manager import websocket_manager
+from src.utils.websocket_manager import websocket_manager, forex_websocket_manager, crypto_websocket_manager
 
 app = FastAPI()
 
@@ -48,8 +48,12 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     print("Starting to listen for prices multiple...")
-    asyncio.create_task(websocket_manager.listen_for_prices_multiple())
-
+    print("Starting to listen for prices multiple...")
+    print()
+    asyncio.create_task(forex_websocket_manager.listen_for_prices_multiple())
+    asyncio.create_task(crypto_websocket_manager.listen_for_prices_multiple())
+    # Uncomment the following line if you want to use indices_websocket_manager
+    # asyncio.create_task(indices_websocket_manager.listen_for_prices_multiple())
     print("Populate Ambassadors dict!")
     populate_ambassadors()
 

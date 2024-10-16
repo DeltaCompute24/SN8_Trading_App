@@ -1,12 +1,12 @@
 import ast
 from datetime import datetime, timedelta
 
-from redis import asyncio as aioredis
+import redis
 
 from src.config import REDIS_URL
 from src.services.api_service import get_profit_and_current_price
 
-redis_client = aioredis.from_url(REDIS_URL, decode_responses=True)
+redis_client = redis.StrictRedis(host='redis', port=6379, decode_responses=True)
 
 
 def get_assets_fee(asset_type):
@@ -21,9 +21,9 @@ def get_assets_fee(asset_type):
 def get_taoshi_values(trader_id, trade_pair, position_uuid=None, challenge="main"):
     key = f"{trade_pair}-{trader_id}"
     position = redis_client.hget('positions', key)
-    # if position exist in redis
+    print(f"TESTING POSITION ,position {position}")
     if position and not position_uuid:
-        position = ast.literal_eval(position.decode('utf-8'))
+        position = ast.literal_eval(position)
         current_time = datetime.now()
         position_time = datetime.strptime(position[0], '%Y-%m-%d %H:%M:%S.%f')
 

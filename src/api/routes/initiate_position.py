@@ -71,9 +71,10 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
                 if first_price != 0:
                     break
         else:
-            await websocket_manager.connect(position_data.asset_type)
-            await websocket_manager.subscribe(position_data.trade_pair)
-            first_price = await websocket_manager.listen_for_initial_price()
+            first_price = entry_price
+            # await websocket_manager.connect(position_data.asset_type)
+            # await websocket_manager.subscribe(position_data.trade_pair)
+            # first_price = await websocket_manager.listen_for_initial_price()
 
         if first_price == 0:
             logger.error("Failed to fetch current price for the trade pair")

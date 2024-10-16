@@ -6,7 +6,9 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8000:5050"
+      - "5050:5050"
+    volumes:
+      - .:/app
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - DATABASE_URL_SYNC=${DATABASE_URL_SYNC}
@@ -23,7 +25,7 @@ services:
       - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
     depends_on:
       - redis
-    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn src.main:app --host 0.0.0.0 --port 5050 --reload
 
   redis:
     image: redis:6.2-alpine

@@ -13,7 +13,7 @@ from src.database_tasks import TaskSessionLocal_
 from src.models.transaction import Transaction
 from src.services.fee_service import get_taoshi_values
 from src.utils.websocket_manager import websocket_manager
-
+from src.tasks.redis_listener import get_live_price
 redis_client = aioredis.from_url(REDIS_URL, decode_responses=True)
 
 logger = logging.getLogger(__name__)
@@ -113,11 +113,11 @@ def monitor_position(position):
             return
 
         # For Pending Position to be opened
-        current_price = redis_client.hget('current_prices', position.trade_pair)
+        
         logger.error(f"Current Price Pair: {position.trade_pair}")
-        if not current_price:
+        current_price = get_live_price(position.trade_pair)
+        if not current_price or current_price == 0:
             return
-        current_price = float(current_price.decode('utf-8'))
         logger.error(f"Current Price Found: {current_price}")
 
         logger.error(f"Objects to be Updated: {objects_to_be_updated}")

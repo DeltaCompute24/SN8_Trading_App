@@ -9,17 +9,17 @@ celery_app = Celery(
 
 celery_app.conf.update(
     task_routes={
-        'src.tasks.subscription_manager.manage_subscriptions': {'queue': 'subscription_management'},
+        # 'src.tasks.subscription_manager.manage_subscriptions': {'queue': 'subscription_management'},
         'src.tasks.position_monitor_sync.monitor_positions': {'queue': 'position_monitoring'},
         'src.tasks.listen_for_profit_loss.monitor_taoshi': {'queue': 'monitor_taoshi'},
         'src.tasks.monitor_challenges.monitor_challenges': {'queue': 'monitor_challenges'},
         'src.tasks.redis_listener.event_listener': {'queue': 'event_listener'},
     },
     beat_schedule={
-        'manage_subscriptions-every-10-seconds': {
-            'task': 'src.tasks.subscription_manager.manage_subscriptions',
-            'schedule': 10.0,  # every 10 seconds
-        },
+        # 'manage_subscriptions-every-10-seconds': {
+        #     'task': 'src.tasks.subscription_manager.manage_subscriptions',
+        #     'schedule': 10.0,  # every 10 seconds
+        # },
         'monitor_positions-every-1-second': {
             'task': 'src.tasks.position_monitor_sync.monitor_positions',
             'schedule': 10.0,  # every 1 second
