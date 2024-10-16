@@ -80,7 +80,7 @@ def update_user(user_id: int, user_data: FirebaseUserUpdate, db: Session = Depen
     return user
 
 
-@router.put("/challenge/{challenge_id}", response_model=ChallengeRead)
+# @router.put("/challenge/{challenge_id}", response_model=ChallengeRead)
 def update_challenge(
         challenge_id: int,
         challenge_data: ChallengeUpdate,
