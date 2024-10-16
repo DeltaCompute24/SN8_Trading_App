@@ -36,13 +36,16 @@ class ChallengeUpdate(BaseModel):
 class ChallengeRead(ChallengeBase):
     id: int
     user_id: int
-    created_at: datetime
-    updated_at: datetime
+    message: Optional[str]
+    response: Optional[dict]
+    hotkey_status: Optional[str]
     draw_down: Optional[float]
     profit_sum: Optional[float]
     register_on_test_net: Optional[datetime]
     register_on_main_net: Optional[datetime]
     pass_the_challenge: Optional[datetime]
+    created_at: datetime
+    updated_at: datetime
 
     class Config:
         orm_mode = True
