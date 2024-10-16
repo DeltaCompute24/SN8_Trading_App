@@ -48,17 +48,31 @@ class ChallengeRead(ChallengeBase):
         orm_mode = True
 
 
+class ChallengeIdRead(BaseModel):
+    id: int
+
+    class Config:
+        orm_mode = True
+
+
 class FirebaseUserCreate(FirebaseUserBase):
+    name: str
+    email: str
     challenges: Optional[list[ChallengeBase]] = []
 
 
 class FirebaseUserUpdate(FirebaseUserBase):
     firebase_id: Optional[str] = ""
+    name: Optional[str] = None
+    email: Optional[str] = None
     challenges: Optional[list[ChallengeBase]] = []
 
 
 class FirebaseUserRead(FirebaseUserBase):
     id: int
+    name: Optional[str]
+    username: Optional[str]
+    email: Optional[str]
     created_at: datetime
     updated_at: datetime
     challenges: list[ChallengeRead] = []
@@ -77,6 +91,7 @@ class PaymentBase(BaseModel):
 class PaymentCreate(BaseModel):
     firebase_id: str
     amount: float
+    network: str
     referral_code: Optional[str] = None
 
 
@@ -84,6 +99,15 @@ class PaymentRead(PaymentBase):
     id: int
     firebase_id: str
     challenge: Optional[ChallengeRead] = None
+
+    class Config:
+        orm_mode = True
+
+
+class PaymentIdRead(PaymentBase):
+    id: int
+    firebase_id: str
+    challenge: Optional[ChallengeIdRead] = None
 
     class Config:
         orm_mode = True

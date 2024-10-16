@@ -9,7 +9,7 @@ from src.schemas.user import ChallengeRead, ChallengeUpdate
 from src.schemas.user import FirebaseUserRead, FirebaseUserCreate, FirebaseUserUpdate
 from src.services.email_service import send_mail_in_thread
 from src.services.user_service import get_firebase_user, create_firebase_user, create_or_update_challenges, \
-    get_challenge_by_id
+    get_challenge_by_id, construct_username, get_user_by_id
 from src.utils.logging import setup_logging
 
 logger = setup_logging()
@@ -29,7 +29,7 @@ def get_db():
 def create_user(user_data: FirebaseUserCreate, db: Session = Depends(get_db)):
     logger.info(f"Create User for trader_id={user_data.firebase_id}")
     try:
-        new_user = create_firebase_user(db, user_data.firebase_id)
+        new_user = create_firebase_user(db, user_data.firebase_id, user_data.name, user_data.email)
         new_user = create_or_update_challenges(db, new_user, user_data.challenges)
         return new_user
     except Exception as e:
@@ -52,21 +52,25 @@ def get_user(firebase_id: str, db: Session = Depends(get_db)):
     return user
 
 
-@router.put("/{firebase_id}", response_model=FirebaseUserRead)
-def update_user(firebase_id: str, user_data: FirebaseUserUpdate, db: Session = Depends(get_db)):
-    logger.info(f"Create User for trader_id={firebase_id}")
+@router.put("/{user_id}", response_model=FirebaseUserRead)
+def update_user(user_id: int, user_data: FirebaseUserUpdate, db: Session = Depends(get_db)):
+    logger.info(f"Create User for user_id={user_id}")
 
-    user = get_firebase_user(db, firebase_id)
+    user = get_user_by_id(db, user_id)
     if user is None:
         raise HTTPException(status_code=404, detail="User Not Found!")
-
     if user_data.firebase_id:
-        user = get_firebase_user(db, user_data.firebase_id)
-        if user:
-            raise HTTPException(status_code=400, detail="User with this firebase_id already exist!")
+        existing_user = get_firebase_user(db, user_data.firebase_id)
+        if existing_user and existing_user != user:
+            raise HTTPException(status_code=400, detail="User with this firebase_id already exists!")
         user.firebase_id = user_data.firebase_id
-        db.commit()
-        db.refresh(user)
+    if user_data.name:
+        user.name = user_data.name
+    if user_data.email:
+        user.email = user_data.email
+        user.username = construct_username(user_data.email)
+    db.commit()
+    db.refresh(user)
 
     if not user_data.challenges:
         return user
