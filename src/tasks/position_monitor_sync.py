@@ -242,7 +242,7 @@ def check_stop_loss(stop_loss, profit_loss) -> bool:
     return False
 
 
-def check_trailing_stop_loss(trailing, stop_loss, max_profit, profit_loss) -> bool:
+def check_trailing_stop_loss(trailing, stop_loss, max_profit_loss, current_profit_loss) -> bool:
     """
     Position should be closed if it reaches the expected trailing loss
     """
@@ -250,9 +250,9 @@ def check_trailing_stop_loss(trailing, stop_loss, max_profit, profit_loss) -> bo
     if not trailing or stop_loss is None or stop_loss == 0:
         return False
 
-    t_profit_loss = profit_loss - max_profit
-    t_stop_loss = max_profit - stop_loss
-    if t_profit_loss >= t_stop_loss:
+    difference = max_profit_loss - current_profit_loss
+
+    if difference >= stop_loss:
         return True
     return False
 
