@@ -1,5 +1,6 @@
 import re
 
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import Session
@@ -63,6 +64,8 @@ def get_user_by_id(db: Session, id: int):
 
 
 def create_firebase_user(db: Session, firebase_id: str, name: str, email: str):
+    if not firebase_id or not name or not email:
+        raise HTTPException(status_code=400, detail="Firebase id, Name or Email can't be Empty!")
     firebase_user = get_firebase_user(db, firebase_id)
     if not firebase_user:
         username = construct_username(email)
