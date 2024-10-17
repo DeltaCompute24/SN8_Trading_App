@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Column, Integer, String, Float, DateTime, JSON
+from sqlalchemy import Column, Integer, String, Float, DateTime, JSON, Boolean
 
 from src.database import Base
 
@@ -16,6 +16,7 @@ class Transaction(Base):
     entry_price = Column(Float, nullable=False)
     upward = Column(Float, default=-1, nullable=True)
     leverage = Column(Float, nullable=False)
+    trailing = Column(Boolean, default=False)
     stop_loss = Column(Float, default=0, nullable=True)
     take_profit = Column(Float, default=0, nullable=True)
     order_type = Column(String, nullable=False)
