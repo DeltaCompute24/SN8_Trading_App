@@ -43,9 +43,6 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup_event():
-    print("Populate Ambassadors dict!")
-    populate_ambassadors()
-
     # Create the monitoring database if it doesn't exist
     default_db_url = DATABASE_URL.rsplit('/', 1)[0] + "/postgres"
     default_engine = create_async_engine(default_db_url, echo=True)
@@ -66,3 +63,6 @@ async def startup_event():
     # Create the tables in the monitoring database
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+    print("Populate Ambassadors dict!")
+    populate_ambassadors()
