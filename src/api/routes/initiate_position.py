@@ -104,6 +104,7 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
                                                    hot_key=hot_key,
                                                    source=challenge,
                                                    order_level=len_order,
+                                                   max_profit_loss=profit_loss,
                                                    )
 
         # Create MonitoredPositionCreate data

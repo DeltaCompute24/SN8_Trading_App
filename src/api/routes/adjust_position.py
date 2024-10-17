@@ -45,6 +45,7 @@ async def adjust_position_endpoint(position_data: TransactionUpdate, db: AsyncSe
         position_data.leverage = position.leverage
         cumulative_leverage = position.cumulative_leverage
         average_entry_price = position.average_entry_price
+        max_profit_loss = position.max_profit_loss
 
         if new_leverage != prev_leverage:
             # Calculate new leverage based on the cumulative order type
@@ -87,6 +88,9 @@ async def adjust_position_endpoint(position_data: TransactionUpdate, db: AsyncSe
             average_entry_price = taoshi_profit_loss_without_fee[-1]
             taoshi_profit_loss_without_fee = taoshi_profit_loss_without_fee[0]
 
+        if profit_loss > max_profit_loss:
+            max_profit_loss = profit_loss
+
         # Create a new transaction record with updated values
         new_transaction = await create_transaction(
             db, position_data, entry_price=position.entry_price, operation_type="adjust",
@@ -108,6 +112,7 @@ async def adjust_position_endpoint(position_data: TransactionUpdate, db: AsyncSe
             hot_key=position.hot_key,
             source=position.source,
             order_level=len_order,
+            max_profit_loss=max_profit_loss,
         )
 
         await close_transaction(db, position.order_id, position.trader_id, realtime_price, profit_loss,
