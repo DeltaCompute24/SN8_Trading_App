@@ -105,6 +105,8 @@ def monitor_position(position):
             position.trade_pair,
             challenge=position.source,
         )
+        update_position_profit(position, profit_loss, profit_loss_without_fee, taoshi_profit_loss,
+                               taoshi_profit_loss_without_fee)
         if position.status == "OPEN" and should_close_position(profit_loss, position):
             logger.info(
                 f"Position shouldn't be closed: {position.position_id}: {position.trader_id}: {position.trade_pair}")
@@ -215,6 +217,46 @@ def should_open_position(position, current_price):
     return result
 
 
+def check_take_profit(take_profit, profit_loss) -> bool:
+    """
+    Position should be closed if it reaches the expected profit
+    """
+    # if profit_loss < 0 it means there is no profit so return False
+    if profit_loss < 0:
+        return False
+    if take_profit is not None and take_profit != 0 and profit_loss >= take_profit:
+        return True
+    return False
+
+
+def check_stop_loss(stop_loss, profit_loss) -> bool:
+    """
+    Position should be closed if it reaches the expected loss
+    """
+    # if profit_loss > 0 it means there is no loss so return False
+    if profit_loss > 0:
+        return False
+
+    if stop_loss is not None and stop_loss != 0 and profit_loss <= -stop_loss:
+        return True
+    return False
+
+
+def check_trailing_stop_loss(trailing, stop_loss, max_profit, profit_loss) -> bool:
+    """
+    Position should be closed if it reaches the expected trailing loss
+    """
+    # return if trailing is false or stop_loss value is None or zero
+    if not trailing or stop_loss is None or stop_loss == 0:
+        return False
+
+    t_profit_loss = profit_loss - max_profit
+    t_stop_loss = max_profit - stop_loss
+    if t_profit_loss >= t_stop_loss:
+        return True
+    return False
+
+
 def should_close_position(profit_loss, position):
     """
     profit_loss: Its direct
@@ -222,18 +264,17 @@ def should_close_position(profit_loss, position):
     try:
         take_profit = position.cumulative_take_profit
         stop_loss = position.cumulative_stop_loss
+        max_profit = position.max_profit_loss
+        trailing = position.trailing
 
-        if profit_loss < 0:
-            if stop_loss is not None and stop_loss != 0 and profit_loss <= -stop_loss:
-                print(f"Determining whether to close position: True")
-                return True
-        else:
-            if take_profit is not None and take_profit != 0 and profit_loss >= take_profit:
-                print(f"Determining whether to close position: True")
-                return True
+        close_result = (
+                check_trailing_stop_loss(trailing, stop_loss, max_profit, profit_loss) or
+                check_stop_loss(stop_loss, profit_loss) or
+                check_take_profit(take_profit, profit_loss)
+        )
 
-        print(f"closing position: False")
-        return False
+        print(f"Determining whether to close position: {close_result}")
+        return close_result
 
     except Exception as e:
         logger.error(f"An error occurred while determining if position should be closed: {e}")
@@ -245,13 +286,13 @@ def update_position_profit(position, profit_loss, profit_loss_without_fee, taosh
     global objects_to_be_updated
     try:
         max_profit_loss = position.max_profit_loss or 0.0
-        if max_profit_loss < profit_loss:
+        if profit_loss <= max_profit_loss:
             return
 
         new_object = {
             "order_id": position.order_id,
             "profit_loss": profit_loss,
-            "max_profit_loss": max_profit_loss,
+            "max_profit_loss": profit_loss,
             "profit_loss_without_fee": profit_loss_without_fee,
             "taoshi_profit_loss": taoshi_profit_loss,
             "taoshi_profit_loss_without_fee": taoshi_profit_loss_without_fee,
