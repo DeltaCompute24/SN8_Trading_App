@@ -5,10 +5,12 @@ import time
 from datetime import datetime
 
 import redis
+from sqlalchemy import update
 from sqlalchemy.future import select
 
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
+from src.models.challenge import Challenge
 from src.models.transaction import Transaction
 from src.services.fee_service import get_taoshi_values
 from src.utils.websocket_manager import websocket_manager
@@ -283,24 +285,26 @@ def should_close_position(profit_loss, position):
 
 def update_position_profit(position, profit_loss, profit_loss_without_fee, taoshi_profit_loss,
                            taoshi_profit_loss_without_fee):
-    global objects_to_be_updated
     try:
         max_profit_loss = position.max_profit_loss or 0.0
         if profit_loss <= max_profit_loss:
             return
 
-        new_object = {
+        data = [{
             "order_id": position.order_id,
             "profit_loss": profit_loss,
             "max_profit_loss": profit_loss,
             "profit_loss_without_fee": profit_loss_without_fee,
             "taoshi_profit_loss": taoshi_profit_loss,
             "taoshi_profit_loss_without_fee": taoshi_profit_loss_without_fee,
-        }
-        if object_exists(objects_to_be_updated, new_object):
-            logger.info("Return back as Profit Loss Position already exists in queue!")
-            return
+        }]
+        with TaskSessionLocal_() as db:
+            db.execute(
+                update(Challenge),
+                data,
+            )
+            db.commit()
+
         logger.info("Update Position Profit Called!")
-        objects_to_be_updated.append(new_object)
     except Exception as e:
         logger.error(f"An error occurred while closing position {position.position_id}: {e}")
