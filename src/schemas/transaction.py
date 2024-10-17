@@ -9,7 +9,7 @@ class TransactionBase(BaseModel):
     trade_pair: str
     leverage: float
     asset_type: str
-    tailing: Optional[bool] = False
+    trailing: Optional[bool] = False
     stop_loss: Optional[float]
     take_profit: Optional[float]
     entry_price: Optional[float] = 0.0
