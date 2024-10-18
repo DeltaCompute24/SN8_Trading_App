@@ -25,6 +25,7 @@ class TransactionUpdate(BaseModel):
     trade_pair: str
     leverage: float
     asset_type: str
+    trailing: bool
     stop_loss: Optional[float]
     take_profit: Optional[float]
 
