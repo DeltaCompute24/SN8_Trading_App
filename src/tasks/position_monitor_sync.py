@@ -7,10 +7,10 @@ from datetime import datetime
 import redis
 from sqlalchemy import update
 from sqlalchemy.future import select
+from sqlalchemy.sql import and_
 
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
-from src.models.challenge import Challenge
 from src.models.transaction import Transaction
 from src.services.fee_service import get_taoshi_values
 from src.utils.websocket_manager import websocket_manager
@@ -58,7 +58,11 @@ def get_monitored_positions():
         logger.info("Fetching monitored positions from database")
         with TaskSessionLocal_() as db:
             result = db.execute(
-                select(Transaction).where(Transaction.status != "CLOSED")
+                select(Transaction).where(
+                    and_(
+                        Transaction.status != "CLOSED",
+                    )
+                )
             )
             positions = result.scalars().all()
         logger.info(f"Retrieved {len(positions)} monitored positions")
@@ -98,36 +102,44 @@ def monitor_positions_sync():
         logger.error(f"An error occurred in monitor_positions_sync: {e}")
 
 
+def check_pending_position(position):
+    # For Pending Position to be opened
+    if position.status != "PENDING":
+        return
+
+    current_price = redis_client.hget('current_prices', position.trade_pair)
+    logger.error(f"Current Price Pair: {position.trade_pair}")
+    if not current_price:
+        return
+    current_price = float(current_price.decode('utf-8'))
+    logger.error(f"Current Price Found: {current_price}")
+
+    logger.error(f"Objects to be Updated: {objects_to_be_updated}")
+    if should_open_position(position, current_price):
+        open_position(position, current_price)
+
+
 def monitor_position(position):
     global objects_to_be_updated
     try:
+        check_pending_position(position)
         # For Open Position to be Closed
         price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, *taoshi_profit_loss_without_fee = get_taoshi_values(
             position.trader_id,
             position.trade_pair,
             challenge=position.source,
+            position_uuid=position.uuid,
         )
-        update_position_profit(position, profit_loss, profit_loss_without_fee, taoshi_profit_loss,
-                               taoshi_profit_loss_without_fee)
+        if price == 0:
+            return
+
+        position = update_position_profit(position, profit_loss, profit_loss_without_fee, taoshi_profit_loss,
+                                          taoshi_profit_loss_without_fee[0])
         if position.status == "OPEN" and should_close_position(profit_loss, position):
             logger.info(
                 f"Position shouldn't be closed: {position.position_id}: {position.trader_id}: {position.trade_pair}")
             close_position(position, profit_loss)
             return
-
-        # For Pending Position to be opened
-        current_price = redis_client.hget('current_prices', position.trade_pair)
-        logger.error(f"Current Price Pair: {position.trade_pair}")
-        if not current_price:
-            return
-        current_price = float(current_price.decode('utf-8'))
-        logger.error(f"Current Price Found: {current_price}")
-
-        logger.error(f"Objects to be Updated: {objects_to_be_updated}")
-        if position.status == "PENDING" and should_open_position(position, current_price):
-            open_position(position, current_price)
-
-        return True
     except Exception as e:
         logger.error(f"An error occurred while monitoring position {position.position_id}: {e}")
 
@@ -192,9 +204,8 @@ def close_position(position, profit_loss):
         close_submitted = asyncio.run(
             websocket_manager.submit_trade(position.trader_id, position.trade_pair, "FLAT", 1))
         if close_submitted:
-            close_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee, uuid, hot_key, len_order, average_entry_price = \
-                get_taoshi_values(position.trader_id, position.trade_pair, position_uuid=position.uuid,
-                                  challenge=position.source)[0]
+            close_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee, uuid, hot_key, len_order, average_entry_price = get_taoshi_values(
+                position.trader_id, position.trade_pair, position_uuid=position.uuid, challenge=position.source)
             if close_price == 0:
                 return
             new_object["close_price"] = close_price
@@ -287,24 +298,34 @@ def update_position_profit(position, profit_loss, profit_loss_without_fee, taosh
                            taoshi_profit_loss_without_fee):
     try:
         max_profit_loss = position.max_profit_loss or 0.0
-        if profit_loss <= max_profit_loss:
-            return
+        if max_profit_loss != 0 and profit_loss <= max_profit_loss:
+            return position
 
-        data = [{
+        data = {
             "order_id": position.order_id,
             "profit_loss": profit_loss,
             "max_profit_loss": profit_loss,
             "profit_loss_without_fee": profit_loss_without_fee,
             "taoshi_profit_loss": taoshi_profit_loss,
             "taoshi_profit_loss_without_fee": taoshi_profit_loss_without_fee,
-        }]
+        }
         with TaskSessionLocal_() as db:
-            db.execute(
-                update(Challenge),
-                data,
-            )
-            db.commit()
+            # Fetch the position first to ensure it's part of the session
+            position = db.query(Transaction).filter(Transaction.order_id == position.order_id).first()
 
-        logger.info("Update Position Profit Called!")
+            if position:
+                db.execute(
+                    update(Transaction)
+                    .where(Transaction.order_id == position.order_id)  # Specify which row to update
+                    .values(data)  # Set the new values
+                )
+                db.commit()
+
+                # No need to refresh since you already have the position object
+                db.refresh(position)  # This now works as position is part of the session
+            else:
+                raise Exception(f"Position with order_id {position.order_id} not found")
+
+        return position
     except Exception as e:
-        logger.error(f"An error occurred while closing position {position.position_id}: {e}")
+        logger.error(f"An error occurred while updating position {position.position_id}: {e}")
