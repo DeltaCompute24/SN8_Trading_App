@@ -40,7 +40,7 @@ async def get_unique_trade_pairs():
     logger.info("Fetching unique trade pairs from database")
     async with get_task_db() as db:
         result = await db.execute(
-            select(Transaction.trade_pair, Transaction.asset_type).where(Transaction.status != "CLOSED").distinct())
+            select(Transaction.trade_pair, Transaction.asset_type).where(Transaction.status == "PENDING").distinct())
         trade_pairs = [(row.trade_pair, row.asset_type) for row in result.all()]
         logger.info(f"Retrieved trade pairs: {trade_pairs}")
         return trade_pairs
@@ -61,7 +61,7 @@ async def manage_trade_pair_subscriptions(trade_pairs):
     for pair in removed_pairs:
         logger.info(f"Unsubscribing from trade pair: {pair}")
         await websocket_manager.unsubscribe(pair[0])
-        await redis_client.hdel("current_prices", pair[0])
+        redis_client.hdel("current_prices", pair[0])
         current_subscriptions.remove(pair)
         task = subscription_tasks.pop(pair, None)
         if task:
@@ -88,7 +88,6 @@ async def manage_trade_pair_subscriptions(trade_pairs):
             task = asyncio.create_task(websocket_manager.listen_for_price(pair[0], pair[1]))
             subscription_tasks[pair] = task
     logger.error(f"Current Prices Dict: {redis_client.hgetall('current_prices')}")
-    logger.error(f"Current Prices: {websocket_manager.current_prices}")
     logger.info(f"Active subscriptions: {current_subscriptions}")
 
 
