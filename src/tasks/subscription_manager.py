@@ -31,7 +31,7 @@ async def manage_subscriptions_async():
         logger.info(f"Current monitored trade pairs: {trade_pairs}")
         await manage_trade_pair_subscriptions(trade_pairs)
     else:
-        await redis_client.delete("current_prices")
+        redis_client.delete("current_prices")
         logger.info("No trade pairs to monitor.")
     logger.info("Finished manage_subscriptions_async")
 
