@@ -1,11 +1,7 @@
-import json
 import logging
-import time
 from datetime import datetime
 
-import redis
 import requests
-from sqlalchemy import update
 from sqlalchemy.future import select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import and_
@@ -16,33 +12,7 @@ from src.database_tasks import TaskSessionLocal_
 from src.models.challenge import Challenge
 from src.services.email_service import send_mail
 
-redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
-
 logger = logging.getLogger(__name__)
-
-FLUSH_INTERVAL = 30
-last_flush_time = time.time()
-objects_to_be_updated = []
-queue_name = "challenges_queue"
-
-
-def push_to_redis_queue(data):
-    redis_client.lpush(queue_name, json.dumps(data))
-
-
-def object_exists(obj_list, new_obj):
-    new_obj_filtered = {k: v for k, v in new_obj.items() if k not in ['pass_the_challenge', 'draw_down', 'profit_sum']}
-
-    raw_data = redis_client.lrange(queue_name, 0, -1)
-    for item in raw_data:
-        redis_objects = json.loads(item.decode('utf-8'))
-        obj_list.extend(redis_objects)
-
-    for obj in obj_list:
-        obj_filtered = {k: v for k, v in obj.items() if k not in ['pass_the_challenge', 'draw_down', 'profit_sum']}
-        if obj_filtered == new_obj_filtered:
-            return True
-    return False
 
 
 def get_monitored_challenges(db: Session):
@@ -68,19 +38,11 @@ def get_monitored_challenges(db: Session):
 def update_challenge(db: Session, challenge, data):
     logger.info(f"Updating monitored challenge: {challenge.trader_id} - {challenge.hot_key}")
 
-    db.execute(
-        update(Challenge)
-        .where(Challenge.order_id == challenge.id)  # Specify which row to update
-        .values(data)  # Set the new values
-    )
-    db.commit()
+    for key, value in data.items():
+        setattr(challenge, key, value)
 
-    # challenge.pass_the_challenge = pass_the_challenge
-    # challenge.status = status
-    # challenge.draw_down = draw_down
-    # challenge.profit_sum = profit_sum
-    # db.commit()
-    # db.refresh(challenge)
+    db.commit()
+    db.refresh(challenge)
 
 
 @celery_app.task(name='src.tasks.monitor_challenges.monitor_challenges')
@@ -138,12 +100,14 @@ def monitor_challenges():
 
                 content = "Congratulations! You have entered to Phase 2 from Phase 1!"
                 if response.status_code == 200:
+                    c_response = challenge.response
+                    c_response["main_net_response"] = response.json()
                     c_data = {
                         **c_data,
                         "challenge": network,
                         "trader_id": data.get("trader_id"),
                         "hot_key": data.get("hot_key"),
-                        "response": response.json(),
+                        "response": c_response,
                     }
                     content = f"{content} Your testnet key is also converted to hot_key!"
                 subject = "Challenge Passed"
