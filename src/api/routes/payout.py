@@ -19,7 +19,7 @@ def get_db():
         db.close()
 
 
-@router.post("/", response_model=PayoutSchema)
+@router.post("", response_model=PayoutSchema)
 def save_payout_information(
     payout_data: PayoutSaveSchema, db: Session = Depends(get_db)
 ):
