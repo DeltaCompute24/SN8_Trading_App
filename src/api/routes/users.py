@@ -5,11 +5,11 @@ from sqlalchemy.orm import Session
 
 from src.database_tasks import TaskSessionLocal_
 from src.models.firebase_user import FirebaseUser
-from src.schemas.user import ChallengeRead, ChallengeUpdate
+from src.schemas.user import ChallengeUpdate
 from src.schemas.user import FirebaseUserRead, FirebaseUserCreate, FirebaseUserUpdate
 from src.services.email_service import send_mail_in_thread
 from src.services.user_service import get_firebase_user, create_firebase_user, create_or_update_challenges, \
-    get_challenge_by_id, construct_username, get_user_by_id
+    get_challenge_by_id, construct_username
 from src.utils.logging import setup_logging
 
 logger = setup_logging()

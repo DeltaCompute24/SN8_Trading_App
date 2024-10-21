@@ -52,17 +52,6 @@ def get_firebase_user(db: Session, firebase_id: str):
     return user
 
 
-def get_user_by_id(db: Session, id: int):
-    user = db.scalar(
-        select(FirebaseUser).where(
-            and_(
-                FirebaseUser.id == id,
-            )
-        )
-    )
-    return user
-
-
 def create_firebase_user(db: Session, firebase_id: str, name: str, email: str):
     if not firebase_id or not name or not email:
         raise HTTPException(status_code=400, detail="Firebase id, Name or Email can't be Empty!")
