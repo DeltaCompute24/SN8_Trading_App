@@ -52,18 +52,11 @@ def get_user(firebase_id: str, db: Session = Depends(get_db)):
     return user
 
 
-@router.put("/{user_id}", response_model=FirebaseUserRead)
-def update_user(user_id: int, user_data: FirebaseUserUpdate, db: Session = Depends(get_db)):
-    logger.info(f"Create User for user_id={user_id}")
-
-    user = get_user_by_id(db, user_id)
+@router.put("/{firebase_id}", response_model=FirebaseUserRead)
+def update_user(firebase_id: str, user_data: FirebaseUserUpdate, db: Session = Depends(get_db)):
+    user = get_firebase_user(db, firebase_id)
     if user is None:
         raise HTTPException(status_code=404, detail="User Not Found!")
-    if user_data.firebase_id:
-        existing_user = get_firebase_user(db, user_data.firebase_id)
-        if existing_user and existing_user != user:
-            raise HTTPException(status_code=400, detail="User with this firebase_id already exists!")
-        user.firebase_id = user_data.firebase_id
     if user_data.name:
         user.name = user_data.name
     if user_data.email:
@@ -71,12 +64,7 @@ def update_user(user_id: int, user_data: FirebaseUserUpdate, db: Session = Depen
         user.username = construct_username(user_data.email)
     db.commit()
     db.refresh(user)
-
-    if not user_data.challenges:
-        return user
-
-    user = create_or_update_challenges(db, user, user_data.challenges)
-    logger.info(f"User updated successfully with firebase_id={user_data.firebase_id}")
+    logger.info(f"User updated successfully with firebase_id={firebase_id}")
     return user
 
 

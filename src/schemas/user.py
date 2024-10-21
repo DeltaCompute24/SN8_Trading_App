@@ -17,7 +17,7 @@ class UsersSchema(UsersBase):
 
 # --------------- FirebaseUser Schemas ----------------------
 class FirebaseUserBase(BaseModel):
-    firebase_id: str = ""
+    firebase_id: str
 
 
 class ChallengeBase(BaseModel):
@@ -61,14 +61,11 @@ class ChallengeIdRead(BaseModel):
 class FirebaseUserCreate(FirebaseUserBase):
     name: str
     email: str
-    challenges: Optional[list[ChallengeBase]] = []
 
 
-class FirebaseUserUpdate(FirebaseUserBase):
-    firebase_id: Optional[str] = ""
+class FirebaseUserUpdate(BaseModel):
     name: Optional[str] = None
     email: Optional[str] = None
-    challenges: Optional[list[ChallengeBase]] = []
 
 
 class FirebaseUserRead(FirebaseUserBase):
