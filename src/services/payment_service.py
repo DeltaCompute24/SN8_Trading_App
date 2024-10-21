@@ -63,13 +63,13 @@ def create_payment(db: Session, payment_data: PaymentCreate):
 
     if not firebase_user:
         new_challenge = None
-    elif firebase_user.name or firebase_user.username:
+    elif firebase_user.username:
         new_challenge = create_challenge(db, payment_data, firebase_user.id)
         thread = threading.Thread(
             target=register_and_update_challenge,
             args=(
                 new_challenge.id, new_challenge.challenge,
-                firebase_user.name or firebase_user.username,
+                firebase_user.username,
             ))
         thread.start()
     # If Firebase user exists but lacks necessary fields
@@ -89,7 +89,7 @@ def register_and_update_challenge(challenge_id: int, network: str, user_name: st
             print("In THREAD!................")
             challenge = get_challenge_by_id(db, challenge_id)
             payload = {
-                "name": user_name,
+                "name": f"{user_name}_{challenge_id}",
                 "network": network,
             }
             response = requests.post(REGISTRATION_API_URL, json=payload)
