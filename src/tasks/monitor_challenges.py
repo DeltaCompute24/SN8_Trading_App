@@ -5,12 +5,12 @@ from datetime import datetime
 
 import redis
 import requests
-from sqlalchemy import or_
+from sqlalchemy import update
 from sqlalchemy.future import select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import and_
 
-from src.config import CHECKPOINT_URL
+from src.config import CHECKPOINT_URL, REGISTRATION_API_URL
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.models.challenge import Challenge
@@ -51,9 +51,7 @@ def get_monitored_challenges(db: Session):
         result = db.execute(
             select(Challenge).where(
                 and_(
-                    or_(
-                        Challenge.status == "In Challenge",
-                    ),
+                    Challenge.status == "In Challenge",
                     Challenge.active == "1",
                     Challenge.challenge == "test"
                 )
@@ -67,31 +65,27 @@ def get_monitored_challenges(db: Session):
         return []
 
 
-def update_challenge(db: Session, challenge, status, draw_down, profit_sum, subject, content, pass_the_challenge=None):
+def update_challenge(db: Session, challenge, data):
     logger.info(f"Updating monitored challenge: {challenge.trader_id} - {challenge.hot_key}")
-    challenge.pass_the_challenge = pass_the_challenge
-    challenge.status = status
-    challenge.draw_down = draw_down
-    challenge.profit_sum = profit_sum
+
+    db.execute(
+        update(Challenge)
+        .where(Challenge.order_id == challenge.id)  # Specify which row to update
+        .values(data)  # Set the new values
+    )
     db.commit()
-    db.refresh(challenge)
-    email = challenge.user.email
-    if not email:
-        return
-    send_mail(email, subject, content)
+
+    # challenge.pass_the_challenge = pass_the_challenge
+    # challenge.status = status
+    # challenge.draw_down = draw_down
+    # challenge.profit_sum = profit_sum
+    # db.commit()
+    # db.refresh(challenge)
 
 
 @celery_app.task(name='src.tasks.monitor_challenges.monitor_challenges')
 def monitor_challenges():
     logger.info("Starting monitor_challenges task")
-
-    # global objects_to_be_updated, last_flush_time
-    #
-    # current_time = time.time()
-    # if (current_time - last_flush_time) >= FLUSH_INTERVAL:
-    #     push_to_redis_queue(objects_to_be_updated)
-    #     last_flush_time = current_time
-    #     objects_to_be_updated = []
 
     response = requests.get(CHECKPOINT_URL)
     if response.status_code != 200:
@@ -121,19 +115,51 @@ def monitor_challenges():
                     profit_sum += profit_loss
 
             draw_down = (l_content["cps"][-1]["mdd"] * 100) - 100
+            c_data = {
+                "draw_down": draw_down,
+                "profit_sum": profit_sum,
+            }
 
             if profit_sum >= 2:  # 2%
                 # new_object = {"id": challenge.id, "pass_the_challenge": datetime.utcnow(), "status": "Passed"}
-                update_challenge(db, challenge, "Passed", draw_down, profit_sum, "Challenge Passed",
-                                 "Congratulations! You have entered to Phase 2 from Phase 1!", datetime.utcnow())
-            elif draw_down <= -5:  # 5%
-                # new_object = {"id": challenge.id, "status": "Failed"}
-                update_challenge(db, challenge, "Failed", draw_down, profit_sum, "Challenge Failed",
-                                 "Unfortunately! You have Failed!")
+                network = "main" if challenge.challenge == "test" else "test"
+                payload = {
+                    "hot_key": challenge.hot_key,
+                    # "name": f"{username}_{challenge.id}",
+                    "network": network,
+                }
+                response = requests.post(REGISTRATION_API_URL, json=payload)
 
-            # if new_object != {} and (not object_exists(objects_to_be_updated, new_object)):
-            #     new_object["draw_down"] = draw_down
-            #     new_object["profit_sum"] = profit_sum
-            #     objects_to_be_updated.append(new_object)
+                c_data = {
+                    **c_data,
+                    "status": "Passed",
+                    "pass_the_challenge": datetime.utcnow(),
+                }
+
+                content = "Congratulations! You have entered to Phase 2 from Phase 1!"
+                if response.status_code == 200:
+                    c_data = {
+                        **c_data,
+                        "challenge": network,
+                        "trader_id": data.get("trader_id"),
+                        "hot_key": data.get("hot_key"),
+                        "response": response.json(),
+                    }
+                    content = f"{content} Your testnet key is also converted to hot_key!"
+                subject = "Challenge Passed"
+                update_challenge(db, challenge, c_data)
+            elif draw_down <= -5:  # 5%
+                c_data = {
+                    **c_data,
+                    "status": "Failed",
+                }
+                subject = "Challenge Failed"
+                content = "Unfortunately! You have Failed!"
+                update_challenge(db, challenge, c_data)
+
+            email = challenge.user.email
+            if not email:
+                continue
+            send_mail(email, subject, content)
 
     logger.info("Finished monitor_challenges task")
