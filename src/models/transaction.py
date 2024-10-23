@@ -45,5 +45,8 @@ class Transaction(Base):
     order_type_list = Column(JSON, default=[])
     uuid = Column(String, nullable=True)
     hot_key = Column(String, nullable=True)
+    min_price = Column(Float, nullable=True, default=0.0)
+    max_price = Column(Float, nullable=True, default=0.0)
+    limit_order = Column(Float, nullable=True, default=0.0)
     source = Column(String, default="", nullable=True)
     modified_by = Column(String, default="", nullable=True)
