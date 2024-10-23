@@ -122,16 +122,6 @@ def close_position(position, profit_loss):
         logger.error(f"An error occurred while closing position {position.position_id}: {e}")
 
 
-def should_open_position(position, current_price):
-    result = (
-            (position.status == "PENDING") and
-            (position.upward == 0 and current_price <= position.entry_price) or
-            (position.upward == 1 and current_price >= position.entry_price)
-    )
-    logger.info(f"Determining whether to open position: {result}")
-    return result
-
-
 def check_take_profit(take_profit, profit_loss) -> bool:
     """
     Position should be closed if it reaches the expected profit
@@ -253,7 +243,7 @@ def update_position_prices(db, position, current_price):
         logger.error(f"An error occurred while updating position {position.position_id}: {e}")
 
 
-def check_pending_trailing_position(position, current_position):
+def check_pending_trailing_position(position, current_price):
     """
     Open Pending Position based on the trailing limit order
     """
@@ -263,7 +253,13 @@ def check_pending_position(position, current_price):
     """
     For Pending Position to be Opened
     """
-    if should_open_position(position, current_price):
+    opened = (
+            (position.upward == 0 and current_price <= position.entry_price) or
+            (position.upward == 1 and current_price >= position.entry_price)
+    )
+    logger.info(f"Determining whether to open pending position: {opened}")
+
+    if opened:
         open_position(position, current_price)
 
 
@@ -290,12 +286,19 @@ def check_open_position(db, position):
 
 
 def monitor_position(db, position):
+    """
+    Monitor a single position
+
+    if status is OPEN then check if it meets the criteria to CLOSE the position
+    if status is PENDING then check if it meets the criteria to OPEN the position
+    """
     global objects_to_be_updated
     try:
+        # ---------------------------- OPENED POSITION ---------------------------------
         if position.status == "OPEN":
             return check_open_position(db, position)
 
-        # POSITION IS PENDING
+        # ---------------------------- PENDING POSITION --------------------------------
         current_price = redis_client.hget('current_prices', position.trade_pair)
         logger.error(f"Current Price Pair: {position.trade_pair}")
         if not current_price:
@@ -306,7 +309,7 @@ def monitor_position(db, position):
         # if it is not a trailing pending position
         if position.limit_order is None or position.limit_order == 0:
             check_pending_position(position, current_price)
-        else:
+        else:  # trailing pending position
             position = update_position_prices(db, position, current_price)
             check_pending_trailing_position(position, current_price)
 
@@ -315,6 +318,9 @@ def monitor_position(db, position):
 
 
 def get_monitored_positions(db):
+    """
+    fetch OPEN and PENDING positions from database
+    """
     try:
         logger.info("Fetching monitored positions from database")
         result = db.execute(
@@ -333,6 +339,9 @@ def get_monitored_positions(db):
 
 
 def monitor_positions_sync():
+    """
+    loop through all the positions and monitor them one by one
+    """
     global objects_to_be_updated, last_flush_time
     try:
         logger.info("Starting monitor_positions_sync")
@@ -347,17 +356,22 @@ def monitor_positions_sync():
             logger.error(f"After: {objects_to_be_updated}")
 
         with TaskSessionLocal_() as db:
-            positions = get_monitored_positions(db)
+            for position in get_monitored_positions(db):
 
-            for position in positions:
-                logger.error(f"Current Prices Dict: {redis_client.hgetall('current_prices')}")
                 # if position is open and take_profit and stop_loss are zero then don't monitor position
-                if (position.status == "OPEN" and (not position.take_profit or position.take_profit == 0)
-                        and (not position.stop_loss or position.stop_loss == 0)):
+                skip_position = (
+                        (position.status == "OPEN") and
+                        (not position.take_profit or position.take_profit == 0) and
+                        (not position.stop_loss or position.stop_loss == 0)
+                )
+
+                if skip_position:
                     logger.info(f"Skip position {position.position_id}: {position.trader_id}: {position.trade_pair}")
                     continue
+
                 logger.info(f"Processing position {position.position_id}: {position.trader_id}: {position.trade_pair}")
                 monitor_position(db, position)
+
         logger.info("Finished monitor_positions_sync")
     except Exception as e:
         logger.error(f"An error occurred in monitor_positions_sync: {e}")
