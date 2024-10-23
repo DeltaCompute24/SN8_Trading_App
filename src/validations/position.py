@@ -332,7 +332,7 @@ def validate_trade_pair(asset_type, trade_pair):
 def validate_order_type(order_type):
     order_type = order_type.upper()
 
-    if order_type not in ["LONG", "SHORT", "FLAT"]:
+    if order_type not in ["LONG", "SHORT"]:
         raise HTTPException(status_code=400, detail="Invalid order type, It should be long, short or flat")
 
     return order_type
