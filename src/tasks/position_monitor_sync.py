@@ -247,6 +247,22 @@ def check_pending_trailing_position(position, current_price):
     """
     Open Pending Position based on the trailing limit order
     """
+    # calculate percentage
+    limit_order_price = (position.limit_order * position.initial_price) / 100
+
+    if position.order_type == "LONG":
+        trailing_price = position.min_price + limit_order_price
+    else:
+        trailing_price = position.max_price - limit_order_price
+
+    opened = (
+            (position.order_type == "LONG" and current_price >= trailing_price) or
+            (position.order_type == "SHORT" and current_price <= trailing_price)
+    )
+
+    logger.info(f"Determining whether to open pending trailing position: {opened}")
+    if opened:
+        open_position(position, current_price)
 
 
 def check_pending_position(position, current_price):
