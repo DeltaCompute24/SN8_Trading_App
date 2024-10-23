@@ -5,7 +5,6 @@ import time
 from datetime import datetime
 
 import redis
-from sqlalchemy import update
 from sqlalchemy.future import select
 from sqlalchemy.sql import and_
 
@@ -45,103 +44,6 @@ def object_exists(obj_list, new_obj):
         if obj_filtered == new_obj_filtered:
             return True
     return False
-
-
-@celery_app.task(name='src.tasks.position_monitor_sync.monitor_positions')
-def monitor_positions():
-    logger.info("Starting monitor_positions task")
-    monitor_positions_sync()
-
-
-def get_monitored_positions():
-    try:
-        logger.info("Fetching monitored positions from database")
-        with TaskSessionLocal_() as db:
-            result = db.execute(
-                select(Transaction).where(
-                    and_(
-                        Transaction.status != "CLOSED",
-                    )
-                )
-            )
-            positions = result.scalars().all()
-        logger.info(f"Retrieved {len(positions)} monitored positions")
-        return positions
-    except Exception as e:
-        logger.error(f"An error occurred while fetching monitored positions: {e}")
-        return []
-
-
-def monitor_positions_sync():
-    global objects_to_be_updated, last_flush_time
-    try:
-        logger.info("Starting monitor_positions_sync")
-
-        current_time = time.time()
-        if (current_time - last_flush_time) >= FLUSH_INTERVAL:
-            logger.error(f"Going to Flush previous Objects!: {str(current_time - last_flush_time)}")
-            push_to_redis_queue(objects_to_be_updated)
-            last_flush_time = current_time
-            logger.error(f"Before: {objects_to_be_updated}")
-            objects_to_be_updated = []
-            logger.error(f"After: {objects_to_be_updated}")
-
-        positions = get_monitored_positions()
-
-        for position in positions:
-            logger.error(f"Current Prices Dict: {redis_client.hgetall('current_prices')}")
-            # if position is open and take_profit and stop_loss are zero then don't monitor position
-            if (position.status == "OPEN" and (not position.take_profit or position.take_profit == 0)
-                    and (not position.stop_loss or position.stop_loss == 0)):
-                logger.info(f"Skip position {position.position_id}: {position.trader_id}: {position.trade_pair}")
-                continue
-            logger.info(f"Processing position {position.position_id}: {position.trader_id}: {position.trade_pair}")
-            monitor_position(position)
-        logger.info("Finished monitor_positions_sync")
-    except Exception as e:
-        logger.error(f"An error occurred in monitor_positions_sync: {e}")
-
-
-def check_pending_position(position):
-    # For Pending Position to be opened
-    if position.status != "PENDING":
-        return
-
-    current_price = redis_client.hget('current_prices', position.trade_pair)
-    logger.error(f"Current Price Pair: {position.trade_pair}")
-    if not current_price:
-        return
-    current_price = float(current_price.decode('utf-8'))
-    logger.error(f"Current Price Found: {current_price}")
-
-    logger.error(f"Objects to be Updated: {objects_to_be_updated}")
-    if should_open_position(position, current_price):
-        open_position(position, current_price)
-
-
-def monitor_position(position):
-    global objects_to_be_updated
-    try:
-        check_pending_position(position)
-        # For Open Position to be Closed
-        price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, *taoshi_profit_loss_without_fee = get_taoshi_values(
-            position.trader_id,
-            position.trade_pair,
-            challenge=position.source,
-            position_uuid=position.uuid,
-        )
-        if price == 0:
-            return
-
-        position = update_position_profit(position, profit_loss, profit_loss_without_fee, taoshi_profit_loss,
-                                          taoshi_profit_loss_without_fee[0])
-        if position.status == "OPEN" and should_close_position(profit_loss, position):
-            logger.info(
-                f"Position shouldn't be closed: {position.position_id}: {position.trader_id}: {position.trade_pair}")
-            close_position(position, profit_loss)
-            return
-    except Exception as e:
-        logger.error(f"An error occurred while monitoring position {position.position_id}: {e}")
 
 
 def open_position(position, current_price):
@@ -294,7 +196,7 @@ def should_close_position(profit_loss, position):
         return False
 
 
-def update_position_profit(position, profit_loss, profit_loss_without_fee, taoshi_profit_loss,
+def update_position_profit(db, position, profit_loss, profit_loss_without_fee, taoshi_profit_loss,
                            taoshi_profit_loss_without_fee):
     try:
         max_profit_loss = position.max_profit_loss or 0.0
@@ -302,30 +204,166 @@ def update_position_profit(position, profit_loss, profit_loss_without_fee, taosh
             return position
 
         data = {
-            "order_id": position.order_id,
             "profit_loss": profit_loss,
             "max_profit_loss": profit_loss,
             "profit_loss_without_fee": profit_loss_without_fee,
             "taoshi_profit_loss": taoshi_profit_loss,
             "taoshi_profit_loss_without_fee": taoshi_profit_loss_without_fee,
         }
-        with TaskSessionLocal_() as db:
-            # Fetch the position first to ensure it's part of the session
-            position = db.query(Transaction).filter(Transaction.order_id == position.order_id).first()
 
-            if position:
-                db.execute(
-                    update(Transaction)
-                    .where(Transaction.order_id == position.order_id)  # Specify which row to update
-                    .values(data)  # Set the new values
-                )
-                db.commit()
+        for key, value in data.items():
+            setattr(position, key, value)
 
-                # No need to refresh since you already have the position object
-                db.refresh(position)  # This now works as position is part of the session
-            else:
-                raise Exception(f"Position with order_id {position.order_id} not found")
-
+        db.commit()
+        db.refresh(position)
         return position
     except Exception as e:
         logger.error(f"An error occurred while updating position {position.position_id}: {e}")
+
+
+def update_position_prices(db, position, current_price):
+    try:
+        max_price = position.max_price or 0.0
+        min_price = position.min_price or 0.0
+        changed = False
+
+        if max_price == 0 and current_price >= max_price:
+            max_price = current_price
+            changed = True
+
+        if min_price == 0 and current_price <= min_price:
+            min_price = current_price
+            changed = True
+
+        if not changed:
+            return
+
+        data = {
+            "min_price": min_price,
+            "max_price": max_price,
+        }
+
+        for key, value in data.items():
+            setattr(position, key, value)
+
+        db.commit()
+        db.refresh(position)
+        return position
+    except Exception as e:
+        logger.error(f"An error occurred while updating position {position.position_id}: {e}")
+
+
+def check_pending_trailing_position(position, current_position):
+    """
+    Open Pending Position based on the trailing limit order
+    """
+
+
+def check_pending_position(position, current_price):
+    """
+    For Pending Position to be Opened
+    """
+    if should_open_position(position, current_price):
+        open_position(position, current_price)
+
+
+def check_open_position(db, position):
+    """
+    For Open Position to be Closed
+    """
+    # get values from taoshi platform
+    price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, *taoshi_profit_loss_without_fee = get_taoshi_values(
+        position.trader_id,
+        position.trade_pair,
+        challenge=position.source,
+        position_uuid=position.uuid,
+    )
+    if price == 0:
+        return False
+
+    position = update_position_profit(db, position, profit_loss, profit_loss_without_fee, taoshi_profit_loss,
+                                      taoshi_profit_loss_without_fee[0])
+    if position.status == "OPEN" and should_close_position(profit_loss, position):
+        logger.info(f"Position should be closed: {position.position_id}: {position.trader_id}: {position.trade_pair}")
+        close_position(position, profit_loss)
+        return True
+
+
+def monitor_position(db, position):
+    global objects_to_be_updated
+    try:
+        if position.status == "OPEN":
+            return check_open_position(db, position)
+
+        # POSITION IS PENDING
+        current_price = redis_client.hget('current_prices', position.trade_pair)
+        logger.error(f"Current Price Pair: {position.trade_pair}")
+        if not current_price:
+            return
+
+        current_price = float(current_price.decode('utf-8'))
+
+        # if it is not a trailing pending position
+        if position.limit_order is None or position.limit_order == 0:
+            check_pending_position(position, current_price)
+        else:
+            position = update_position_prices(db, position, current_price)
+            check_pending_trailing_position(position, current_price)
+
+    except Exception as e:
+        logger.error(f"An error occurred while monitoring position {position.position_id}: {e}")
+
+
+def get_monitored_positions(db):
+    try:
+        logger.info("Fetching monitored positions from database")
+        result = db.execute(
+            select(Transaction).where(
+                and_(
+                    Transaction.status != "CLOSED",
+                )
+            )
+        )
+        positions = result.scalars().all()
+        logger.info(f"Retrieved {len(positions)} monitored positions")
+        return positions
+    except Exception as e:
+        logger.error(f"An error occurred while fetching monitored positions: {e}")
+        return []
+
+
+def monitor_positions_sync():
+    global objects_to_be_updated, last_flush_time
+    try:
+        logger.info("Starting monitor_positions_sync")
+
+        current_time = time.time()
+        if (current_time - last_flush_time) >= FLUSH_INTERVAL:
+            logger.error(f"Going to Flush previous Objects!: {str(current_time - last_flush_time)}")
+            push_to_redis_queue(objects_to_be_updated)
+            last_flush_time = current_time
+            logger.error(f"Before: {objects_to_be_updated}")
+            objects_to_be_updated = []
+            logger.error(f"After: {objects_to_be_updated}")
+
+        with TaskSessionLocal_() as db:
+            positions = get_monitored_positions(db)
+
+            for position in positions:
+                logger.error(f"Current Prices Dict: {redis_client.hgetall('current_prices')}")
+                # if position is open and take_profit and stop_loss are zero then don't monitor position
+                if (position.status == "OPEN" and (not position.take_profit or position.take_profit == 0)
+                        and (not position.stop_loss or position.stop_loss == 0)):
+                    logger.info(f"Skip position {position.position_id}: {position.trader_id}: {position.trade_pair}")
+                    continue
+                logger.info(f"Processing position {position.position_id}: {position.trader_id}: {position.trade_pair}")
+                monitor_position(db, position)
+        logger.info("Finished monitor_positions_sync")
+    except Exception as e:
+        logger.error(f"An error occurred in monitor_positions_sync: {e}")
+
+
+@celery_app.task(name='src.tasks.position_monitor_sync.monitor_positions')
+def monitor_positions():
+    logger.info("Starting monitor_positions task")
+    monitor_positions_sync()
