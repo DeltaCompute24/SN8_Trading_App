@@ -46,17 +46,20 @@ def object_exists(obj_list, new_obj):
     return False
 
 
-def open_position(position, current_price):
+def open_position(position, current_price, entry_price=False):
     global objects_to_be_updated
     try:
         new_object = {
             "order_id": position.order_id,
-            "initial_price": current_price,
             "operation_type": "open",
             "status": "OPEN",
             "old_status": position.status,
             "modified_by": "system",
         }
+        if entry_price:
+            new_object["entry_price"] = current_price
+        else:
+            new_object["initial_price"] = current_price
         if object_exists(objects_to_be_updated, new_object):
             logger.info("Return back as Open Position already exists in queue!")
             return
@@ -262,7 +265,7 @@ def check_pending_trailing_position(position, current_price):
 
     logger.info(f"Determining whether to open pending trailing position: {opened}")
     if opened:
-        open_position(position, current_price)
+        open_position(position, current_price, entry_price=True)
 
 
 def check_pending_position(position, current_price):
