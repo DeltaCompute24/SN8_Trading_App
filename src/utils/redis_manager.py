@@ -1,14 +1,13 @@
 import json
 
-from redis import asyncio as aioredis
+import redis
 
-from src.config import REDIS_URL
 from src.utils.constants import REDIS_LIVE_PRICES_TABLE, POSITIONS_TABLE, OPERATION_QUEUE_NAME
 
-redis_client = aioredis.from_url(REDIS_URL, decode_responses=True)
+redis_client = redis.StrictRedis(host='localhost', port=6379, decode_responses=True)
 
 
-def get_hash_values(hash_name=REDIS_LIVE_PRICES_TABLE):
+def get_hash_values(hash_name=POSITIONS_TABLE):
     """
     get all the hash values against a key
     """
