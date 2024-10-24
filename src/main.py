@@ -34,7 +34,7 @@ app.include_router(get_users_router, prefix="/trades")
 app.include_router(user_routers, prefix="/users")
 app.include_router(payment_routers, prefix="/payments")
 app.include_router(send_email, prefix="/send-email")
-app.include_router(prices_websocket, prefix="/live-prices")
+app.include_router(prices_websocket, prefix="/ws")
 
 # Enable CORS
 app.add_middleware(
