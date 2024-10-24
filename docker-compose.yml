@@ -42,7 +42,6 @@ services:
     restart: always
     command: >
       sh -c "celery -A src.core.celery_app worker -n position_worker --loglevel=info -Q position_monitoring &
-               celery -A src.core.celery_app worker -n subscription_worker --loglevel=info -Q subscription_management &
                celery -A src.core.celery_app worker -n taoshi_worker --loglevel=info -Q monitor_taoshi &
                celery -A src.core.celery_app worker -n challenges_worker --loglevel=info -Q monitor_challenges &
                celery -A src.core.celery_app worker -n redis_worker --loglevel=info -Q event_listener "
