@@ -30,7 +30,6 @@ def create_user(user_data: FirebaseUserCreate, db: Session = Depends(get_db)):
     logger.info(f"Create User for trader_id={user_data.firebase_id}")
     try:
         new_user = create_firebase_user(db, user_data.firebase_id, user_data.name, user_data.email)
-        new_user = create_or_update_challenges(db, new_user, user_data.challenges)
         return new_user
     except Exception as e:
         logger.error(f"Error creating user: {e}")

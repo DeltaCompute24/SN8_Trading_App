@@ -23,7 +23,7 @@ def get_monitored_challenges(db: Session):
                 and_(
                     Challenge.status == "In Challenge",
                     Challenge.active == "1",
-                    Challenge.challenge == "test"
+                    Challenge.challenge == "test",
                 )
             )
         )
@@ -67,7 +67,7 @@ def monitor_challenges():
             hot_key = challenge.hot_key
             p_content = positions.get(hot_key)
             l_content = perf_ledgers.get(hot_key)
-            if not (p_content or l_content):
+            if not p_content or not l_content:
                 continue
 
             profit_sum = 0

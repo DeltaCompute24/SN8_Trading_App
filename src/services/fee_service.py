@@ -1,11 +1,8 @@
 import ast
 from datetime import datetime, timedelta
 
-import redis
-
 from src.services.api_service import get_profit_and_current_price
-
-redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
+from src.utils.websocket_manager import redis_client
 
 
 def get_assets_fee(asset_type):

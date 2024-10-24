@@ -1,17 +1,14 @@
 import asyncio
 import logging
 
-import redis
 from sqlalchemy.future import select
 
 from src.core.celery_app import celery_app
 from src.database_tasks import get_task_db
 from src.models.transaction import Transaction
-from src.utils.websocket_manager import websocket_manager
+from src.utils.websocket_manager import websocket_manager, redis_client
 
 logger = logging.getLogger(__name__)
-
-redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
 
 current_subscriptions = set()
 subscription_tasks = {}

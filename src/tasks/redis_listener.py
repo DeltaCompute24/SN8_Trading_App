@@ -8,8 +8,7 @@ from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.models.challenge import Challenge
 from src.models.transaction import Transaction
-
-redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
+from src.utils.websocket_manager import redis_client
 
 logger = logging.getLogger(__name__)
 

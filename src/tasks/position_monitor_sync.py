@@ -4,7 +4,6 @@ import logging
 import time
 from datetime import datetime
 
-import redis
 from sqlalchemy.future import select
 from sqlalchemy.sql import and_
 
@@ -12,9 +11,7 @@ from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.models.transaction import Transaction
 from src.services.fee_service import get_taoshi_values
-from src.utils.websocket_manager import websocket_manager
-
-redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
+from src.utils.websocket_manager import websocket_manager, redis_client
 
 logger = logging.getLogger(__name__)
 
