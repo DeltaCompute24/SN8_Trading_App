@@ -10,6 +10,7 @@ from src.services.fee_service import get_taoshi_values
 from src.services.trade_service import create_transaction, update_monitored_positions, get_latest_position
 from src.services.user_service import get_challenge
 from src.utils.logging import setup_logging
+from src.utils.redis_manager import get_live_price
 from src.utils.websocket_manager import websocket_manager
 from src.validations.position import validate_position
 
@@ -72,10 +73,7 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
                 if first_price != 0:
                     break
         else:
-            first_price = entry_price
-            # await websocket_manager.connect(position_data.asset_type)
-            # await websocket_manager.subscribe(position_data.trade_pair)
-            # first_price = await websocket_manager.listen_for_initial_price()
+            first_price = get_live_price(position_data.trade_pair)
 
         if first_price == 0:
             logger.error("Failed to fetch current price for the trade pair")

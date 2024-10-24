@@ -22,7 +22,7 @@ def get_taoshi_values(trader_id, trade_pair, position_uuid=None, challenge="main
     position = redis_client.hget('positions', key)
     # if position exist in redis
     if position and not position_uuid:
-        position = ast.literal_eval(position.decode('utf-8'))
+        position = ast.literal_eval(position)
         current_time = datetime.now()
         position_time = datetime.strptime(position[0], '%Y-%m-%d %H:%M:%S.%f')
 

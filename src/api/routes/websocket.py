@@ -1,10 +1,13 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from src.utils.websocket_manager import redis_client
 import asyncio
 import json
 from typing import List
 
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+
+from src.utils.websocket_manager import redis_client
+
 router = APIRouter()
+
 
 class ConnectionManager:
     def __init__(self):
@@ -32,7 +35,7 @@ class ConnectionManager:
                 await connection.send_text(message)
             except Exception:
                 disconnected.append(connection)
-        
+
         # Remove disconnected clients
         for conn in disconnected:
             self.active_connections.remove(conn)
@@ -44,13 +47,16 @@ class ConnectionManager:
                 break
             try:
                 current_prices = await redis_client.hgetall('live_prices')
-                prices_dict = {k : json.loads(v) for k, v in current_prices.items()}
+                # prices_dict = {k : json.loads(v) for k, v in current_prices.items()}
+                prices_dict = {k: float(v) for k, v in current_prices.items()}
                 await self.broadcast(json.dumps(prices_dict))
             except Exception as e:
                 print(f"Error fetching prices: {e}")
             await asyncio.sleep(1)
 
+
 manager = ConnectionManager()
+
 
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -61,5 +67,3 @@ async def websocket_endpoint(websocket: WebSocket):
             await websocket.receive_text()
     except WebSocketDisconnect:
         manager.disconnect(websocket)
-
-# No need for a separate startup event
