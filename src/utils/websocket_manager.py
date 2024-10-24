@@ -7,7 +7,7 @@ import websockets
 from throttler import Throttler
 
 from src.config import POLYGON_API_KEY, SIGNAL_API_KEY, SIGNAL_API_BASE_URL
-from src.utils.constants import forex_pairs, crypto_pairs, indices_pairs
+from src.utils.constants import forex_pairs, crypto_pairs, indices_pairs, REDIS_LIVE_PRICES_TABLE
 from src.utils.logging import setup_logging
 from src.utils.redis_manager import set_hash_value
 
