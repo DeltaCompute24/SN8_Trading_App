@@ -1,15 +1,11 @@
 import logging
 from datetime import datetime
 
-from redis import asyncio as aioredis
-
-from src.config import REDIS_URL
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.models.challenge import Challenge
 from src.services.api_service import call_main_net, call_checkpoint_api
-
-redis_client = aioredis.from_url(REDIS_URL, decode_responses=True)
+from src.utils.redis_manager import set_hash_value
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +45,6 @@ def monitor_taoshi():
                     value = [str(datetime.now()), price, profit_loss, profit_loss_without_fee, taoshi_profit_loss,
                              taoshi_profit_loss_without_fee, position_uuid, hot_key, len(position["orders"]),
                              position["average_entry_price"]]
-                    redis_client.hset('positions', f"{trade_pair}-{trader_id}", str(value))
+                    set_hash_value(key=f"{trade_pair}-{trader_id}", value=value)
                 except Exception as ex:
                     logger.error(f"An error occurred while fetching position {trade_pair}-{trader_id}: {ex}")

@@ -4,7 +4,7 @@ from typing import List
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from src.utils.websocket_manager import redis_client
+from src.utils.redis_manager import get_hash_values
 
 router = APIRouter()
 
@@ -46,7 +46,7 @@ class ConnectionManager:
                 # No active connections, stop broadcasting
                 break
             try:
-                current_prices = await redis_client.hgetall('live_prices')
+                current_prices = get_hash_values()
                 # prices_dict = {k : json.loads(v) for k, v in current_prices.items()}
                 prices_dict = {k: float(v) for k, v in current_prices.items()}
                 await self.broadcast(json.dumps(prices_dict))

@@ -4,37 +4,28 @@ import logging
 import time
 from datetime import datetime
 
-from redis import asyncio as aioredis
 from sqlalchemy.future import select
 from sqlalchemy.sql import and_
 
-from src.config import REDIS_URL
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.models.transaction import Transaction
 from src.services.fee_service import get_taoshi_values
-from src.utils.redis_manager import get_live_price
+from src.utils.redis_manager import get_live_price, push_to_redis_queue, get_queue_data
 from src.utils.websocket_manager import websocket_manager
-
-redis_client = aioredis.from_url(REDIS_URL, decode_responses=True)
 
 logger = logging.getLogger(__name__)
 
 FLUSH_INTERVAL = 20
 last_flush_time = time.time()
 objects_to_be_updated = []
-queue_name = "db_operations_queue"
-
-
-def push_to_redis_queue(data):
-    redis_client.lpush(queue_name, json.dumps(data))
 
 
 def object_exists(obj_list, new_obj):
     new_obj_filtered = {k: v for k, v in new_obj.items() if
                         k not in ['close_time', 'close_price', 'profit_loss', 'initial_price']}
 
-    raw_data = redis_client.lrange(queue_name, 0, -1)
+    raw_data = get_queue_data()
     for item in raw_data:
         redis_objects = json.loads(item.decode('utf-8'))
         obj_list.extend(redis_objects)
@@ -324,8 +315,6 @@ def monitor_position(db, position):
         logger.error(f"Current Price Pair: {position.trade_pair}")
         if not current_price:
             return
-
-        current_price = float(current_price.decode('utf-8'))
 
         # if it is not a trailing pending position
         if position.limit_order is None or position.limit_order == 0:

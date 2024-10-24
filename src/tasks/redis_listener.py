@@ -2,17 +2,14 @@ import json
 import logging
 
 import redis
-from redis import asyncio as aioredis
 from sqlalchemy import update
 
-from src.config import REDIS_URL
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.models.challenge import Challenge
 from src.models.transaction import Transaction
-
-REDIS_LIVE_PRICES_TABLE = 'live_prices'
-redis_client = aioredis.from_url(REDIS_URL, decode_responses=True)
+from src.utils.constants import CHALLENGE_QUEUE_NAME
+from src.utils.redis_manager import get_queue_left_item, pop_queue_right_item
 
 logger = logging.getLogger(__name__)
 
@@ -45,19 +42,19 @@ def bulk_update_challenge(data):
 def event_listener():
     logger.info("Starting process_db_operations task")
     try:
-        item = redis_client.lindex('db_operations_queue', -1)
+        item = get_queue_left_item()
         if item:
             data = json.loads(item)
             bulk_update(data)
-            redis_client.rpop('db_operations_queue')
+            pop_queue_right_item()
 
         # for monitor challenge
-        item = redis_client.lindex('challenges_queue', -1)
+        item = get_queue_left_item(queue_name=CHALLENGE_QUEUE_NAME)
         if not item:
             return
         data = json.loads(item)
         bulk_update_challenge(data)
-        redis_client.rpop('challenges_queue')
+        pop_queue_right_item(queue_name=CHALLENGE_QUEUE_NAME)
     except redis.ConnectionError as e:
         logger.error(f"Redis connection error: {e}")
     except Exception as e:

@@ -4,21 +4,18 @@ from typing import List
 
 import aiohttp
 import websockets
-from redis import asyncio as aioredis
 from throttler import Throttler
 
 from src.config import POLYGON_API_KEY, SIGNAL_API_KEY, SIGNAL_API_BASE_URL
-from src.config import REDIS_URL
 from src.utils.constants import forex_pairs, crypto_pairs, indices_pairs
 from src.utils.logging import setup_logging
+from src.utils.redis_manager import set_hash_value
 
 # Set the rate limit: max 10 requests per second
 throttler = Throttler(rate_limit=10, period=1.0)
 # Use the REDIS_URL from environment variables
 
 logger = setup_logging()
-
-redis_client = aioredis.from_url(REDIS_URL, decode_responses=True)
 
 
 class WebSocketManager:
@@ -97,7 +94,7 @@ class WebSocketManager:
                     try:
                         # serialized_item = json.dumps(item)
                         trade_pair = trade_pair.replace("-", "").replace("/", "")
-                        await redis_client.hset('live_prices', trade_pair, price)
+                        set_hash_value(trade_pair, price, hash_name=REDIS_LIVE_PRICES_TABLE)
 
                     except Exception as e:
                         print(f"Failed to add to Redis: {e}")
