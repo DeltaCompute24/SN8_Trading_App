@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Float
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Float, JSON
 from sqlalchemy.orm import relationship
 
 from src.database import Base
@@ -22,6 +22,9 @@ class Challenge(Base):
     pass_the_challenge = Column(DateTime, nullable=True)
     draw_down = Column(Float, nullable=True)
     profit_sum = Column(Float, nullable=True)
+    response = Column(JSON, nullable=True)
+    message = Column(String, nullable=False)
+    hotkey_status = Column(String, nullable=False)
 
     # Foreign key to reference the FirebaseUser
     user_id = Column(Integer, ForeignKey("firebase_users.id"))

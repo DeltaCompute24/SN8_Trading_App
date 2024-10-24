@@ -34,6 +34,7 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
         upward = -1
         status = "OPEN"
         entry_price = position_data.entry_price
+        limit_order = position_data.limit_order
 
         challenge = get_challenge(position_data.trader_id, source=True)
         if not challenge:
@@ -50,7 +51,7 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
         average_entry_price = 0.0
 
         # If entry_price == 0, it is empty then status will be "OPEN" so we can submit trade
-        if not entry_price or entry_price == 0:
+        if not entry_price or entry_price == 0 or not limit_order or limit_order == 0:
             # Submit the trade and wait for confirmation
             trade_submitted = await websocket_manager.submit_trade(position_data.trader_id, position_data.trade_pair,
                                                                    position_data.order_type, position_data.leverage)
@@ -102,6 +103,7 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
                                                    hot_key=hot_key,
                                                    source=challenge,
                                                    order_level=len_order,
+                                                   max_profit_loss=profit_loss,
                                                    )
 
         # Create MonitoredPositionCreate data

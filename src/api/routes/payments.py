@@ -7,7 +7,7 @@ from sqlalchemy.sql import and_
 
 from src.database_tasks import TaskSessionLocal_
 from src.models.payments import Payment
-from src.schemas.user import PaymentRead, PaymentCreate
+from src.schemas.user import PaymentRead, PaymentCreate, PaymentIdRead
 from src.services.payment_service import create_payment, get_payment
 from src.utils.logging import setup_logging
 
@@ -23,7 +23,7 @@ def get_db():
         db.close()
 
 
-@router.post("/", response_model=PaymentRead)
+@router.post("/", response_model=PaymentIdRead)
 def create_payment_endpoint(payment_data: PaymentCreate, db: Session = Depends(get_db)):
     try:
         new_payment = create_payment(db, payment_data)

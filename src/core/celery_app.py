@@ -43,7 +43,6 @@ celery_app.conf.update(
 celery_app.autodiscover_tasks(['src.tasks'])
 
 # Ensure tasks are loaded
-import src.tasks.subscription_manager
 import src.tasks.position_monitor_sync
 import src.tasks.redis_listener
 import src.tasks.listen_for_profit_loss

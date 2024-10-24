@@ -9,9 +9,11 @@ class TransactionBase(BaseModel):
     trade_pair: str
     leverage: float
     asset_type: str
+    trailing: Optional[bool] = False
     stop_loss: Optional[float]
     take_profit: Optional[float]
     entry_price: Optional[float] = 0.0
+    limit_order: Optional[float] = 0.0
     order_type: str
 
 
@@ -24,6 +26,7 @@ class TransactionUpdate(BaseModel):
     trade_pair: str
     leverage: float
     asset_type: str
+    trailing: bool
     stop_loss: Optional[float]
     take_profit: Optional[float]
 
@@ -45,9 +48,12 @@ class Transaction(TransactionBase):
     close_price: Optional[float]
     profit_loss: Optional[float]
     profit_loss_without_fee: Optional[float] or 0.0
+    max_profit_loss: Optional[float] or 0.0
     fee: Optional[float] or 0.0
     position_id: int
     trade_order: int
+    min_price: Optional[float] = 0.0
+    max_price: Optional[float] = 0.0
     uuid: Optional[str]
     hot_key: Optional[str]
     modified_by: Optional[str]
