@@ -41,11 +41,6 @@ def bulk_update_challenge(data):
         db.commit()
 
 
-def get_live_price(trade_pair: str) -> float:
-    current_price_data = redis_client.hget(REDIS_LIVE_PRICES_TABLE, trade_pair)
-    return float(json.loads(current_price_data)['c']) if current_price_data else 0
-
-
 @celery_app.task(name='src.tasks.redis_listener.event_listener')
 def event_listener():
     logger.info("Starting process_db_operations task")
