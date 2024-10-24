@@ -2,18 +2,18 @@ import asyncio
 import json
 
 import aiohttp
-import redis
 import websockets
 from throttler import Throttler
 
 from src.config import POLYGON_API_KEY, SIGNAL_API_KEY, SIGNAL_API_BASE_URL
+from src.utils.constants import REDIS_LIVE_PRICES_TABLE
 from src.utils.logging import setup_logging
+from src.utils.redis_manager import set_hash_value
 
 logger = setup_logging()
 
 # Set the rate limit: max 10 requests per second
 throttler = Throttler(rate_limit=10, period=1.0)
-redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
 
 
 class WebSocketManager:
@@ -21,7 +21,6 @@ class WebSocketManager:
         self.websocket = None
         self.asset_type = None
         self.trade_pair = None
-        self.current_prices = {}  # Store current prices
         self.reconnect_interval = 5  # seconds
         self._recv_lock = asyncio.Lock()  # Lock to ensure single access to recv
 
@@ -87,13 +86,10 @@ class WebSocketManager:
                             pair = data[0]['pair']
                             trade_pair = pair.replace("-", "").replace("/", "")
                             price = float(data[0]['c'])
-                            self.current_prices[trade_pair] = price
-                            await redis_client.hset('current_prices', trade_pair, data[0]['c'])
+                            set_hash_value(trade_pair, data[0]['c'], hash_name=REDIS_LIVE_PRICES_TABLE)
                             current_time = asyncio.get_event_loop().time()
                             if last_log_time is None or current_time - last_log_time >= 1:
                                 logger.info(f"Current price for {trade_pair}: {price}")
-                                # self.current_prices[trade_pair] = price
-                                # await redis_client.hset('current_prices', trade_pair, data[0]['c'])
                                 last_log_time = current_time
                             await asyncio.sleep(1)  # Adjust sleep duration as necessary
                     except websockets.ConnectionClosedError as e:

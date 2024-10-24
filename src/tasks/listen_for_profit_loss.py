@@ -5,7 +5,7 @@ from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.models.challenge import Challenge
 from src.services.api_service import call_main_net, call_checkpoint_api
-from src.utils.websocket_manager import redis_client
+from src.utils.redis_manager import set_hash_value
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +45,6 @@ def monitor_taoshi():
                     value = [str(datetime.now()), price, profit_loss, profit_loss_without_fee, taoshi_profit_loss,
                              taoshi_profit_loss_without_fee, position_uuid, hot_key, len(position["orders"]),
                              position["average_entry_price"]]
-                    redis_client.hset('positions', f"{trade_pair}-{trader_id}", str(value))
+                    set_hash_value(key=f"{trade_pair}-{trader_id}", value=str(value))
                 except Exception as ex:
                     logger.error(f"An error occurred while fetching position {trade_pair}-{trader_id}: {ex}")
