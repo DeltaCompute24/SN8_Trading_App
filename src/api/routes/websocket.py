@@ -49,8 +49,8 @@ class ConnectionManager:
                 break
             try:
                 current_prices = get_hash_values()
-                # prices_dict = {k : json.loads(v) for k, v in current_prices.items()}
-                prices_dict = {k: float(v) for k, v in current_prices.items()}
+                prices_dict = {k : json.loads(v) for k, v in current_prices.items()}
+               
                 await self.broadcast(json.dumps(prices_dict))
             except Exception as e:
                 print(f"Error fetching prices: {e}")
@@ -97,7 +97,9 @@ class PConnectionManager:
                 positions = get_hash_values(POSITIONS_TABLE)
                 positions_dict = {}
                 for key, value in positions.items():
+           
                     value = ast.literal_eval(value)
+     
                     trade_pair, trader_id = key.split("-")
                     if trader_id not in positions_dict:
                         positions_dict[trader_id] = {}
