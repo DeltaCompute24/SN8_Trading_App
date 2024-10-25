@@ -52,7 +52,7 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
         average_entry_price = 0.0
 
         # If entry_price == 0, it is empty then status will be "OPEN" so we can submit trade
-        if not entry_price or entry_price == 0 or not limit_order or limit_order == 0:
+        if (not entry_price or entry_price == 0) and (not limit_order or limit_order == 0):
             # Submit the trade and wait for confirmation
             trade_submitted = await websocket_manager.submit_trade(position_data.trader_id, position_data.trade_pair,
                                                                    position_data.order_type, position_data.leverage)
@@ -73,6 +73,7 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
                 if first_price != 0:
                     break
         else:
+            status = "PENDING"
             first_price = get_live_price(position_data.trade_pair)
 
         if first_price == 0:
