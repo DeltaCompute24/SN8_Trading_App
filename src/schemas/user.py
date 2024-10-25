@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Literal
 
 from pydantic import BaseModel, EmailStr
 
@@ -91,7 +91,8 @@ class PaymentBase(BaseModel):
 class PaymentCreate(BaseModel):
     firebase_id: str
     amount: float
-    network: str
+    step: Literal[1, 2]
+    phase: Literal[1, 2]
     referral_code: Optional[str] = None
 
 

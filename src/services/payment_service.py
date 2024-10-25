@@ -1,6 +1,7 @@
 import threading
 
 import requests
+from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import and_
@@ -37,6 +38,8 @@ def create_challenge(db, payment_data, user_id, status="In Progress", message="T
         challenge=payment_data.network,
         hotkey_status=status,
         message=message,
+        step=payment_data.step,
+        phase=payment_data.phase,
     )
     db.add(_challenge)
     db.commit()
@@ -51,6 +54,8 @@ def create_payment_entry(db, payment_data, challenge=None):
         referral_code=payment_data.referral_code,
         challenge=challenge,
         challenge_id=challenge.id if challenge else None,
+        step=payment_data.step,
+        phase=payment_data.phase,
     )
     db.add(_payment)
     db.commit()
@@ -59,6 +64,10 @@ def create_payment_entry(db, payment_data, challenge=None):
 
 
 def create_payment(db: Session, payment_data: PaymentCreate):
+    if payment_data.step not in [1, 2] or payment_data.phase not in [1, 2]:
+        raise HTTPException(status_code=400, detail="Step or Phase can either be 1 or 2")
+
+    payment_data.network = "main" if payment_data.step == 1 else "test"
     firebase_user = get_firebase_user(db, payment_data.firebase_id)
 
     if not firebase_user:
