@@ -175,6 +175,7 @@ def should_close_position(profit_loss, position):
         )
 
         print(f"Determining whether to close position: {close_result}")
+        logger.info(f"Determining whether to close position: {close_result}")
         return close_result
 
     except Exception as e:
@@ -213,11 +214,11 @@ def update_position_prices(db, position, current_price):
         min_price = position.min_price or 0.0
         changed = False
 
-        if max_price == 0 and current_price >= max_price:
+        if max_price == 0 or current_price >= max_price:
             max_price = current_price
             changed = True
 
-        if min_price == 0 and current_price <= min_price:
+        if min_price == 0 or current_price <= min_price:
             min_price = current_price
             changed = True
 
@@ -357,13 +358,12 @@ def monitor_positions_sync():
         logger.info("Starting monitor_positions_sync")
 
         current_time = time.time()
-        if (current_time - last_flush_time) >= FLUSH_INTERVAL:
+
+        if objects_to_be_updated and (current_time - last_flush_time) >= FLUSH_INTERVAL:
             logger.error(f"Going to Flush previous Objects!: {str(current_time - last_flush_time)}")
-            push_to_redis_queue(objects_to_be_updated)
             last_flush_time = current_time
-            logger.error(f"Before: {objects_to_be_updated}")
+            push_to_redis_queue(objects_to_be_updated)
             objects_to_be_updated = []
-            logger.error(f"After: {objects_to_be_updated}")
 
         with TaskSessionLocal_() as db:
             for position in get_monitored_positions(db):
