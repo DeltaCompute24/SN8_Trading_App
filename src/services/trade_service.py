@@ -23,7 +23,7 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
                              leverage_list: list = None, order_type_list: list = None, max_profit_loss: float = 0.0,
                              profit_loss_without_fee: float = 0.0, taoshi_profit_loss: float = 0.0,
                              taoshi_profit_loss_without_fee: float = 0.0, uuid: str = None, hot_key: str = None,
-                             source: str = ""):
+                             source: str = "", limit_order: float = 0.0):
     if operation_type == "initiate":
         max_position_id = await db.scalar(
             select(func.max(Transaction.position_id)).filter(Transaction.trader_id == transaction_data.trader_id))
@@ -46,7 +46,7 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
         initial_price=initial_price,
         min_price=initial_price,
         max_price=initial_price,
-        limit_order=transaction_data.limit_order,
+        limit_order=limit_order,
         leverage=transaction_data.leverage,
         trailing=transaction_data.trailing,
         stop_loss=transaction_data.stop_loss,

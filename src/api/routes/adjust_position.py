@@ -115,6 +115,7 @@ async def adjust_position_endpoint(position_data: TransactionUpdate, db: AsyncSe
             source=position.source,
             order_level=len_order,
             max_profit_loss=max_profit_loss,
+            limit_order=position.limit_order,
         )
 
         await close_transaction(db, position.order_id, position.trader_id, realtime_price, profit_loss,
