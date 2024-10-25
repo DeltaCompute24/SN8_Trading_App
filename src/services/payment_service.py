@@ -29,13 +29,14 @@ def get_payment(db: Session, payment_id: int):
     return payment
 
 
-def create_challenge(db, payment_data, user_id, status="In Progress", message="Trader_id and hot_key will be created"):
+def create_challenge(db, payment_data, network, user_id, status="In Progress",
+                     message="Trader_id and hot_key will be created"):
     _challenge = Challenge(
         trader_id=0,
         hot_key="",
         user_id=user_id,
         active="0",
-        challenge=payment_data.network,
+        challenge=network,
         hotkey_status=status,
         message=message,
         step=payment_data.step,
@@ -67,13 +68,13 @@ def create_payment(db: Session, payment_data: PaymentCreate):
     if payment_data.step not in [1, 2] or payment_data.phase not in [1, 2]:
         raise HTTPException(status_code=400, detail="Step or Phase can either be 1 or 2")
 
-    payment_data.network = "main" if payment_data.step == 1 else "test"
+    network = "main" if payment_data.step == 1 else "test"
     firebase_user = get_firebase_user(db, payment_data.firebase_id)
 
     if not firebase_user:
         new_challenge = None
     elif firebase_user.username:
-        new_challenge = create_challenge(db, payment_data, firebase_user.id)
+        new_challenge = create_challenge(db, payment_data, network, firebase_user.id)
         thread = threading.Thread(
             target=register_and_update_challenge,
             args=(
@@ -83,7 +84,7 @@ def create_payment(db: Session, payment_data: PaymentCreate):
         thread.start()
     # If Firebase user exists but lacks necessary fields
     else:
-        new_challenge = create_challenge(db, payment_data, firebase_user.id, status="Failed",
+        new_challenge = create_challenge(db, payment_data, network, firebase_user.id, status="Failed",
                                          message="User's Email and Name is Empty!")
 
     new_payment = create_payment_entry(db, payment_data, new_challenge)
