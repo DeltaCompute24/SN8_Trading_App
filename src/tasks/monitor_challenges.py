@@ -81,9 +81,10 @@ def monitor_challenges():
                 "draw_down": draw_down,
                 "profit_sum": profit_sum,
             }
+            changed = False
 
             if profit_sum >= 2:  # 2%
-                # new_object = {"id": challenge.id, "pass_the_challenge": datetime.utcnow(), "status": "Passed"}
+                changed = True
                 network = "main" if challenge.challenge == "test" else "test"
                 payload = {
                     "hot_key": challenge.hot_key,
@@ -113,6 +114,7 @@ def monitor_challenges():
                 subject = "Challenge Passed"
                 update_challenge(db, challenge, c_data)
             elif draw_down <= -5:  # 5%
+                changed = True
                 c_data = {
                     **c_data,
                     "status": "Failed",
@@ -122,7 +124,7 @@ def monitor_challenges():
                 update_challenge(db, challenge, c_data)
 
             email = challenge.user.email
-            if not email:
+            if not email or not changed:
                 continue
             send_mail(email, subject, content)
 
