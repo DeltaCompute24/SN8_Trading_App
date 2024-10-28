@@ -9,7 +9,7 @@ from throttler import Throttler
 from src.config import POLYGON_API_KEY, SIGNAL_API_KEY, SIGNAL_API_BASE_URL
 from src.utils.constants import forex_pairs, crypto_pairs, indices_pairs, REDIS_LIVE_PRICES_TABLE
 from src.utils.logging import setup_logging
-from src.utils.redis_manager import set_hash_value
+from src.utils.redis_manager import set_live_price
 
 # Set the rate limit: max 10 requests per second
 throttler = Throttler(rate_limit=10, period=1.0)
@@ -87,14 +87,13 @@ class WebSocketManager:
                     if item.get("ev") not in ["CAS", "XAS", "A"]:
                         print(f"Skipping non-CAS event: {item}")
                         continue
-                    trade_pair = item.get("pair")
-                    price = item.get("c")
-                    # item.pop("ev", None)
+                    trade_pair = item.pop("pair", None)
+                    item.pop("ev", None)
 
                     try:
-                        # serialized_item = json.dumps(item)
+                       
                         trade_pair = trade_pair.replace("-", "").replace("/", "")
-                        set_hash_value(trade_pair, price, hash_name=REDIS_LIVE_PRICES_TABLE)
+                        set_live_price(trade_pair, item)
 
                     except Exception as e:
                         print(f"Failed to add to Redis: {e}")
