@@ -52,9 +52,9 @@ def get_firebase_user(db: Session, firebase_id: str):
     return user
 
 
-def create_firebase_user(db: Session, firebase_id: str, name: str, email: str):
-    if not firebase_id or not name or not email:
-        raise HTTPException(status_code=400, detail="Firebase id, Name or Email can't be Empty!")
+def create_firebase_user(db: Session, firebase_id: str, name: str = "", email: str = ""):
+    if not firebase_id:
+        raise HTTPException(status_code=400, detail="Firebase id can't be Empty!")
     firebase_user = get_firebase_user(db, firebase_id)
     if not firebase_user:
         username = construct_username(email)
