@@ -20,11 +20,7 @@ from src.api.routes.websocket import router as prices_websocket
 from src.api.routes.payout import router as payout
 from src.database import engine, Base, DATABASE_URL
 from src.services.user_service import populate_ambassadors
-from src.utils.websocket_manager import (
-    websocket_manager,
-    forex_websocket_manager,
-    crypto_websocket_manager,
-)
+from src.utils.websocket_manager import forex_websocket_manager, crypto_websocket_manager
 
 app = FastAPI()
 
@@ -39,8 +35,9 @@ app.include_router(get_users_router, prefix="/trades")
 app.include_router(user_routers, prefix="/users")
 app.include_router(payment_routers, prefix="/payments")
 app.include_router(send_email, prefix="/send-email")
-app.include_router(prices_websocket, prefix="/live-prices")
 app.include_router(payout, prefix="/payout")
+app.include_router(prices_websocket, prefix="/ws")
+
 
 # Enable CORS
 app.add_middleware(
@@ -55,14 +52,11 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     print("Starting to listen for prices multiple...")
-    print("Starting to listen for prices multiple...")
     print()
     asyncio.create_task(forex_websocket_manager.listen_for_prices_multiple())
     asyncio.create_task(crypto_websocket_manager.listen_for_prices_multiple())
     # Uncomment the following line if you want to use indices_websocket_manager
     # asyncio.create_task(indices_websocket_manager.listen_for_prices_multiple())
-    print("Populate Ambassadors dict!")
-    populate_ambassadors()
 
     default_db_url = DATABASE_URL.rsplit("/", 1)[0] + "/postgres"
     default_engine = create_async_engine(default_db_url, echo=True)
@@ -83,3 +77,6 @@ async def startup_event():
     # Create the tables in the monitoring database
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+    print("Populate Ambassadors dict!")
+    populate_ambassadors()

@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "5050:5050"
+      - "80:80"
     volumes:
       - .:/app
     environment:
@@ -25,7 +25,6 @@ services:
       - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
     depends_on:
       - redis
-    command: uvicorn src.main:app --host 0.0.0.0 --port 5050 --reload
 
   redis:
     image: redis:6.2-alpine
@@ -43,7 +42,6 @@ services:
     restart: always
     command: >
       sh -c "celery -A src.core.celery_app worker -n position_worker --loglevel=info -Q position_monitoring &
-               celery -A src.core.celery_app worker -n subscription_worker --loglevel=info -Q subscription_management &
                celery -A src.core.celery_app worker -n taoshi_worker --loglevel=info -Q monitor_taoshi &
                celery -A src.core.celery_app worker -n challenges_worker --loglevel=info -Q monitor_challenges &
                celery -A src.core.celery_app worker -n redis_worker --loglevel=info -Q event_listener "

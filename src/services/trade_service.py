@@ -15,15 +15,15 @@ from src.services.fee_service import get_assets_fee
 async def create_transaction(db: AsyncSession, transaction_data: TransactionCreate, entry_price: float,
                              operation_type: str, initial_price: float, position_id: int = None,
                              cumulative_leverage: float = None, cumulative_stop_loss: float = None,
-                             cumulative_take_profit: float = None,
-                             order_type: str = None, cumulative_order_type: str = None, status: str = "OPEN", old_status: str = "OPEN",
+                             cumulative_take_profit: float = None, order_type: str = None,
+                             cumulative_order_type: str = None, status: str = "OPEN", old_status: str = "OPEN",
                              close_time: datetime = None, close_price: float = None, profit_loss: float = 0,
                              upward: float = -1, order_level: int = 0, modified_by: str = None,
                              average_entry_price: float = None, entry_price_list: list = None,
                              leverage_list: list = None, order_type_list: list = None, max_profit_loss: float = 0.0,
                              profit_loss_without_fee: float = 0.0, taoshi_profit_loss: float = 0.0,
                              taoshi_profit_loss_without_fee: float = 0.0, uuid: str = None, hot_key: str = None,
-                             source: str = ""):
+                             source: str = "", limit_order: float = 0.0):
     if operation_type == "initiate":
         max_position_id = await db.scalar(
             select(func.max(Transaction.position_id)).filter(Transaction.trader_id == transaction_data.trader_id))
@@ -44,7 +44,11 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
         open_time=datetime.utcnow(),
         entry_price=entry_price,
         initial_price=initial_price,
+        min_price=initial_price,
+        max_price=initial_price,
+        limit_order=limit_order,
         leverage=transaction_data.leverage,
+        trailing=transaction_data.trailing,
         stop_loss=transaction_data.stop_loss,
         take_profit=transaction_data.take_profit,
         order_type=order_type,

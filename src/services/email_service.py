@@ -22,6 +22,8 @@ def send_mail(receiver, subject, content):
     """
     Send an email with a subject and body content to the specified receiver.
     """
+    if not receiver:
+        return
     server = None
     try:
         # Set up the server connection
