@@ -1,3 +1,6 @@
+import re
+
+from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import Session
@@ -8,7 +11,9 @@ from src.models.challenge import Challenge
 from src.models.firebase_user import FirebaseUser
 from src.models.users import Users
 from src.schemas.user import UsersBase
+from src.utils.logging import setup_logging
 
+logger = setup_logging()
 ambassadors = {}
 
 
@@ -47,12 +52,17 @@ def get_firebase_user(db: Session, firebase_id: str):
     return user
 
 
-def create_firebase_user(db: Session, firebase_id: str):
+def create_firebase_user(db: Session, firebase_id: str, name: str = "", email: str = ""):
+    if not firebase_id:
+        raise HTTPException(status_code=400, detail="Firebase id can't be Empty!")
     firebase_user = get_firebase_user(db, firebase_id)
-
     if not firebase_user:
+        username = construct_username(email)
         firebase_user = FirebaseUser(
             firebase_id=firebase_id,
+            name=name,
+            email=email,
+            username=username,
         )
         db.add(firebase_user)
         db.commit()
@@ -91,6 +101,11 @@ def create_or_update_challenges(db: Session, user, challenges):
         db.refresh(user)
 
     return user
+
+
+def construct_username(email):
+    base_username = email.split('@')[0].lower()
+    return re.sub(r'[^a-z0-9]', '_', base_username)
 
 
 def get_challenge(trader_id: int, source=False):

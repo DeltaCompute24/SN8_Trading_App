@@ -25,7 +25,7 @@ async def close_position(position_data: ProfitLossRequest, db: AsyncSession = De
     position = await get_latest_position(db, position_data.trader_id, position_data.trade_pair)
     if not position:
         logger.error("No open position found for this trade pair and trader")
-        raise HTTPException(status_code=404, detail="No open position found for this trade pair and trader")
+        raise HTTPException(status_code=404, detail="No open or pending position found for this trade pair and trader")
 
     try:
         # Submit the FLAT signal to close the position

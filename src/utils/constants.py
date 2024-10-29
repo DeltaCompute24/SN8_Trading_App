@@ -33,3 +33,9 @@ indices_pairs = [
     {"value": "VIX", "label": "VIX", "asset_type": "indices", "platform": "IN"},
     {"value": "GDAXI", "label": "GDAXI", "asset_type": "indices", "platform": "IN"},
 ]
+
+# ----------------------------- REDIS CONSTANTS --------------------------------
+REDIS_LIVE_PRICES_TABLE = 'live_prices'
+POSITIONS_TABLE = 'positions'
+OPERATION_QUEUE_NAME = "db_operations_queue"
+CHALLENGE_QUEUE_NAME = "challenges_queue"
