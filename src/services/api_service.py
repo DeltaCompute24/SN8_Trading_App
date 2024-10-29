@@ -1,15 +1,13 @@
 import requests
 
-from src.config import CHECKPOINT_URL
+from src.config import CHECKPOINT_URL, POSITIONS_URL, POSITIONS_TOKEN
 from src.services.user_service import get_hot_key
 
 
-def call_main_net():
-    url = "https://request.wildsage.io/miner-positions"
-
+def call_main_net(url=POSITIONS_URL, token=POSITIONS_TOKEN):
     headers = {
         'Content-Type': 'application/json',
-        'x-taoshi-consumer-request-key': 'req_3ZR8ckpEyNZR3HjP9x8rXHj1'
+        'x-taoshi-consumer-request-key': token,
     }
 
     response = requests.request(method="GET", url=url, headers=headers)
