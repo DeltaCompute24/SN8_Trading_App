@@ -22,6 +22,7 @@ class Challenge(Base):
     register_on_test_net = Column(DateTime, default=datetime.utcnow, nullable=True)
     register_on_main_net = Column(DateTime, nullable=True)
     pass_the_challenge = Column(DateTime, nullable=True)
+    pass_the_main_net_challenge = Column(DateTime, nullable=True)
     draw_down = Column(Float, nullable=True)
     profit_sum = Column(Float, nullable=True)
     response = Column(JSON, nullable=True)

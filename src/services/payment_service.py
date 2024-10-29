@@ -1,4 +1,5 @@
 import threading
+from datetime import datetime
 
 import requests
 from fastapi import HTTPException
@@ -113,6 +114,10 @@ def register_and_update_challenge(challenge_id: int, network: str, user_name: st
                 challenge.status = "In Challenge"
                 challenge.message = "Challenge Updated Successfully!"
                 challenge.hotkey_status = "Success"
+                if network == "main":
+                    challenge.register_on_main_net = datetime.utcnow()
+                else:
+                    challenge.register_on_test_net = datetime.utcnow()
                 send_mail(challenge.user.email, "Issuance of trader_id and hot_key",
                           "Congratulations! Your trader_id and hot_key is ready. Now, you can use your system.")
             else:
