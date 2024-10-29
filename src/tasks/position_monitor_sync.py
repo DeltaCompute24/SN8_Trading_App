@@ -11,7 +11,7 @@ from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.models.transaction import Transaction
 from src.services.fee_service import get_taoshi_values
-from src.utils.redis_manager import get_live_price, push_to_redis_queue, get_queue_data
+from src.utils.redis_manager import get_live_price, push_to_redis_queue, get_queue_data, delete_hash_value
 from src.utils.websocket_manager import websocket_manager
 
 logger = logging.getLogger(__name__)
@@ -22,17 +22,18 @@ objects_to_be_updated = []
 
 
 def object_exists(obj_list, new_obj):
-    new_obj_filtered = {k: v for k, v in new_obj.items() if
-                        k not in ['close_time', 'close_price', 'profit_loss', 'initial_price']}
+    excluded_keys = ['close_time', 'close_price', 'profit_loss', 'profit_loss_without_fee', 'taoshi_profit_loss',
+                     'taoshi_profit_loss_without_fee', 'initial_price', 'entry_price', 'hot_key', 'uuid', 'hot_key',
+                     'order_level', 'average_entry_price']
+    new_obj_filtered = {k: v for k, v in new_obj.items() if k not in excluded_keys}
 
     raw_data = get_queue_data()
     for item in raw_data:
-        redis_objects = json.loads(item.decode('utf-8'))
+        redis_objects = json.loads(item)
         obj_list.extend(redis_objects)
 
     for obj in obj_list:
-        obj_filtered = {k: v for k, v in obj.items() if
-                        k not in ['close_time', 'close_price', 'profit_loss', 'initial_price']}
+        obj_filtered = {k: v for k, v in obj.items() if k not in excluded_keys}
 
         if obj_filtered == new_obj_filtered:
             return True
@@ -114,6 +115,7 @@ def close_position(position, profit_loss):
             new_object["order_level"] = len_order
             new_object["average_entry_price"] = average_entry_price
             objects_to_be_updated.append(new_object)
+            delete_hash_value(position.trade_pair)
     except Exception as e:
         logger.error(f"An error occurred while closing position {position.position_id}: {e}")
 
