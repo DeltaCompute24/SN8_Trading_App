@@ -115,7 +115,7 @@ def close_position(position, profit_loss):
             new_object["order_level"] = len_order
             new_object["average_entry_price"] = average_entry_price
             objects_to_be_updated.append(new_object)
-            delete_hash_value(position.trade_pair)
+            delete_hash_value(f"{position.trade_pair}-{position.trader_id}")
     except Exception as e:
         logger.error(f"An error occurred while closing position {position.position_id}: {e}")
 

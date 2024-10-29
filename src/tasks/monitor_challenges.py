@@ -124,8 +124,7 @@ def monitor_challenges():
                 update_challenge(db, challenge, c_data)
 
             email = challenge.user.email
-            if not email or not changed:
-                continue
-            send_mail(email, subject, content)
+            if email and changed:
+                send_mail(email, subject, content)
 
     logger.info("Finished monitor_challenges task")
