@@ -26,8 +26,8 @@ class ChallengeBase(BaseModel):
     active: str = ""
     status: Optional[str] = ""
     challenge: str = ""
-    step: str = ""
-    phase: str = ""
+    step: Optional[int] = ""
+    phase: Optional[int] = ""
 
 
 class ChallengeUpdate(BaseModel):
