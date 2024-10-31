@@ -1,39 +1,29 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Path
 from sqlalchemy.orm import Session
-
-from src.database_tasks import TaskSessionLocal_
-
-from src.schemas.payout import PayoutSaveSchema, PayoutSchema
-from src.services.payout_service import get_payout, save_payout
+from src.database import get_db
+from src.models.payout import Payout
+from src.schemas.payout import  PayoutSchema
+from src.services.payout_service import PayoutService
 from src.utils.logging import setup_logging
+from typing import Dict, Any, Optional  
 
 logger = setup_logging()
 router = APIRouter()
 
 
-def get_db():
-    db = TaskSessionLocal_()
-    try:
-        yield db
-    finally:
-        db.close()
 
-
-@router.post("", response_model=PayoutSchema)
-def save_payout_information(
-    payout_data: PayoutSaveSchema, db: Session = Depends(get_db)
-):
-    payout = save_payout(db, payout_data)
+@router.post("/{firebase_id}", response_model=PayoutSchema)
+async def create_payout(payout_data: PayoutSchema, firebase_id: str =  Path(..., description="Firebase ID of the user"), db: Session = Depends(get_db)):
+    payout = await PayoutService.update_or_create( db, firebase_id , payout_data )
     return payout
 
 
-@router.get("/{firebase_id}", response_model=PayoutSchema)
-def get_payout_information(firebase_id: str, db: Session = Depends(get_db)):
-    payout = get_payout(db, firebase_id)
+@router.get("/{firebase_id}", response_model= Optional[PayoutSchema])
+async def get_payout_information(firebase_id: str =  Path(..., description="Firebase ID of the user"), db: Session = Depends(get_db)):
+    """
+    If the payout is not found, it will return a new payout with the firebase_id and type "wire"
+    """
+    
+    payout = await PayoutService.get_by_user_id( db, firebase_id  )
     logger.info(f"Retrieved payout information for firebase_id={firebase_id}")
-
-    if not payout:
-        logger.info(f"No payout information found for firebase_id={firebase_id}")
-        raise HTTPException(status_code=404, detail="Payout Not Found!")
-
-    return payout
+    return payout or Payout(firebase_id=firebase_id, type="wire")

@@ -10,23 +10,23 @@ class Payout(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
 
     # Foreign key to reference the FirebaseUser
-    user_id: int = Column(Integer, ForeignKey("firebase_users.id"), nullable=False)
-    user: Mapped["FirebaseUser"] = relationship("FirebaseUser")
+    user_id: str = Column(String, ForeignKey("firebase_users.firebase_id", ondelete="SET NULL"), nullable=False)
+    user: Mapped["FirebaseUser"] = relationship("FirebaseUser", back_populates = "payout" , uselist=False)
 
     # Enum will not be used, because is harder to migrate changes in postgres
     # and also is not compatible with all databases
-    type: str = Column(String, nullable=False)
+    type: Mapped[str] = Column(String, nullable=False)
 
     # Wire type
-    first_name: str = Column(String, nullable=True)
-    last_name: str = Column(String, nullable=True)
-    address: str = Column(String, nullable=True)
-    iban: str = Column(String, nullable=True)
-    bank_name: str = Column(String, nullable=True)
-    bank_address: str = Column(String, nullable=True)
-    bank_country: str = Column(String, nullable=True)
-    bic_swift_code: str = Column(String, nullable=True)
+    first_name: Mapped[str] = Column(String, nullable=True)
+    last_name: Mapped[str] = Column(String, nullable=True)
+    address: Mapped[str] = Column(String, nullable=True)
+    iban: Mapped[str] = Column(String, nullable=True)
+    bank_name: Mapped[str] = Column(String, nullable=True)
+    bank_address: Mapped[str] = Column(String, nullable=True)
+    bank_country: Mapped[str] = Column(String, nullable=True)
+    bic_swift_code: Mapped[str] = Column(String, nullable=True)
 
     # Crypto type
-    usdt_address: str = Column(String, nullable=True)
-    tao_address: str = Column(String, nullable=True)
+    usdt_address: Mapped[str] = Column(String, nullable=True)
+    tao_address: Mapped[str] = Column(String, nullable=True)
