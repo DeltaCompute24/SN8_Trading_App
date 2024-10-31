@@ -1,17 +1,28 @@
 from enum import Enum
 from typing import Optional
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, model_validator, field_validator
 from pydantic.alias_generators import to_camel
+from src.models.payout import Payout
 
 
 class PayoutFormType(str, Enum):
-    crypto = "crypto"
-    wire = "wire"
+    CRYPTO = "crypto"
+    WIRE = "wire"
 
 
 class PayoutSchema(BaseModel):
-    type: PayoutFormType
+    model_config = ConfigDict(
+        from_attributes=True,  
+        alias_generator=to_camel,
+        populate_by_name=True,
+        orm_model=Payout
+    )
 
+    # Define all fields that match your Payout model
+    type: PayoutFormType
+    user_id: str
+    
+    # Wire transfer fields
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     address: Optional[str] = None
@@ -21,60 +32,36 @@ class PayoutSchema(BaseModel):
     bank_country: Optional[str] = None
     bic_swift_code: Optional[str] = None
 
+    # Crypto fields
     usdt_address: Optional[str] = None
     tao_address: Optional[str] = None
 
-    # Alias generator allow values travel through the API in camelCase.
-    # To disable it just need to remove alias_generator or define it as to_snake.
-    model_config = ConfigDict(
-        alias_generator=to_camel,
-        populate_by_name=True,
-        from_attributes=True,
-    )
+    @field_validator('type')
+    def validate_type(cls, v):
+        if v not in PayoutFormType.__members__.values():
+            raise ValueError('Invalid payout type')
+        return v
 
-    # Override json method to always use aliases (if not set) when dumping the model.
-    # This allows API to handle camelCases in request payloads to a better fit with frontend.
-    def model_dump_json(self, by_alias: Optional[bool] = None, **kwargs):
-        # Ensure `by_alias=True` is always passed to the default `json` method
-        if by_alias is None:
-            kwargs["by_alias"] = True
-        return super().model_dump_json(**kwargs)
-
-    @model_validator(mode="before")
+    @model_validator(mode='after')
     def validate_based_on_type(cls, values):
-        if isinstance(values, dict):
-            payout_type = values.get("type")
+        if 'type' not in values:
+            return values
 
-            crypto_fields = ["taoAddress", "usdtAddress"]
-            wire_fields = [
-                "firstName",
-                "lastName",
-                "address",
-                "iban",
-                "bankName",
-                "bankAddress",
-                "bankCountry",
-                "bicSwiftCode",
-            ]
+        payout_type = values.get('type')
 
-            if payout_type == PayoutFormType.crypto:
-                # For `crypto`, either `tao_address` or `usdt_address` must be provided
-                has_any_crypto_field = any(values.get(field) for field in crypto_fields)
-                if not has_any_crypto_field:
-                    raise ValueError(
-                        "For crypto payout, either 'taoAddress' or 'usdtAddress' must be provided."
-                    )
+        crypto_fields = {'usdt_address', 'tao_address'}
+        wire_fields = {
+            'first_name', 'last_name', 'address', 'iban',
+            'bank_name', 'bank_address', 'bank_country', 'bic_swift_code'
+        }
 
-            elif payout_type == PayoutFormType.wire:
-                # For `wire`, `tao_address` and `usdt_address` can be null, but bank fields cannot be null
-                for field in wire_fields:
-                    if values.get(field) is None:
-                        raise ValueError(f"For wire payout, '{field}' cannot be null.")
-            else:
-                raise ValueError("Unknown payout type.")
+        if payout_type == PayoutFormType.CRYPTO:
+            if not any(values.get(field) for field in crypto_fields):
+                raise ValueError("For crypto payout, either 'tao_address' or 'usdt_address' must be provided")
+        elif payout_type == PayoutFormType.WIRE:
+            for field in wire_fields:
+                if not values.get(field):
+                    raise ValueError(f"For wire payout, '{field}' cannot be null")
 
         return values
 
-
-class PayoutSaveSchema(PayoutSchema):
-    firebase_id: str
