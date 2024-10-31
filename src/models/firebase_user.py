@@ -19,3 +19,4 @@ class FirebaseUser(Base):
 
     # One-to-many relationship: A user can have multiple challenges
     challenges = relationship("Challenge", back_populates="user")
+    payout = relationship("Payout", back_populates="user")
