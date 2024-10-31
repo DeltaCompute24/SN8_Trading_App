@@ -20,21 +20,21 @@ celery_app.conf.update(
         #     'task': 'src.tasks.subscription_manager.manage_subscriptions',
         #     'schedule': 10.0,  # every 10 seconds
         # },
-        'monitor_positions-every-1-second': {
+        'monitor_positions-every-5-seconds': {
             'task': 'src.tasks.position_monitor_sync.monitor_positions',
-            'schedule': 10.0,  # every 1 second
+            'schedule': 5.0,  # every 1 second
         },
         'redis-listener-every-15-seconds': {
             'task': 'src.tasks.redis_listener.event_listener',
-            'schedule': 20.0,  # every 20 second
+            'schedule': 15.0,  # every 20 second
         },
-        'monitor_taoshi_every_3_seconds': {
+        'monitor_taoshi_every_1_second': {
             'task': 'src.tasks.listen_for_profit_loss.monitor_taoshi',
-            'schedule': 3.0,  # every 3 second
+            'schedule': 1.0,  # every 3 second
         },
-        'monitor_challenges_every_10_seconds': {
+        'monitor_challenges_every_5_seconds': {
             'task': 'src.tasks.monitor_challenges.monitor_challenges',
-            'schedule': 10.0,  # every 10 second
+            'schedule': 5.0,  # every 10 second
         },
     },
     timezone='UTC',
