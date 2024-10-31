@@ -26,4 +26,4 @@ async def get_payout_information(firebase_id: str =  Path(..., description="Fire
     
     payout = await PayoutService.get_by_user_id( db, firebase_id  )
     logger.info(f"Retrieved payout information for firebase_id={firebase_id}")
-    return payout or Payout(firebase_id=firebase_id, type="wire")
+    return payout or Payout(user_id=firebase_id, type="wire")
