@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, PrivateAttr
+from pydantic import BaseModel
 
 
 class TransactionBase(BaseModel):
@@ -26,7 +26,7 @@ class TransactionUpdate(BaseModel):
     trade_pair: str
     leverage: float
     asset_type: str
-    trailing: bool
+    trailing: Optional[bool] = False  # trailing stop loss default value will be false if user didn't submit
     stop_loss: Optional[float]
     take_profit: Optional[float]
 
