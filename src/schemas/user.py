@@ -130,3 +130,12 @@ class PaymentUpdate(BaseModel):
 class EmailInput(BaseModel):
     email: EmailStr
     type: str
+
+
+# --------------------------- GENERATE PDF SCHEMA ---------------------------
+
+class GeneratePdfSchema(BaseModel):
+    firebase_id: str
+    step: int
+    phase: int
+    hot_key: str
