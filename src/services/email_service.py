@@ -1,5 +1,6 @@
 import smtplib
 import threading
+from email.mime.application import MIMEApplication
 from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -18,7 +19,7 @@ def render_to_string(template_name, context=None):
     return template.render(context)
 
 
-def send_mail(receiver, subject, content):
+def send_mail(receiver, subject, content, attachment=None):
     """
     Send an email with a subject and body content to the specified receiver.
     """
@@ -40,6 +41,13 @@ def send_mail(receiver, subject, content):
         # Attach the email body
         context = {'email': receiver, 'text': content}
         html_content = render_to_string('src/templates/email_template.html', context)
+        # attach pdf
+        if attachment:
+            pdf_file = attachment.get("path")
+            with open(pdf_file, 'rb') as f:
+                file = MIMEApplication(f.read(), _subtype="pdf")
+                file.add_header('Content-Disposition', 'attachment', filename=attachment.get("name"))
+                message.attach(file)
         message.attach(MIMEText(html_content, 'html'))  # HTML version
 
         image_path = 'src/templates/image1.png'
