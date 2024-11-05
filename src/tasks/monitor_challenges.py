@@ -105,6 +105,8 @@ def monitor_testnet():
                         c_data = {
                             **c_data,
                             "challenge": network,
+                            "status": "In Challenge",
+                            "active": "1",
                             "trader_id": data.get("trader_id"),
                             "hot_key": data.get("hot_key"),
                             "response": c_response,
@@ -118,6 +120,7 @@ def monitor_testnet():
                     c_data = {
                         **c_data,
                         "status": "Failed",
+                        "active": "0",
                     }
                     subject = "Challenge Failed"
                     content = "Unfortunately! You have Failed!"
@@ -151,6 +154,7 @@ def monitor_mainnet():
 
                 c_data = {
                     "status": "Passed",
+                    "active": "0",
                     "pass_the_main_net_challenge": datetime.utcnow(),
                 }
                 update_challenge(db, challenge, c_data)
