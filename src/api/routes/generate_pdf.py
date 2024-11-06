@@ -44,8 +44,8 @@ async def generate_certificate(user_data: GeneratePdfSchema, db: Session = Depen
     except s3.exceptions.ClientError:
         # Certificate does not exist, generate a new one
         date = datetime.today().strftime("%b %d, %Y")
-        rendered_html = render_to_string("src/templates/certificate.html",
-                                         {"phase_number": user_data.phase, "name": user.name, "date": date})
+        rendered_html = render_to_string(template_name="challenge_certificate.html",
+                                         context={"phase_number": user_data.phase, "name": user.name, "date": date})
 
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_pdf:
             tmp_pdf_path = tmp_pdf.name

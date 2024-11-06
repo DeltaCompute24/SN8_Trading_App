@@ -11,11 +11,11 @@ from src.config import EMAIL_HOST, EMAIL_PORT, EMAIL_HOST_USER, EMAIL_HOST_PASSW
 
 
 def render_to_string(template_name, context=None):
-    # Set up the Jinja2 environment to look for templates in the current directory
-    env = Environment(loader=FileSystemLoader(searchpath="./"))
+    """
+    Render the template with the context and return as a string
+    """
+    env = Environment(loader=FileSystemLoader(searchpath="./src/templates/"))
     template = env.get_template(template_name)
-
-    # Render the template with the context and return as a string
     return template.render(context)
 
 
@@ -40,21 +40,23 @@ def send_mail(receiver, subject, content, attachment=None):
 
         # Attach the email body
         context = {'email': receiver, 'text': content}
-        html_content = render_to_string('src/templates/email_template.html', context)
-        # attach pdf
+        html_content = render_to_string(template_name='email_template.html', context=context)
+        message.attach(MIMEText(html_content, 'html'))  # HTML version
+
+        # Attach the PDF file
         if attachment:
             pdf_file = attachment.get("path")
             with open(pdf_file, 'rb') as f:
                 file = MIMEApplication(f.read(), _subtype="pdf")
                 file.add_header('Content-Disposition', 'attachment', filename=attachment.get("name"))
                 message.attach(file)
-        message.attach(MIMEText(html_content, 'html'))  # HTML version
 
-        image_path = 'src/templates/image1.png'
+        # Attach the image
+        image_path = 'src/templates/email_template_image.png'
         with open(image_path, 'rb') as img_file:
             img_data = img_file.read()
             image = MIMEImage(img_data)
-            image.add_header('Content-ID', '<image1>')  # Content-ID to reference in the HTML
+            image.add_header('Content-ID', '<email_template_image>')  # Content-ID to reference in the HTML
             image.add_header('Content-Disposition', 'inline', filename=image_path)
             message.attach(image)
 
@@ -66,9 +68,7 @@ def send_mail(receiver, subject, content, attachment=None):
         server.sendmail(EMAIL_HOST_USER, receiver, text)
 
     except Exception as exp:
-        pass
-        # raise HTTPException(status_code=400, detail=f"Email not sent successfully! Error: {str(exp)}")
-
+        print(f"ERROR: {exp}")
     finally:
         # Close the server connection
         if server:
