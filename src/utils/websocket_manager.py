@@ -7,7 +7,7 @@ import websockets
 from throttler import Throttler
 
 from src.config import POLYGON_API_KEY, SIGNAL_API_KEY, SIGNAL_API_BASE_URL
-from src.utils.constants import forex_pairs, crypto_pairs, indices_pairs, REDIS_LIVE_PRICES_TABLE
+from src.utils.constants import forex_pairs, crypto_pairs, indices_pairs
 from src.utils.logging import setup_logging
 from src.utils.redis_manager import set_live_price
 
@@ -91,10 +91,8 @@ class WebSocketManager:
                     item.pop("ev", None)
 
                     try:
-                       
                         trade_pair = trade_pair.replace("-", "").replace("/", "")
                         set_live_price(trade_pair, item)
-
                     except Exception as e:
                         print(f"Failed to add to Redis: {e}")
             except websockets.ConnectionClosed:
@@ -148,7 +146,7 @@ class WebSocketManager:
 class ForexWebSocketManager(WebSocketManager):
     def __init__(self):
         super().__init__("forex")
-        self.trade_pairs = [self.format_pair_updated(pair['value']) for pair in forex_pairs]
+        self.trade_pairs = [self.format_pair_updated(pair) for pair in forex_pairs]
 
     def format_pair_updated(self, pair):
         return f"CAS.{pair[:-3]}/{pair[-3:]}"
@@ -157,7 +155,7 @@ class ForexWebSocketManager(WebSocketManager):
 class CryptoWebSocketManager(WebSocketManager):
     def __init__(self):
         super().__init__("crypto")
-        self.trade_pairs = [self.format_pair_updated(pair['value']) for pair in crypto_pairs]
+        self.trade_pairs = [self.format_pair_updated(pair) for pair in crypto_pairs]
 
     def format_pair_updated(self, pair):
         return f"XAS.{pair[:-3]}-{pair[-3:]}"
@@ -166,7 +164,7 @@ class CryptoWebSocketManager(WebSocketManager):
 class IndicesWebSocketManager(WebSocketManager):
     def __init__(self):
         super().__init__("indices")
-        self.trade_pairs = [self.format_pair_updated(pair['value']) for pair in indices_pairs]
+        self.trade_pairs = [self.format_pair_updated(pair) for pair in indices_pairs]
 
     def format_pair_updated(self, pair):
         prefix = "A."
