@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 from typing import Optional, Literal
 
 from pydantic import BaseModel, EmailStr
@@ -139,3 +140,20 @@ class GeneratePdfSchema(BaseModel):
     step: int
     phase: int
     hot_key: str
+
+
+# --------------------------- USER BALANCE SCHEMA ---------------------------
+
+class CreateUserBalanceSchema(BaseModel):
+    trader_id: int
+    hot_key: str
+    balance: Decimal
+    balance_as_on: datetime
+
+
+class UserBalanceSchema(CreateUserBalanceSchema):
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        orm_mode = True
