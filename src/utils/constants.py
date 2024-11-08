@@ -45,3 +45,11 @@ MAIN_POSITIONS_URL = "https://request.wildsage.io/miner-positions"
 MAIN_POSITIONS_TOKEN = "req_3ZR8ckpEyNZR3HjP9x8rXHj1"
 MAIN_STATISTICS_URL = "https://request.wildsage.io/statistics"
 MAIN_STATISTICS_TOKEN = "req_3ZY8hrPfrzMfkzZHNr9QNQw5"
+
+# -------------------- Assets Minimum and Maximum Leverages -------------------------
+CRYPTO_MIN_LEVERAGE = 0.01
+CRYPTO_MAX_LEVERAGE = 0.5
+FOREX_MIN_LEVERAGE = 0.1
+FOREX_MAX_LEVERAGE = 5
+INDICES_MIN_LEVERAGE = 0.1
+INDICES_MAX_LEVERAGE = 5

@@ -12,7 +12,7 @@ from src.services.trade_service import create_transaction, get_open_position, up
     close_transaction
 from src.utils.logging import setup_logging
 from src.utils.websocket_manager import websocket_manager
-from src.validations.position import validate_position
+from src.validations.position import validate_position, validate_leverage
 
 logger = setup_logging()
 router = APIRouter()
@@ -47,7 +47,6 @@ async def adjust_position_endpoint(position_data: TransactionUpdate, db: AsyncSe
         average_entry_price = position.average_entry_price
         max_profit_loss = position.max_profit_loss
 
-
         if new_leverage != prev_leverage:
             # Calculate new leverage based on the cumulative order type
             leverage = new_leverage - prev_leverage
@@ -57,6 +56,7 @@ async def adjust_position_endpoint(position_data: TransactionUpdate, db: AsyncSe
                 leverage = abs(leverage)
             position_data.leverage = leverage
             cumulative_leverage = abs(new_leverage)
+            validate_leverage(position_data.asset_type, leverage)
 
             # Submit the adjustment signal
             adjustment_submitted = await websocket_manager.submit_trade(position_data.trader_id,
@@ -91,7 +91,6 @@ async def adjust_position_endpoint(position_data: TransactionUpdate, db: AsyncSe
 
         if profit_loss > max_profit_loss:
             max_profit_loss = profit_loss
-
 
         # Create a new transaction record with updated values
         new_transaction = await create_transaction(
