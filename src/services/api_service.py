@@ -1,20 +1,25 @@
 import requests
 
-from src.config import CHECKPOINT_URL, POSITIONS_URL, POSITIONS_TOKEN
+from src.config import CHECKPOINT_URL, NEW_POSITIONS_URL, POSITIONS_TOKEN
 from src.services.user_service import get_hot_key
 
 
-def call_main_net(url=POSITIONS_URL, token=POSITIONS_TOKEN):
-    headers = {
-        'Content-Type': 'application/json',
-        'x-taoshi-consumer-request-key': token,
-    }
+def call_main_net(url=NEW_POSITIONS_URL, token=POSITIONS_TOKEN, headers=False):
+    if headers:
+        headers = {
+            'Content-Type': 'application/json',
+            'x-taoshi-consumer-request-key': token,
+        }
+    else:
+        headers = {}
 
     response = requests.request(method="GET", url=url, headers=headers)
     if response.status_code != 200:
         return {}
 
-    return response.json()
+    if headers:
+        return response.json()
+    return response.json()["positions"]
 
 
 def call_checkpoint_api():
