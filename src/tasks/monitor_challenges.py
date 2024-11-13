@@ -6,13 +6,12 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import and_
 
-from src.config import CHECKPOINT_URL, STATISTICS_URL, STATISTICS_TOKEN, SWITCH_TO_MAINNET_URL
+from src.config import CHECKPOINT_URL, STATISTICS_URL, STATISTICS_TOKEN
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.models.challenge import Challenge
 from src.services.api_service import call_main_net
 from src.services.email_service import send_mail
-from src.services.s3_services import send_certificate_email
 
 logger = logging.getLogger(__name__)
 
@@ -141,7 +140,7 @@ def monitor_testnet():
 
 def monitor_mainnet():
     try:
-        response = call_main_net(url=STATISTICS_URL, token=STATISTICS_TOKEN, headers=True)
+        response = call_main_net(url=STATISTICS_URL, token=STATISTICS_TOKEN)
         if not response:
             return
         data = {}
