@@ -56,8 +56,8 @@ app.add_middleware(
 async def startup_event():
     print("Starting to listen for prices multiple...")
     print()
-    asyncio.create_task(forex_websocket_manager.listen_for_prices_multiple())
-    asyncio.create_task(crypto_websocket_manager.listen_for_prices_multiple())
+    # asyncio.create_task(forex_websocket_manager.listen_for_prices_multiple())
+    # asyncio.create_task(crypto_websocket_manager.listen_for_prices_multiple())
     # Uncomment the following line if you want to use indices_websocket_manager
     # asyncio.create_task(indices_websocket_manager.listen_for_prices_multiple())
 
