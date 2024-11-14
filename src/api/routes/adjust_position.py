@@ -47,10 +47,9 @@ async def adjust_position_endpoint(position_data: TransactionUpdate, db: AsyncSe
         average_entry_price = position.average_entry_price
         max_profit_loss = position.max_profit_loss
 
-
         if new_leverage != prev_leverage:
             # Calculate new leverage based on the cumulative order type
-            leverage = new_leverage - prev_leverage
+            leverage = new_leverage - cumulative_leverage
             order_type = position.order_type
             if leverage < 0:
                 order_type = "SHORT" if position.order_type == "LONG" else "LONG"
@@ -92,7 +91,6 @@ async def adjust_position_endpoint(position_data: TransactionUpdate, db: AsyncSe
         if profit_loss > max_profit_loss:
             max_profit_loss = profit_loss
 
-
         # Create a new transaction record with updated values
         new_transaction = await create_transaction(
             db, position_data, entry_price=position.entry_price, operation_type="adjust",
@@ -121,8 +119,9 @@ async def adjust_position_endpoint(position_data: TransactionUpdate, db: AsyncSe
         await close_transaction(db, position.order_id, position.trader_id, realtime_price, profit_loss,
                                 old_status=position.status, profit_loss_without_fee=profit_loss_without_fee,
                                 order_level=position.order_level, average_entry_price=average_entry_price,
-                                taoshi_profit_loss=taoshi_profit_loss,
-                                taoshi_profit_loss_without_fee=taoshi_profit_loss_without_fee)
+                                taoshi_profit_loss=taoshi_profit_loss, operation_type="adjust",
+                                taoshi_profit_loss_without_fee=taoshi_profit_loss_without_fee,
+                                )
 
         # Remove old monitored position
         await db.execute(
@@ -154,6 +153,7 @@ async def adjust_position_endpoint(position_data: TransactionUpdate, db: AsyncSe
                 "position_id": new_transaction.position_id,
                 "trader_id": new_transaction.trader_id,
                 "trade_pair": new_transaction.trade_pair,
+                "leverage": new_transaction.leverage,
                 "cumulative_leverage": new_transaction.cumulative_leverage,
                 "cumulative_order_type": new_transaction.cumulative_order_type,
                 "cumulative_stop_loss": new_transaction.cumulative_stop_loss,
