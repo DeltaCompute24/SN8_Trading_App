@@ -1,81 +1,79 @@
+import unittest
 from unittest.mock import AsyncMock, patch
 
-import pytest
 from httpx import AsyncClient
 
 from src.main import app
-from src.schemas.transaction import TransactionCreate
 
 
-@pytest.fixture
-def position_data():
-    return TransactionCreate(
-        trader_id=4040,
-        trade_pair="BTCUSD",
-        asset_type="crypto",
-        leverage=0.2,
-        stop_loss=0.1,
-        take_profit=0.2,
-        order_type="LONG",
-    )
+class TestInitiatePosition(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        self.client = AsyncClient(app=app, base_url="http://test")
+        self.payload = {
+            "trader_id": 4060,
+            "trade_pair": "BTCUSD",
+            "leverage": 1,
+            "asset_type": "crypto",
+            "stop_loss": 2,
+            "take_profit": 2,
+            "order_type": "LONG"
+        }
 
+    async def asyncTearDown(self):
+        await self.client.aclose()
 
-@pytest.fixture
-async def client():
-    async with AsyncClient(app=app, base_url="http://test") as ac:
-        yield ac
+    async def test_position_already_exist(self):
+        with patch("src.api.routes.initiate_position.get_latest_position", new=AsyncMock(return_value=self.payload)):
+            response = await self.client.post("/trades/initiate-position/", json=self.payload)
+            # assert response
+            self.assertEqual(response.status_code, 400)
+            self.assertEqual(response.json(),
+                             {"detail": "An open or pending position already exists for this trade pair and trader"})
 
+    async def test_challenge_not_exist(self):
+        with (patch(target="src.api.routes.initiate_position.get_latest_position", new=AsyncMock(return_value=None)),
+              patch(target="src.api.routes.initiate_position.get_challenge", return_value=None)):
+            response = await self.client.post("/trades/initiate-position/", json=self.payload)
+            # assert response
+            self.assertEqual(response.status_code, 500)
+            self.assertEqual(response.json(),
+                             second={
+                                 "detail": f"400: Given Trader ID {self.payload['trader_id']} does not exist in the system!"})
 
-@pytest.mark.asyncio
-async def test_initiate_position_success(client, position_data):
-    # Mock dependencies
-    with patch("src.services.trade_service.get_latest_position", new=AsyncMock(return_value=None)), \
-            patch("src.services.user_service.get_challenge", return_value="challenge_data"), \
-            patch("src.utils.websocket_manager.websocket_manager.submit_trade", new=AsyncMock(return_value=True)), \
-            patch("src.services.trade_service.create_transaction", new=AsyncMock()), \
-            patch("src.services.fee_service.get_taoshi_values",
-                  return_value=(1.0, 0.0, 0.0, 0.0, 0.0, "uuid", "hot_key", 1, 1.0)), \
-            patch("src.services.trade_service.update_monitored_positions", new=AsyncMock()), \
-            patch("src.utils.redis_manager.get_live_price", return_value=1.0):
-        response = await client.post("/initiate-position/", json=position_data.dict())
-        assert response.status_code == 200
-        assert response.json()["message"] == "Position initiated successfully"
+    async def test_submit_trade_failed(self):
+        with (patch(target="src.api.routes.initiate_position.get_latest_position", new=AsyncMock(return_value=None)),
+              patch(target="src.api.routes.initiate_position.get_challenge", return_value="test"),
+              patch(target="src.api.routes.initiate_position.websocket_manager.submit_trade", return_value=False)):
+            response = await self.client.post("/trades/initiate-position/", json=self.payload)
+            # assert response
+            self.assertEqual(response.status_code, 500)
+            self.assertEqual(response.json(), second={"detail": "500: Failed to submit trade"})
 
+    async def test_trade_submitted_successfully(self):
+        with (patch(target="src.api.routes.initiate_position.get_latest_position", new=AsyncMock(return_value=None)),
+              patch(target="src.api.routes.initiate_position.get_challenge", return_value="test"),
+              patch(target="src.api.routes.initiate_position.websocket_manager.submit_trade", return_value=True),
+              patch(target="src.api.routes.initiate_position.get_taoshi_values",
+                    return_value=(0, 1, 1, 1, 1, 1, 1, 1, 1))):
+            # call api
+            response = await self.client.post("/trades/initiate-position/", json=self.payload)
+            # assert response
+            self.assertEqual(response.status_code, 500)
+            self.assertEqual(response.json(),
+                             second={"detail": "500: Failed to fetch current price for the trade pair"})
 
-@pytest.mark.asyncio
-async def test_initiate_position_existing_position(client, position_data):
-    with patch("src.services.trade_service.get_latest_position", new=AsyncMock(return_value="existing_position")):
-        response = await client.post("/initiate-position/", json=position_data.dict())
-        assert response.status_code == 400
-        assert response.json()["detail"] == "An open or pending position already exists for this trade pair and trader"
-
-
-@pytest.mark.asyncio
-async def test_initiate_position_failed_trade_submission(client, position_data):
-    with patch("src.services.trade_service.get_latest_position", new=AsyncMock(return_value=None)), \
-            patch("src.services.user_service.get_challenge", return_value="challenge_data"), \
-            patch("src.utils.websocket_manager.websocket_manager.submit_trade", new=AsyncMock(return_value=False)):
-        response = await client.post("/initiate-position/", json=position_data.dict())
-        assert response.status_code == 500
-        assert response.json()["detail"] == "Failed to submit trade"
-
-
-@pytest.mark.asyncio
-async def test_initiate_position_price_fetch_failure(client, position_data):
-    with patch("src.services.trade_service.get_latest_position", new=AsyncMock(return_value=None)), \
-            patch("src.services.user_service.get_challenge", return_value="challenge_data"), \
-            patch("src.utils.websocket_manager.websocket_manager.submit_trade", new=AsyncMock(return_value=True)), \
-            patch("src.services.fee_service.get_taoshi_values",
-                  return_value=(0, 0.0, 0.0, 0.0, 0.0, "uuid", "hot_key", 1, 1.0)):
-        response = await client.post("/initiate-position/", json=position_data.dict())
-        assert response.status_code == 500
-        assert response.json()["detail"] == "Failed to fetch current price for the trade pair"
-
-
-@pytest.mark.asyncio
-async def test_initiate_position_invalid_trader_id(client, position_data):
-    with patch("src.services.trade_service.get_latest_position", new=AsyncMock(return_value=None)), \
-            patch("src.services.user_service.get_challenge", return_value=None):
-        response = await client.post("/initiate-position/", json=position_data.dict())
-        assert response.status_code == 400
-        assert response.json()["detail"] == "Given Trader ID 4040 does not exist in the system!"
+    async def test_open_position_successfully(self):
+        with (
+            patch(target="src.api.routes.initiate_position.get_latest_position", new=AsyncMock(return_value=None)),
+            patch(target="src.api.routes.initiate_position.get_challenge", return_value="test"),
+            patch(target="src.api.routes.initiate_position.websocket_manager.submit_trade", return_value=True),
+            patch(target="src.api.routes.initiate_position.get_taoshi_values",
+                  return_value=(1, 1, 1, 1, 1, 1, 1, 1, 1)),
+            patch("src.api.routes.initiate_position.create_transaction", new=AsyncMock()),
+            patch("src.api.routes.initiate_position.update_monitored_positions", new=AsyncMock()),
+        ):
+            # call api
+            response = await self.client.post("/trades/initiate-position/", json=self.payload)
+            # assert response
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json(), {"detail": "Position initiated successfully"})
