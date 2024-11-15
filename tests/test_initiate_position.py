@@ -5,6 +5,7 @@ import pytest
 import src
 
 pytestmark = pytest.mark.asyncio
+url = "/trades/initiate-position/"
 
 
 class TestInitiatePosition:
@@ -14,7 +15,7 @@ class TestInitiatePosition:
             patch(target="src.api.routes.initiate_position.get_latest_position",
                   new=AsyncMock(return_value=transaction_payload)),
         ):
-            response = await async_client.post("/trades/initiate-position/", json=transaction_payload)
+            response = await async_client.post(url=url, json=transaction_payload)
             # assert response
             assert response.status_code == 400
             assert response.json() == {
@@ -26,7 +27,7 @@ class TestInitiatePosition:
                   new=AsyncMock(return_value=None)),
             patch('src.api.routes.initiate_position.get_challenge', return_value=None)
         ):
-            response = await async_client.post("/trades/initiate-position/", json=transaction_payload)
+            response = await async_client.post(url=url, json=transaction_payload)
             # assert response
             assert response.status_code == 500
             assert response.json() == {
@@ -37,12 +38,12 @@ class TestInitiatePosition:
             patch(target="src.api.routes.initiate_position.get_challenge", return_value="test"),
             patch(target="src.api.routes.initiate_position.websocket_manager.submit_trade", return_value=False)
         ):
-            response = await async_client.post("/trades/initiate-position/", json=transaction_payload)
+            response = await async_client.post(url=url, json=transaction_payload)
             # assert response
             assert response.status_code == 500
             assert response.json() == {"detail": "500: Failed to submit trade"}
 
-    async def test_trade_submitted_successfully(self, async_client, transaction_payload):
+    async def test_first_price_is_zero(self, async_client, transaction_payload):
         with (
             patch(target="src.api.routes.initiate_position.get_latest_position", new=AsyncMock(return_value=None)),
             patch(target="src.api.routes.initiate_position.get_challenge", return_value="test"),
@@ -51,7 +52,7 @@ class TestInitiatePosition:
                   return_value=(0, 1, 1, 1, 1, 1, 1, 1, 1))
         ):
             # call api
-            response = await async_client.post("/trades/initiate-position/", json=transaction_payload)
+            response = await async_client.post(url=url, json=transaction_payload)
             # assert response
             assert response.status_code == 500
             assert response.json() == {"detail": "500: Failed to fetch current price for the trade pair"}
@@ -70,7 +71,7 @@ class TestInitiatePosition:
             patch("src.api.routes.initiate_position.update_monitored_positions", new=AsyncMock()),
         ):
             # call api
-            response = await async_client.post("/trades/initiate-position/", json=transaction_payload)
+            response = await async_client.post(url=url, json=transaction_payload)
             # assert response
             assert response.status_code == 200
             assert response.json() == {"message": "Position initiated successfully"}

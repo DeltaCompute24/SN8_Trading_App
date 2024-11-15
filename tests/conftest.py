@@ -1,7 +1,7 @@
+import asyncio
 import os
 from typing import Iterator
 
-import asyncio
 import pytest_asyncio
 from dotenv import load_dotenv
 from httpx import AsyncClient
@@ -68,6 +68,7 @@ async def async_client(async_db_session: AsyncSession) -> AsyncClient:
     async with AsyncClient(app=app, base_url="http://test") as client:
         yield client
 
+
 @pytest_asyncio.fixture
 def event_loop():
     policy = asyncio.get_event_loop_policy()
@@ -89,9 +90,8 @@ def transaction_payload() -> dict:
     }
 
 
-# Doesn't work because it is not deleted after successful test
 @pytest_asyncio.fixture
-async def transaction_object(async_db_session: AsyncSession) -> Transaction:
+def transaction_object() -> Transaction:
     transaction = Transaction(
         trader_id=4040,
         trade_pair="BTCUSD",
@@ -117,8 +117,8 @@ async def transaction_object(async_db_session: AsyncSession) -> Transaction:
         limit_order=0.0,
         source="test",
         modified_by="4040",
+        order_level=2,
+        max_profit_loss=0.2,
+        profit_loss=0.2,
     )
-    async_db_session.add(transaction)
-    await async_db_session.commit()
-    await async_db_session.refresh(transaction)
     return transaction
