@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+          background-color: #1a1a1a;
+          color: white;
+          font-family: Arial, sans-serif;
+          text-align: center;
+          padding: 40px;
+          margin: 0;
+        }
+
+        .logo {
+          color: #ff4500;
+          font-size: 24px;
+          margin-bottom: 40px;
+        }
+
+        .congratulations {
+          font-size: 48px;
+          font-weight: bold;
+          margin: 20px 0;
+        }
+
+        .phase {
+          font-size: 24px;
+          margin-bottom: 60px;
+        }
+
+        .certificate-box {
+          background-color: rgba(255, 255, 255, 0.1);
+          border-radius: 10px;
+          padding: 40px;
+          max-width: 500px;
+          margin: 0 auto;
+        }
+
+        .presented-to {
+          font-size: 18px;
+          margin-bottom: 20px;
+          color: #888;
+        }
+
+        .name {
+          font-size: 36px;
+          margin-bottom: 30px;
+        }
+
+        .title {
+          background-color: #ff4500;
+          color: white;
+          padding: 10px 30px;
+          border-radius: 25px;
+          display: inline-block;
+          font-size: 24px;
+          margin-bottom: 20px;
+        }
+
+        .date {
+          color: #888;
+          font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+<div class="logo">Delta Prop Shop</div>
+
+<div class="congratulations">CONGRATULATIONS</div>
+<div class="phase">FOR PASSING PHASE {{ phase_number }}</div>
+
+<div class="certificate-box">
+    <div class="presented-to">PRESENTED TO:</div>
+    <div class="name">{{ name }}</div>
+    <div class="title">Funded Trader</div>
+    <div class="date">{{ date }}</div>
+</div>
+</body>
+</html>

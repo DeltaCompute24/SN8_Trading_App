@@ -1,103 +1,114 @@
-# Trade Monitor CLI
+# Trading App
 
-The Trade Monitor CLI is an advanced command-line interface tool designed for monitoring and managing cryptocurrency and forex trades in real-time. It connects to a WebSocket for live price feeds and allows users to set dynamic thresholds for taking profits and stopping losses.
+## Step 1: Install Required Softwares
+Update your package manager and install necessary packages:
+```bash
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y python3-pip python3-venv git
+```
 
-## Features
+## Step 2: Clone Your FastAPI Application
+Clone your FastAPI project from your version control system:
+```commandline
+git clone https://github.com/DeltaCompute24/SN8_Trading_App.git
+cd SN8_Trading_App
+```
 
-- **Real-Time Trade Monitoring**: Connects via WebSocket to receive and process live market data.- **Dynamic Trade Management**: Users can set custom values for take profit and stop loss thresholds.- **Asset Flexibility**: Supports various asset types including cryptocurrencies and forex.- **Trade Simulations**: Includes a test mode for simulating trades without executing real transactions.- **Visual Summaries**: Provides colorful and structured summaries of trade performance.
+## Step 3: Set Up a Virtual Environment
+Create a virtual environment for your FastAPI application:
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
 
-## Prerequisites
+## Step 4: Install Python Dependencies
+Install the necessary Python packages for your application:
+```bash
+pip install -r requirements.txt
+```
 
-Before you begin, ensure you have Python 3.8 or higher installed on your system.
+## Step 5: Configure Environment Variables
+Create a .env file in your project directory to store environment variables:
+```bash
+touch .env
+```
+Add the necessary environment variables:
+```bash
+POLYGON_API_KEY="XXXXXXXXXXXXXXXXXXXXXXXX"
+SIGNAL_API_KEY="XXXXXXXXXXXXXXXXXXXXXX"
+DATABASE_URL=postgresql+asyncpg://developer:DeltaCompute123@rococo-db-server-postgres-aurora.cluster-c3y444mm80qj.eu-west-1.rds.amazonaws.com/postgres
+```
 
-## Setup
+## Step 6: Set Up Redis
+Install Redis for Celery:
+```bash
+sudo apt install -y redis-server
+sudo systemctl enable redis-server
+sudo systemctl start redis-server
+```
 
-1. **Clone the Repository**:   
-    ```bash   
-    git clone git@github.com:DeltaCompute24/SN8_Trading_App.git   
+## Step 7: Run Celery Beat and Workers
+Start the Celery beat:
+```bash
+celery -A src.core.celery_app beat --loglevel=info
+```
 
-    cd SN8_Trading_App
-    ```
+Start the Celery worker for position_monitor task
+```bash
+celery -A src.core.celery_app worker --loglevel=info -Q position_monitoring
+```
 
+Start the Celery worker for subscription_manager task
+```bash
+celery -A src.core.celery_app worker --loglevel=info -Q subscription_management
+```
 
-2. **Setup Virtual Environment**:
+## Step 8: Run the FastAPI Application
+Run the FastAPI application using uvicorn:
+```bash
+uvicorn src.main:app --host 0.0.0.0 --port 80
+```
 
-    ```bash   
-    python3 -m venv venv   
+## Step 9: Install and Configure Nginx
 
-    -macos/linus: source venv/bin/activate  
+Install Nginx to act as a reverse proxy:
+```bash
+sudo apt install nginx
+```
 
-    -Windows: `venv\Scripts\activate`   
-    ```
-
-3. **Install Requirements**:   
-    ```bash   
-    pip install -r requirements.txt   
-    ```
-
-4. **Set Environment Variables**:   
-Create a `.env` file in the root directory of the project and add the following lines:  
-
-    ```bash 
-    POLYGON_API_KEY="XXXXXXXXXXXXXXXXXXXXXXXX"
-    SIGNAL_API_KEY="XXXXXXXXXXXXXXXXXXXXXX"    
-    ```
-
-5. **Modify Permission for the Script** :   
-    ```bash   
-    chmod +x trade.py   
-    ```
-
-## Usage
-
-Run the script from the command line, specifying parameters for summary and check intervals, and trading thresholds:
+Create Nginx configuration file for your FastAPI application:
+```bash
+sudo nano /etc/nginx/sites-available/trading_app
+```
+Add the following configuration:
 
 ```bash
-python3 trade.py --summary_interval 10 --check_interval 1 --take_profit 2 --stop_loss -9.5 --test_mode --trader_id 4040
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:80;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
 ```
 
-### Parameters
-
-- `--summary_interval` (int): Frequency in seconds to display the trade summary (default: 60)
-- `--check_interval` (int): Frequency in seconds to check for new price updates (default: 5)
-- `--take_profit` (float): Take profit level in percentage (default: 2.0)
-- `--stop_loss` (float): Stop loss level in percentage (default: 9.5)
-- `--test_mode` (bool): Run the bot in simulation mode to test without making actual trades (default: disabled)
-- `--trader_id` (int): the trader id which will be used to minitor it's trades
-
-### Interactive Inputs
-
-Upon running the script, you will be prompted to enter:- Trade Pair (e.g., BTCUSD)- Order Type (LONG/SHORT)- Leverage (e.g., 25)- Asset Type (forex, crypto)
-
-## Example Output
-
-```plaintext
-2024-04-16 23:30:54 - INFO - ============= Trade Summary =============
-Trade Open Time : 2024-04-16 23:30:51
-Trade Pair      : BTCUSD
-Asset Type      : Crypto
-Order Type      : LONG
-Leverage        : 25.00x
-Entry Price     : 63711.00
-Current Price   : 63722.00
-Profit/Loss     : 0.02% (274.95)
-Fee Deducted    : 0.050000
-Take Profit     : 2.00%
-Stop Loss       : -9.50%
-========================================
-2024-04-16 23:30:55 - INFO - ============= Trade Summary =============
-Trade Open Time : 2024-04-16 23:30:51
-Trade Pair      : BTCUSD
-Asset Type      : Crypto
-Order Type      : LONG
-Leverage        : 25.00x
-Entry Price     : 63711.00
-Current Price   : 63681.26
-Profit/Loss     : -0.05% (-743.55)
-Fee Deducted    : 0.050000
-Take Profit     : 2.00%
-Stop Loss       : -9.50%
-========================================
+Enable the configuration and restart Nginx:
+```bash
+sudo ln -s /etc/nginx/sites-available/trading_app /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl restart nginx
 ```
 
-The output will display structured and colorful summaries at specified intervals, detailing the trade's current status, performance, and relevant thresholds.
+Use Certbot to obtain an SSL certificate from Let's Encrypt:
+```bash
+sudo apt install certbot python3-certbot-nginx
+sudo certbot --nginx -d your-domain.com
+```
+
+# Conclusion
+You have successfully deployed your FastAPI application with Celery tasks on an AWS EC2 instance. This setup includes running Redis for Celery, and using Nginx as a reverse proxy.

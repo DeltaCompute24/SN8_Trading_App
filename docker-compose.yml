@@ -1,0 +1,59 @@
+version: "3.8"
+
+services:
+  fastapi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:6.2-alpine
+    ports:
+      - "6379:6379"
+
+  celery_worker:
+    build: .
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - redis
+    restart: always
+    command: >
+      sh -c "celery -A src.core.celery_app worker -n position_worker --loglevel=info -Q position_monitoring &
+               celery -A src.core.celery_app worker -n taoshi_worker --loglevel=info -Q monitor_taoshi &
+               celery -A src.core.celery_app worker -n challenges_worker --loglevel=info -Q monitor_challenges &
+               celery -A src.core.celery_app worker -n redis_worker --loglevel=info -Q event_listener "
+
+  celery_beat:
+    build: .
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    restart: always
+    depends_on:
+      - redis
+    command: celery -A src.core.celery_app beat --loglevel=info
+
+  flower:
+    image: mher/flower:0.9.7
+    ports:
+      - "5002:5002"
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - celery_worker
+    command: celery flower --broker=redis://redis:6379/0 --port=5002
