@@ -56,7 +56,7 @@ app.add_middleware(
 async def startup_event():
     print("Starting to listen for prices multiple...")
     print()
-    environment = os.environ.get("ENVIRONMENT") or "dev"
+    environment = os.getenv("ENVIRONMENT") or "dev"
     if environment == "prod":
         asyncio.create_task(forex_websocket_manager.listen_for_prices_multiple())
         asyncio.create_task(crypto_websocket_manager.listen_for_prices_multiple())
