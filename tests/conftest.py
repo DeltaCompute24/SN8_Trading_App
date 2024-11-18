@@ -2,12 +2,14 @@ import asyncio
 import os
 from typing import Iterator
 
+import pytest
 import pytest_asyncio
 from dotenv import load_dotenv
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import SQLModel
+from starlette.testclient import TestClient
 
 from src.database import get_db
 from src.main import app
@@ -67,6 +69,11 @@ async def async_client(async_db_session: AsyncSession) -> AsyncClient:
     app.dependency_overrides[get_db] = override_get_db
     async with AsyncClient(app=app, base_url="http://test") as client:
         yield client
+
+
+@pytest.fixture
+def client() -> TestClient:
+    return TestClient(app=app, base_url="http://test")
 
 
 @pytest_asyncio.fixture
