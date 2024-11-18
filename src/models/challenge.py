@@ -15,6 +15,7 @@ class Challenge(Base):
     active = Column(String, nullable=False)
     status = Column(String, nullable=True, default="")
     challenge = Column(String, nullable=False)
+    challenge_name = Column(String, nullable=True, default="")
     step = Column(Integer, nullable=True)
     phase = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)

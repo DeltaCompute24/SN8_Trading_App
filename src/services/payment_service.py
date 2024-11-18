@@ -30,13 +30,14 @@ def get_payment(db: Session, payment_id: int):
     return payment
 
 
-def create_challenge(db, payment_data, network, user_id, status="In Progress",
+def create_challenge(db, payment_data, network, user, status="In Progress",
                      message="Trader_id and hot_key will be created"):
     _challenge = Challenge(
         trader_id=0,
         hot_key="",
-        user_id=user_id,
+        user_id=user.id,
         active="0",
+        status="In Challenge",
         challenge=network,
         hotkey_status=status,
         message=message,
@@ -46,6 +47,13 @@ def create_challenge(db, payment_data, network, user_id, status="In Progress",
     db.add(_challenge)
     db.commit()
     db.refresh(_challenge)
+
+    if user.username:
+        _challenge.challenge_name = f"{user.username}_{_challenge.id}"
+        db.add(_challenge)
+        db.commit()
+        db.refresh(_challenge)
+
     return _challenge
 
 
@@ -75,7 +83,7 @@ def create_payment(db: Session, payment_data: PaymentCreate):
     if not firebase_user:
         new_challenge = None
     elif firebase_user.username:
-        new_challenge = create_challenge(db, payment_data, network, firebase_user.id)
+        new_challenge = create_challenge(db, payment_data, network, firebase_user)
         thread = threading.Thread(
             target=register_and_update_challenge,
             args=(
@@ -85,7 +93,7 @@ def create_payment(db: Session, payment_data: PaymentCreate):
         thread.start()
     # If Firebase user exists but lacks necessary fields
     else:
-        new_challenge = create_challenge(db, payment_data, network, firebase_user.id, status="Failed",
+        new_challenge = create_challenge(db, payment_data, network, firebase_user, status="Failed",
                                          message="User's Email and Name is Empty!")
 
     new_payment = create_payment_entry(db, payment_data, new_challenge)
@@ -94,13 +102,13 @@ def create_payment(db: Session, payment_data: PaymentCreate):
     return new_payment
 
 
-def register_and_update_challenge(challenge_id: int, network: str, user_name: str):
+def register_and_update_challenge(challenge_id: int, network: str):
     with TaskSessionLocal_() as db:
         try:
             print("In THREAD!................")
             challenge = get_challenge_by_id(db, challenge_id)
             payload = {
-                "name": f"{user_name}_{challenge_id}",
+                "name": challenge.challenge_name,
                 "network": network,
             }
             response = requests.post(REGISTRATION_API_URL, json=payload)

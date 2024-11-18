@@ -95,12 +95,11 @@ class WebSocketManager:
                         set_live_price(trade_pair, item)
                     except Exception as e:
                         print(f"Failed to add to Redis: {e}")
-            except websockets.ConnectionClosed:
-                print("WebSocket connection closed. Reconnecting...")
-                await self.connect()
-                await self.subscribe_multiple(self.trade_pairs)
             except Exception as e:
-                print(f"Unexpected error in receive_and_log: {e}")
+                print("WebSocket connection closed. Reconnecting...")
+                await self.close()
+                await asyncio.sleep(self.reconnect_interval)
+                await self.listen_for_prices_multiple()
 
     async def unsubscribe_multiple(self):
         unsubscribe_message = {
@@ -129,7 +128,7 @@ class WebSocketManager:
 
     async def close(self):
         if self.websocket:
-            await self.websocket.close()
+            self.websocket.close()
             self.websocket = None
 
     def format_pair_updated(self, pair):

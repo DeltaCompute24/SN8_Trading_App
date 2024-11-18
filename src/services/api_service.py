@@ -13,7 +13,6 @@ def call_main_net(url=POSITIONS_URL, token=POSITIONS_TOKEN):
     response = requests.request(method="GET", url=url, headers=headers)
     if response.status_code != 200:
         return {}
-
     return response.json()
 
 
