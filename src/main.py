@@ -9,15 +9,17 @@ from sqlalchemy.sql import text
 from src.api.routes.adjust_position import router as adjust_router
 from src.api.routes.close_position import router as close_router
 from src.api.routes.create_users import router as create_user_router
+from src.api.routes.generate_pdf import router as generate_certificate
 from src.api.routes.get_positions import router as get_positions_router
 from src.api.routes.get_users import router as get_users_router
 from src.api.routes.initiate_position import router as initiate_router
 from src.api.routes.payments import router as payment_routers
+from src.api.routes.payout import router as payout
 from src.api.routes.profit_loss import router as profit_loss_router
 from src.api.routes.send_email import router as send_email
 from src.api.routes.users import router as user_routers
+from src.api.routes.users_balance import router as balance_routers
 from src.api.routes.websocket import router as prices_websocket
-from src.api.routes.payout import router as payout
 from src.database import engine, Base, DATABASE_URL
 from src.services.user_service import populate_ambassadors
 from src.utils.websocket_manager import forex_websocket_manager, crypto_websocket_manager
@@ -36,8 +38,9 @@ app.include_router(user_routers, prefix="/users")
 app.include_router(payment_routers, prefix="/payments")
 app.include_router(send_email, prefix="/send-email")
 app.include_router(payout, prefix="/payout")
+app.include_router(generate_certificate, prefix="/generate-certificate")
+app.include_router(balance_routers, prefix="/users-balance")
 app.include_router(prices_websocket, prefix="/ws")
-
 
 # Enable CORS
 app.add_middleware(
@@ -53,8 +56,8 @@ app.add_middleware(
 async def startup_event():
     print("Starting to listen for prices multiple...")
     print()
-    asyncio.create_task(forex_websocket_manager.listen_for_prices_multiple())
-    asyncio.create_task(crypto_websocket_manager.listen_for_prices_multiple())
+    # asyncio.create_task(forex_websocket_manager.listen_for_prices_multiple())
+    # asyncio.create_task(crypto_websocket_manager.listen_for_prices_multiple())
     # Uncomment the following line if you want to use indices_websocket_manager
     # asyncio.create_task(indices_websocket_manager.listen_for_prices_multiple())
 

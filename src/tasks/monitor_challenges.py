@@ -6,12 +6,13 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import and_
 
-from src.config import CHECKPOINT_URL, REGISTRATION_API_URL, STATISTICS_URL, STATISTICS_TOKEN
+from src.config import CHECKPOINT_URL, STATISTICS_URL, STATISTICS_TOKEN, SWITCH_TO_MAINNET_URL
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.models.challenge import Challenge
 from src.services.api_service import call_main_net
 from src.services.email_service import send_mail
+from src.services.s3_services import send_certificate_email
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +65,9 @@ def monitor_testnet():
             for challenge in get_monitored_challenges(db):
                 logger.info(f"Monitor first Challenge!")
                 hot_key = challenge.hot_key
+                name = challenge.user.name
+                email = challenge.user.email
+
                 p_content = positions.get(hot_key)
                 l_content = perf_ledgers.get(hot_key)
                 if not p_content or not l_content:
@@ -86,11 +90,10 @@ def monitor_testnet():
                     changed = True
                     network = "main" if challenge.challenge == "test" else "test"
                     payload = {
-                        "hot_key": challenge.hot_key,
-                        # "name": f"{username}_{challenge.id}",
-                        "network": network,
+                        "name": challenge.challenge_name,
+                        "trader_id": challenge.trader_id,
                     }
-                    response = requests.post(REGISTRATION_API_URL, json=payload)
+                    # _response = requests.post(SWITCH_TO_MAINNET_URL, json=payload)
 
                     c_data = {
                         **c_data,
@@ -99,18 +102,22 @@ def monitor_testnet():
                     }
 
                     content = "Congratulations! You have entered to Phase 2 from Phase 1!"
-                    if response.status_code == 200:
-                        c_response = challenge.response
-                        c_response["main_net_response"] = response.json()
-                        c_data = {
-                            **c_data,
-                            "challenge": network,
-                            "trader_id": data.get("trader_id"),
-                            "hot_key": data.get("hot_key"),
-                            "response": c_response,
-                            "register_on_main_net": datetime.utcnow(),
-                        }
-                        content = f"{content} Your testnet key is also converted to hot_key!"
+
+                    # if _response.status_code == 200:
+                    #     c_response = challenge.response
+                    #     c_response["main_net_response"] = _response.json()
+                    #     c_data = {
+                    #         **c_data,
+                    #         "challenge": network,
+                    #         "status": "In Challenge",
+                    #         "active": "1",
+                    #         "trader_id": data.get("trader_id"),
+                    #         "response": c_response,
+                    #         "register_on_main_net": datetime.utcnow(),
+                    #     }
+                    #     content = f"{content} Your testnet key is also converted to hot_key!"
+                    #     send_certificate_email(email, name, challenge)
+
                     subject = "Challenge Passed"
                     update_challenge(db, challenge, c_data)
                 elif draw_down <= -5:  # 5%
@@ -118,12 +125,12 @@ def monitor_testnet():
                     c_data = {
                         **c_data,
                         "status": "Failed",
+                        "active": "0",
                     }
                     subject = "Challenge Failed"
                     content = "Unfortunately! You have Failed!"
                     update_challenge(db, challenge, c_data)
 
-                email = challenge.user.email
                 if email and changed:
                     send_mail(email, subject, content)
 
@@ -151,6 +158,7 @@ def monitor_mainnet():
 
                 c_data = {
                     "status": "Passed",
+                    "active": "0",
                     "pass_the_main_net_challenge": datetime.utcnow(),
                 }
                 update_challenge(db, challenge, c_data)
