@@ -11,7 +11,7 @@ from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.models.transaction import Transaction
 from src.services.fee_service import get_taoshi_values
-from src.utils.redis_manager import get_queue_data, push_to_redis_queue, get_live_price
+from src.utils.redis_manager import get_live_price, push_to_redis_queue, get_queue_data, delete_hash_value
 from src.utils.websocket_manager import websocket_manager
 
 logger = logging.getLogger(__name__)
@@ -22,17 +22,18 @@ objects_to_be_updated = []
 
 
 def object_exists(obj_list, new_obj):
-    new_obj_filtered = {k: v for k, v in new_obj.items() if
-                        k not in ['close_time', 'close_price', 'profit_loss', 'initial_price']}
+    excluded_keys = ['close_time', 'close_price', 'profit_loss', 'profit_loss_without_fee', 'taoshi_profit_loss',
+                     'taoshi_profit_loss_without_fee', 'initial_price', 'entry_price', 'hot_key', 'uuid', 'hot_key',
+                     'order_level', 'average_entry_price']
+    new_obj_filtered = {k: v for k, v in new_obj.items() if k not in excluded_keys}
 
     raw_data = get_queue_data()
     for item in raw_data:
-        redis_objects = json.loads(item.decode('utf-8'))
+        redis_objects = json.loads(item)
         obj_list.extend(redis_objects)
 
     for obj in obj_list:
-        obj_filtered = {k: v for k, v in obj.items() if
-                        k not in ['close_time', 'close_price', 'profit_loss', 'initial_price']}
+        obj_filtered = {k: v for k, v in obj.items() if k not in excluded_keys}
 
         if obj_filtered == new_obj_filtered:
             return True
@@ -92,8 +93,6 @@ def close_position(position, profit_loss):
             "status": "CLOSED",
             "old_status": position.status,
             "modified_by": "system",
-            "order_type": "FLAT",
-            "leverage": 1,
         }
         if object_exists(objects_to_be_updated, new_object):
             logger.info("Return back as Close Position already exists in queue!")
@@ -114,6 +113,7 @@ def close_position(position, profit_loss):
             new_object["order_level"] = len_order
             new_object["average_entry_price"] = average_entry_price
             objects_to_be_updated.append(new_object)
+            delete_hash_value(f"{position.trade_pair}-{position.trader_id}")
     except Exception as e:
         logger.error(f"An error occurred while closing position {position.position_id}: {e}")
 
@@ -175,6 +175,7 @@ def should_close_position(profit_loss, position):
         )
 
         print(f"Determining whether to close position: {close_result}")
+        logger.info(f"Determining whether to close position: {close_result}")
         return close_result
 
     except Exception as e:
@@ -213,11 +214,11 @@ def update_position_prices(db, position, current_price):
         min_price = position.min_price or 0.0
         changed = False
 
-        if max_price == 0 and current_price >= max_price:
+        if max_price == 0 or current_price >= max_price:
             max_price = current_price
             changed = True
 
-        if min_price == 0 and current_price <= min_price:
+        if min_price == 0 or current_price <= min_price:
             min_price = current_price
             changed = True
 
@@ -357,13 +358,12 @@ def monitor_positions_sync():
         logger.info("Starting monitor_positions_sync")
 
         current_time = time.time()
-        if (current_time - last_flush_time) >= FLUSH_INTERVAL:
+
+        if objects_to_be_updated and (current_time - last_flush_time) >= FLUSH_INTERVAL:
             logger.error(f"Going to Flush previous Objects!: {str(current_time - last_flush_time)}")
-            push_to_redis_queue(objects_to_be_updated)
             last_flush_time = current_time
-            logger.error(f"Before: {objects_to_be_updated}")
+            push_to_redis_queue(objects_to_be_updated)
             objects_to_be_updated = []
-            logger.error(f"After: {objects_to_be_updated}")
 
         with TaskSessionLocal_() as db:
             for position in get_monitored_positions(db):

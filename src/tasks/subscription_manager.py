@@ -1,6 +1,7 @@
 import asyncio
 import logging
 
+# import redis
 from sqlalchemy.future import select
 
 from src.core.celery_app import celery_app
@@ -10,6 +11,8 @@ from src.utils.redis_manager import redis_client
 from src.utils.websocket_manager import websocket_manager
 
 logger = logging.getLogger(__name__)
+
+# redis_client = redis.StrictRedis(host='redis', port=6379, decode_responses=True)
 
 current_subscriptions = set()
 subscription_tasks = {}
@@ -29,7 +32,7 @@ async def manage_subscriptions_async():
         logger.info(f"Current monitored trade pairs: {trade_pairs}")
         await manage_trade_pair_subscriptions(trade_pairs)
     else:
-        redis_client.delete("live_prices")
+        # redis_client.delete("current_prices")
         logger.info("No trade pairs to monitor.")
     logger.info("Finished manage_subscriptions_async")
 
@@ -59,7 +62,7 @@ async def manage_trade_pair_subscriptions(trade_pairs):
     for pair in removed_pairs:
         logger.info(f"Unsubscribing from trade pair: {pair}")
         await websocket_manager.unsubscribe(pair[0])
-        redis_client.hdel("live_prices", pair[0])
+        # redis_client.hdel("current_prices", pair[0])
         current_subscriptions.remove(pair)
         task = subscription_tasks.pop(pair, None)
         if task:

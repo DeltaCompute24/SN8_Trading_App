@@ -45,6 +45,6 @@ def monitor_taoshi():
                     value = [str(datetime.now()), price, profit_loss, profit_loss_without_fee, taoshi_profit_loss,
                              taoshi_profit_loss_without_fee, position_uuid, hot_key, len(position["orders"]),
                              position["average_entry_price"]]
-                    set_hash_value(key=f"{trade_pair}-{trader_id}", value=str(value))
+                    set_hash_value(key=f"{trade_pair}-{trader_id}", value=value)
                 except Exception as ex:
                     logger.error(f"An error occurred while fetching position {trade_pair}-{trader_id}: {ex}")

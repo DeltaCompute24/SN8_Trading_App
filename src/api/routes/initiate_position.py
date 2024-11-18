@@ -10,8 +10,9 @@ from src.services.fee_service import get_taoshi_values
 from src.services.trade_service import create_transaction, update_monitored_positions, get_latest_position
 from src.services.user_service import get_challenge
 from src.utils.logging import setup_logging
+from src.utils.redis_manager import get_live_price
 from src.utils.websocket_manager import websocket_manager
-from src.validations.position import validate_position
+from src.validations.position import validate_position, validate_leverage
 
 logger = setup_logging()
 router = APIRouter()
@@ -23,6 +24,7 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
         f"Initiating position for trader_id={position_data.trader_id} and trade_pair={position_data.trade_pair}")
 
     position_data = validate_position(position_data)
+    validate_leverage(position_data.asset_type, position_data.leverage)
 
     existing_position = await get_latest_position(db, position_data.trader_id, position_data.trade_pair)
     if existing_position:
@@ -51,7 +53,7 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
         average_entry_price = 0.0
 
         # If entry_price == 0, it is empty then status will be "OPEN" so we can submit trade
-        if not entry_price or entry_price == 0 or not limit_order or limit_order == 0:
+        if (not entry_price or entry_price == 0) and (not limit_order or limit_order == 0):
             # Submit the trade and wait for confirmation
             trade_submitted = await websocket_manager.submit_trade(position_data.trader_id, position_data.trade_pair,
                                                                    position_data.order_type, position_data.leverage)
@@ -72,9 +74,8 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
                 if first_price != 0:
                     break
         else:
-            await websocket_manager.connect(position_data.asset_type)
-            await websocket_manager.subscribe(position_data.trade_pair)
-            first_price = await websocket_manager.listen_for_initial_price()
+            status = "PENDING"
+            first_price = get_live_price(position_data.trade_pair)
 
         if first_price == 0:
             logger.error("Failed to fetch current price for the trade pair")
@@ -103,6 +104,7 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
                                                    source=challenge,
                                                    order_level=len_order,
                                                    max_profit_loss=profit_loss,
+                                                   limit_order=limit_order,
                                                    )
 
         # Create MonitoredPositionCreate data

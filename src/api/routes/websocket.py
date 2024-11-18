@@ -5,6 +5,7 @@ from typing import List
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
+from src.utils.constants import POSITIONS_TABLE
 from src.utils.redis_manager import get_hash_values
 
 router = APIRouter()
@@ -13,23 +14,25 @@ router = APIRouter()
 class ConnectionManager:
     def __init__(self):
         self.active_connections: List[WebSocket] = []
-        self.broadcast_task = None
+        self.broadcast_tasks = []
 
     async def connect(self, websocket: WebSocket):
         await websocket.accept()
         self.active_connections.append(websocket)
         if len(self.active_connections) == 1:
             # Start broadcasting when the first client connects
-            self.broadcast_task = asyncio.create_task(self.broadcast_prices())
+            self.broadcast_tasks.append(asyncio.create_task(self.broadcast_prices()))
+            self.broadcast_tasks.append(asyncio.create_task(self.broadcast_positions()))
 
     def disconnect(self, websocket: WebSocket):
         self.active_connections.remove(websocket)
-        if not self.active_connections and self.broadcast_task:
+        if not self.active_connections and self.broadcast_tasks:
             # Stop broadcasting when the last client disconnects
-            self.broadcast_task.cancel()
-            self.broadcast_task = None
+            for task in self.broadcast_tasks:
+                task.cancel()
+            self.broadcast_tasks = []
 
-    async def broadcast(self, message: str):
+    async def broadcast(self, message: dict):
         disconnected = []
         for connection in self.active_connections:
             try:
@@ -47,10 +50,25 @@ class ConnectionManager:
                 # No active connections, stop broadcasting
                 break
             try:
-                positions = get_hash_values()
+                current_prices = get_hash_values()
+                prices_dict = {k : json.loads(v) for k, v in current_prices.items()}
+                await self.broadcast(json.dumps({ "type" : "prices", "data" : prices_dict }))
+            except Exception as e:
+                print(f"Error fetching prices: {e}")
+            await asyncio.sleep(1)
+
+    async def broadcast_positions(self):
+        while True:
+            if not self.active_connections:
+                # No active connections, stop broadcasting
+                break
+            try:
+                positions = get_hash_values(POSITIONS_TABLE)
                 positions_dict = {}
                 for key, value in positions.items():
+           
                     value = ast.literal_eval(value)
+     
                     trade_pair, trader_id = key.split("-")
                     if trader_id not in positions_dict:
                         positions_dict[trader_id] = {}
@@ -60,22 +78,23 @@ class ConnectionManager:
                         "profit_loss": value[2],
                         "profit_loss_without_fee": value[3],
                     }
-
-                await self.broadcast(json.dumps(positions_dict))
+                await self.broadcast(json.dumps({ "type" : "positions", "data" : positions_dict }))
             except Exception as e:
-                print(f"Error fetching prices: {e}")
+                print(f"Error fetching positions: {e}")
             await asyncio.sleep(1)
+    
 
 
 manager = ConnectionManager()
 
 
-@router.websocket("/ws")
-async def position_websocket_endpoint(websocket: WebSocket):
+@router.websocket("/delta")
+async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
     try:
         while True:
-            # Wait for any message from the client to keep the connection alive
             await websocket.receive_text()
     except WebSocketDisconnect:
         manager.disconnect(websocket)
+
+

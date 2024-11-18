@@ -1,5 +1,6 @@
 from datetime import datetime
-from typing import Optional
+from decimal import Decimal
+from typing import Optional, Literal
 
 from pydantic import BaseModel, EmailStr
 
@@ -26,6 +27,8 @@ class ChallengeBase(BaseModel):
     active: str = ""
     status: Optional[str] = ""
     challenge: str = ""
+    step: Optional[int] = ""
+    phase: Optional[int] = ""
 
 
 class ChallengeUpdate(BaseModel):
@@ -44,6 +47,7 @@ class ChallengeRead(ChallengeBase):
     register_on_test_net: Optional[datetime]
     register_on_main_net: Optional[datetime]
     pass_the_challenge: Optional[datetime]
+    pass_the_main_net_challenge: Optional[datetime]
     created_at: datetime
     updated_at: datetime
 
@@ -91,7 +95,8 @@ class PaymentBase(BaseModel):
 class PaymentCreate(BaseModel):
     firebase_id: str
     amount: float
-    network: str
+    step: Literal[1, 2]
+    phase: Literal[1, 2]
     referral_code: Optional[str] = None
 
 
@@ -126,3 +131,29 @@ class PaymentUpdate(BaseModel):
 class EmailInput(BaseModel):
     email: EmailStr
     type: str
+
+
+# --------------------------- GENERATE PDF SCHEMA ---------------------------
+
+class GeneratePdfSchema(BaseModel):
+    firebase_id: str
+    step: int
+    phase: int
+    hot_key: str
+
+
+# --------------------------- USER BALANCE SCHEMA ---------------------------
+
+class CreateUserBalanceSchema(BaseModel):
+    trader_id: int
+    hot_key: str
+    balance: Decimal
+    balance_as_on: datetime
+
+
+class UserBalanceSchema(CreateUserBalanceSchema):
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        orm_mode = True

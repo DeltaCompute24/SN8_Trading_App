@@ -8,8 +8,7 @@ from src.models.firebase_user import FirebaseUser
 from src.schemas.user import ChallengeUpdate
 from src.schemas.user import FirebaseUserRead, FirebaseUserCreate, FirebaseUserUpdate
 from src.services.email_service import send_mail_in_thread
-from src.services.user_service import get_firebase_user, create_firebase_user, create_or_update_challenges, \
-    get_challenge_by_id, construct_username
+from src.services.user_service import get_firebase_user, create_firebase_user, get_challenge_by_id, construct_username
 from src.utils.logging import setup_logging
 
 logger = setup_logging()
@@ -29,8 +28,9 @@ def get_db():
 def create_user(user_data: FirebaseUserCreate, db: Session = Depends(get_db)):
     logger.info(f"Create User for trader_id={user_data.firebase_id}")
     try:
-        new_user = create_firebase_user(db, user_data.firebase_id, user_data.name, user_data.email)
-        return new_user
+        if not user_data.firebase_id or not user_data.name or not user_data.email:
+            raise HTTPException(status_code=400, detail="Firebase id, Name or Email can't be Empty!")
+        return create_firebase_user(db, user_data.firebase_id, user_data.name, user_data.email)
     except Exception as e:
         logger.error(f"Error creating user: {e}")
         raise HTTPException(status_code=500, detail=str(e))

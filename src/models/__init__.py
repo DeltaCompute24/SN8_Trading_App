@@ -1,10 +1,13 @@
 # src/models/__init__.py
 from .base import Base
-from .firebase_user import FirebaseUser
 from .challenge import Challenge
+from .firebase_user import FirebaseUser
 from .monitored_positions import MonitoredPosition
+from .payments import Payment
+from .payout import Payout
 from .transaction import Transaction
 from .users import Users
-from .payments import Payment
+from .users_balance import UsersBalance
 
-__all__ = ["Base", "Transaction", "MonitoredPosition", "Users", "FirebaseUser", "Challenge", "Payment"]
+__all__ = ["Base", "Transaction", "MonitoredPosition", "Users", "FirebaseUser", "Challenge", "Payment", "Payout",
+           "UsersBalance"]

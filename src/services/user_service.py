@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.sql import and_
 
 from src.database_tasks import TaskSessionLocal_
+from src.models import UsersBalance
 from src.models.challenge import Challenge
 from src.models.firebase_user import FirebaseUser
 from src.models.users import Users
@@ -52,9 +53,9 @@ def get_firebase_user(db: Session, firebase_id: str):
     return user
 
 
-def create_firebase_user(db: Session, firebase_id: str, name: str, email: str):
-    if not firebase_id or not name or not email:
-        raise HTTPException(status_code=400, detail="Firebase id, Name or Email can't be Empty!")
+def create_firebase_user(db: Session, firebase_id: str, name: str = "", email: str = ""):
+    if not firebase_id:
+        raise HTTPException(status_code=400, detail="Firebase id can't be Empty!")
     firebase_user = get_firebase_user(db, firebase_id)
     if not firebase_user:
         username = construct_username(email)
@@ -158,3 +159,36 @@ def get_hot_key(trader_id: int):
         populate_ambassadors()
         hot_key = ambassadors.get(trader_id)
     return hot_key
+
+
+# ---------------------- USER BALANCE ------------------------------
+
+def get_user_balance(db: Session, hot_key: str):
+    try:
+        user_balance = db.scalar(
+            select(UsersBalance).where(
+                and_(
+                    UsersBalance.hot_key == hot_key,
+                )
+            )
+        )
+        return user_balance
+    except Exception as e:
+        return None
+
+
+def create_user_balance(db: Session, user_data):
+    try:
+        user_balance = UsersBalance(
+            trader_id=user_data.trader_id,
+            hot_key=user_data.hot_key,
+            balance=user_data.balance,
+            balance_as_on=user_data.balance_as_on,
+        )
+        db.add(user_balance)
+        db.commit()
+        db.refresh(user_balance)
+        return user_balance
+    except Exception as e:
+        logger.error(f"Error creating user balance: {e}")
+        raise HTTPException(status_code=400, detail=str(e))

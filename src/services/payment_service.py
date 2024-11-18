@@ -1,6 +1,8 @@
 import threading
+from datetime import datetime
 
 import requests
+from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import and_
@@ -28,19 +30,30 @@ def get_payment(db: Session, payment_id: int):
     return payment
 
 
-def create_challenge(db, payment_data, user_id, status="In Progress", message="Trader_id and hot_key will be created"):
+def create_challenge(db, payment_data, network, user, status="In Progress",
+                     message="Trader_id and hot_key will be created"):
     _challenge = Challenge(
         trader_id=0,
         hot_key="",
-        user_id=user_id,
+        user_id=user.id,
         active="0",
-        challenge=payment_data.network,
+        status="In Challenge",
+        challenge=network,
         hotkey_status=status,
         message=message,
+        step=payment_data.step,
+        phase=payment_data.phase,
     )
     db.add(_challenge)
     db.commit()
     db.refresh(_challenge)
+
+    if user.username:
+        _challenge.challenge_name = f"{user.username}_{_challenge.id}"
+        db.add(_challenge)
+        db.commit()
+        db.refresh(_challenge)
+
     return _challenge
 
 
@@ -51,6 +64,8 @@ def create_payment_entry(db, payment_data, challenge=None):
         referral_code=payment_data.referral_code,
         challenge=challenge,
         challenge_id=challenge.id if challenge else None,
+        step=payment_data.step,
+        phase=payment_data.phase,
     )
     db.add(_payment)
     db.commit()
@@ -59,12 +74,16 @@ def create_payment_entry(db, payment_data, challenge=None):
 
 
 def create_payment(db: Session, payment_data: PaymentCreate):
+    if payment_data.step not in [1, 2] or payment_data.phase not in [1, 2]:
+        raise HTTPException(status_code=400, detail="Step or Phase can either be 1 or 2")
+
+    network = "main" if payment_data.step == 1 else "test"
     firebase_user = get_firebase_user(db, payment_data.firebase_id)
 
     if not firebase_user:
         new_challenge = None
     elif firebase_user.username:
-        new_challenge = create_challenge(db, payment_data, firebase_user.id)
+        new_challenge = create_challenge(db, payment_data, network, firebase_user)
         thread = threading.Thread(
             target=register_and_update_challenge,
             args=(
@@ -74,7 +93,7 @@ def create_payment(db: Session, payment_data: PaymentCreate):
         thread.start()
     # If Firebase user exists but lacks necessary fields
     else:
-        new_challenge = create_challenge(db, payment_data, firebase_user.id, status="Failed",
+        new_challenge = create_challenge(db, payment_data, network, firebase_user, status="Failed",
                                          message="User's Email and Name is Empty!")
 
     new_payment = create_payment_entry(db, payment_data, new_challenge)
@@ -83,13 +102,13 @@ def create_payment(db: Session, payment_data: PaymentCreate):
     return new_payment
 
 
-def register_and_update_challenge(challenge_id: int, network: str, user_name: str):
+def register_and_update_challenge(challenge_id: int, network: str):
     with TaskSessionLocal_() as db:
         try:
             print("In THREAD!................")
             challenge = get_challenge_by_id(db, challenge_id)
             payload = {
-                "name": f"{user_name}_{challenge_id}",
+                "name": challenge.challenge_name,
                 "network": network,
             }
             response = requests.post(REGISTRATION_API_URL, json=payload)
@@ -103,6 +122,10 @@ def register_and_update_challenge(challenge_id: int, network: str, user_name: st
                 challenge.status = "In Challenge"
                 challenge.message = "Challenge Updated Successfully!"
                 challenge.hotkey_status = "Success"
+                if network == "main":
+                    challenge.register_on_main_net = datetime.utcnow()
+                else:
+                    challenge.register_on_test_net = datetime.utcnow()
                 send_mail(challenge.user.email, "Issuance of trader_id and hot_key",
                           "Congratulations! Your trader_id and hot_key is ready. Now, you can use your system.")
             else:
