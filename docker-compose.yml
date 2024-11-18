@@ -9,20 +9,8 @@ services:
       - "80:80"
     volumes:
       - .:/app
-    environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - DATABASE_URL_SYNC=${DATABASE_URL_SYNC}
-      - POLYGON_API_KEY=${POLYGON_API_KEY}
-      - SIGNAL_API_BASE_URL=${SIGNAL_API_BASE_URL}
-      - SIGNAL_API_KEY=${SIGNAL_API_KEY}
-      - CHECKPOINT_URL=${CHECKPOINT_URL}
-      - MAIN_NET=${MAIN_NET}P
-      - REDIS_URL=redis://redis:6379/0
-      - EMAIL_HOST=${EMAIL_HOST}
-      - EMAIL_PORT=${EMAIL_PORT}
-      - EMAIL_USE_TLS=${EMAIL_USE_TLS}
-      - EMAIL_HOST_USER=${EMAIL_HOST_USER}
-      - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
+    env_file:
+      - .env
     depends_on:
       - redis
 

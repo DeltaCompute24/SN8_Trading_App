@@ -141,7 +141,7 @@ def monitor_testnet():
 
 def monitor_mainnet():
     try:
-        response = call_main_net(url=STATISTICS_URL, token=STATISTICS_TOKEN, headers=True)
+        response = call_main_net(url=STATISTICS_URL, token=STATISTICS_TOKEN)
         if not response:
             return
         data = {}

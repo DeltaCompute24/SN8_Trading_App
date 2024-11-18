@@ -12,7 +12,7 @@ from src.services.trade_service import create_transaction, get_open_position, up
     close_transaction
 from src.utils.logging import setup_logging
 from src.utils.websocket_manager import websocket_manager
-from src.validations.position import validate_position
+from src.validations.position import validate_position, validate_leverage
 
 logger = setup_logging()
 router = APIRouter()
@@ -56,6 +56,7 @@ async def adjust_position_endpoint(position_data: TransactionUpdate, db: AsyncSe
                 leverage = abs(leverage)
             position_data.leverage = leverage
             cumulative_leverage = abs(new_leverage)
+            validate_leverage(position_data.asset_type, leverage)
 
             # Submit the adjustment signal
             adjustment_submitted = await websocket_manager.submit_trade(position_data.trader_id,
