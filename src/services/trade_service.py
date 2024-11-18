@@ -89,7 +89,8 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
 async def close_transaction(db: AsyncSession, order_id, trader_id, close_price: float = None,
                             profit_loss: float = None, old_status: str = "", order_level: int = 0,
                             profit_loss_without_fee: float = 0.0, taoshi_profit_loss: float = 0.0,
-                            taoshi_profit_loss_without_fee: float = 0.0, average_entry_price: float = 0.0):
+                            taoshi_profit_loss_without_fee: float = 0.0, average_entry_price: float = 0.0,
+                            operation_type="close"):
     close_time = datetime.utcnow()
     statement = text("""
             UPDATE transactions
@@ -99,10 +100,6 @@ async def close_transaction(db: AsyncSession, order_id, trader_id, close_price: 
                 close_time = :close_time, 
                 close_price = :close_price,
                 profit_loss = :profit_loss,
-                leverage = :leverage,
-                stop_loss = :stop_loss,
-                take_profit = :take_profit,
-                order_type = :order_type,
                 modified_by = :modified_by,
                 order_level = :order_level,
                 profit_loss_without_fee = :profit_loss_without_fee,
@@ -115,16 +112,12 @@ async def close_transaction(db: AsyncSession, order_id, trader_id, close_price: 
     await db.execute(
         statement,
         {
-            "operation_type": "close",
+            "operation_type": operation_type,
             "status": "CLOSED",
             "old_status": old_status,
             "close_time": close_time,
             "close_price": close_price,
             "profit_loss": profit_loss,
-            "leverage": 1,
-            "stop_loss": None,
-            "take_profit": None,
-            "order_type": "FLAT",
             "order_id": order_id,
             "modified_by": str(trader_id),
             "order_level": order_level,

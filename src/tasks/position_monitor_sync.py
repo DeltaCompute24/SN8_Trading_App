@@ -93,8 +93,6 @@ def close_position(position, profit_loss):
             "status": "CLOSED",
             "old_status": position.status,
             "modified_by": "system",
-            "order_type": "FLAT",
-            "leverage": 1,
         }
         if object_exists(objects_to_be_updated, new_object):
             logger.info("Return back as Close Position already exists in queue!")

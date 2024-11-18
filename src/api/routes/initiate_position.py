@@ -12,7 +12,7 @@ from src.services.user_service import get_challenge
 from src.utils.logging import setup_logging
 from src.utils.redis_manager import get_live_price
 from src.utils.websocket_manager import websocket_manager
-from src.validations.position import validate_position
+from src.validations.position import validate_position, validate_leverage
 
 logger = setup_logging()
 router = APIRouter()
@@ -24,6 +24,7 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
         f"Initiating position for trader_id={position_data.trader_id} and trade_pair={position_data.trade_pair}")
 
     position_data = validate_position(position_data)
+    validate_leverage(position_data.asset_type, position_data.leverage)
 
     existing_position = await get_latest_position(db, position_data.trader_id, position_data.trade_pair)
     if existing_position:
