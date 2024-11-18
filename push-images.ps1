@@ -9,7 +9,7 @@ $loginCommand = aws ecr get-login-password --region $AWS_REGION --profile defi-p
 Invoke-Expression -Command $loginCommand
 
 # Tag and push images
-$services = @("fastapi", "celery_worker", "celery_beat")
+$services = @("celery_worker", "celery_beat")
 
 foreach ($service in $services) {
     $sourceImage = "sn8_trading_app-$service`:latest"
