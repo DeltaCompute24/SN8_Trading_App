@@ -35,7 +35,7 @@ jobs:
 
       - name: Tag and push defi-fastapi-container
         run: |
-          docker tag sn8_trading_app-fastapi:latest 288792505174.dkr.ecr.us-east-1.amazonaws.com/defi-backend-fastapi:latest    
+          docker tag fastapi:latest 288792505174.dkr.ecr.us-east-1.amazonaws.com/defi-backend-fastapi:latest    
           docker push 288792505174.dkr.ecr.us-east-1.amazonaws.com/defi-backend-fastapi:latest
 
       - name: Deploy ECS task
