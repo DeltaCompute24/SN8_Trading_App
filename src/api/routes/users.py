@@ -27,9 +27,9 @@ def get_db():
 @router.post("/", response_model=FirebaseUserRead)
 def create_user(user_data: FirebaseUserCreate, db: Session = Depends(get_db)):
     logger.info(f"Create User for trader_id={user_data.firebase_id}")
+    if not user_data.firebase_id or not user_data.name or not user_data.email:
+        raise HTTPException(status_code=400, detail="Firebase id, Name or Email can't be Empty!")
     try:
-        if not user_data.firebase_id or not user_data.name or not user_data.email:
-            raise HTTPException(status_code=400, detail="Firebase id, Name or Email can't be Empty!")
         return create_firebase_user(db, user_data.firebase_id, user_data.name, user_data.email)
     except Exception as e:
         logger.error(f"Error creating user: {e}")
