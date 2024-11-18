@@ -13,7 +13,9 @@ from starlette.testclient import TestClient
 
 from src.database import get_db
 from src.main import app
+from src.models import FirebaseUser, Challenge
 from src.models.transaction import Transaction
+from src.schemas.user import PaymentIdRead, PaymentRead
 
 load_dotenv()
 
@@ -129,3 +131,106 @@ def transaction_object() -> Transaction:
         profit_loss=0.2,
     )
     return transaction
+
+
+# --------------------------------------------------- Payment Fixtures ----------------------------------------------
+
+@pytest.fixture
+def payment_payload():
+    return {
+        "firebase_id": "firebase_id",
+        "amount": 100,
+        "referral_code": "referral_code",
+        "step": 1,
+        "phase": 1,
+    }
+
+
+@pytest.fixture
+def payment_object():
+    return PaymentIdRead(
+        id=1,
+        firebase_id="firebase_id",
+        amount=100,
+        referral_code="referral_code",
+        challenge_id=None,
+        challenge=None,
+    )
+
+
+@pytest.fixture
+def payment_response():
+    return {
+        "id": 1,
+        "firebase_id": "firebase_id",
+        "amount": 100,
+        "referral_code": "referral_code",
+        "challenge_id": None,
+        "challenge": None,
+    }
+
+
+@pytest.fixture
+def firebase_user():
+    return FirebaseUser(
+        id=1,
+        firebase_id="firebase_id",
+        email="email@gmail.com",
+        name="name",
+        username="email",
+    )
+
+
+@pytest.fixture
+def challenge_object():
+    return Challenge(
+        id=1,
+        trader_id=0,
+        hot_key="",
+        user_id=1,
+        active="0",
+        status="In Challenge",
+        challenge="main",
+        hotkey_status="Failed",
+        message="User's Email and Name is Empty!",
+        step=1,
+        phase=1,
+        response={},
+        draw_down=0,
+        profit_sum=0,
+        register_on_test_net=None,
+        register_on_main_net=None,
+        pass_the_challenge=None,
+        pass_the_main_net_challenge=None,
+        created_at="2021-08-01 00:00:00",
+        updated_at="2021-08-01 00:00:00",
+    )
+
+
+@pytest.fixture
+def payment_read(payment_object):
+    payment_object.challenge = {
+        "id": 1,
+        "trader_id": 0,
+        "hot_key": "",
+        "user_id": 1,
+        "active": "0",
+        "status": "In Challenge",
+        "challenge": "main",
+        "hotkey_status": "Failed",
+        "message": "User's Email and Name is Empty!",
+        "step": 1,
+        "phase": 1,
+        "response": {},
+        "draw_down": 0.0,
+        "profit_sum": 0.0,
+        "register_on_test_net": None,
+        "register_on_main_net": None,
+        "pass_the_challenge": None,
+        "pass_the_main_net_challenge": None,
+        "created_at": "2021-08-01T00:00:00",
+        "updated_at": "2021-08-01T00:00:00",
+    }
+    return payment_object, PaymentRead(
+        **payment_object.dict(),
+    )
