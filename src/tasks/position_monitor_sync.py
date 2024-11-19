@@ -63,11 +63,17 @@ def open_position(position, current_price, entry_price=False):
                                            position.leverage))
         if not open_submitted:
             return
-        first_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee, uuid, hot_key, len_order, average_entry_price = get_taoshi_values(
-            position.trader_id,
-            position.trade_pair,
-            challenge=position.source,
-        )
+        for i in range(10):
+            time.sleep(1)
+            first_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee, uuid, hot_key, len_order, average_entry_price = get_taoshi_values(
+                position.trader_id,
+                position.trade_pair,
+                challenge=position.source,
+            )
+            # 10 times
+            if first_price != 0:
+                break
+
         new_object["hot_key"] = hot_key
         new_object["uuid"] = uuid
         new_object["initial_price"] = first_price
@@ -100,20 +106,24 @@ def close_position(position, profit_loss):
         logger.info("Close Position Called!")
         close_submitted = asyncio.run(
             websocket_manager.submit_trade(position.trader_id, position.trade_pair, "FLAT", 1))
-        if close_submitted:
+        if not close_submitted:
+            return
+        for i in range(10):
+            time.sleep(1)
             close_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee, uuid, hot_key, len_order, average_entry_price = get_taoshi_values(
                 position.trader_id, position.trade_pair, position_uuid=position.uuid, challenge=position.source)
-            if close_price == 0:
-                return
-            new_object["close_price"] = close_price
-            new_object["profit_loss"] = profit_loss
-            new_object["profit_loss_without_fee"] = profit_loss_without_fee
-            new_object["taoshi_profit_loss"] = taoshi_profit_loss
-            new_object["taoshi_profit_loss_without_fee"] = taoshi_profit_loss_without_fee
-            new_object["order_level"] = len_order
-            new_object["average_entry_price"] = average_entry_price
-            objects_to_be_updated.append(new_object)
-            delete_hash_value(f"{position.trade_pair}-{position.trader_id}")
+            # 10 times
+            if close_price != 0:
+                break
+
+        new_object["close_price"] = close_price
+        new_object["profit_loss"] = profit_loss
+        new_object["profit_loss_without_fee"] = profit_loss_without_fee
+        new_object["taoshi_profit_loss"] = taoshi_profit_loss
+        new_object["taoshi_profit_loss_without_fee"] = taoshi_profit_loss_without_fee
+        new_object["order_level"] = len_order
+        new_object["average_entry_price"] = average_entry_price
+        objects_to_be_updated.append(new_object)
     except Exception as e:
         logger.error(f"An error occurred while closing position {position.position_id}: {e}")
 
@@ -223,7 +233,7 @@ def update_position_prices(db, position, current_price):
             changed = True
 
         if not changed:
-            return
+            return position
 
         data = {
             "min_price": min_price,
@@ -257,7 +267,7 @@ def check_pending_trailing_position(position, current_price):
             (position.order_type == "SHORT" and current_price <= trailing_price)
     )
 
-    logger.info(f"Determining whether to open pending trailing position: {opened}")
+    logger.error(f"Determining whether to open pending trailing position: {opened}")
     if opened:
         open_position(position, current_price, entry_price=True)
 
@@ -270,7 +280,7 @@ def check_pending_position(position, current_price):
             (position.upward == 0 and current_price <= position.entry_price) or
             (position.upward == 1 and current_price >= position.entry_price)
     )
-    logger.info(f"Determining whether to open pending position: {opened}")
+    logger.error(f"Determining whether to open pending position: {opened}")
 
     if opened:
         open_position(position, current_price)
@@ -307,13 +317,13 @@ def monitor_position(db, position):
     """
     global objects_to_be_updated
     try:
+        logger.error(f"Current Pair: {position.trader_id}-{position.trade_pair}")
         # ---------------------------- OPENED POSITION ---------------------------------
         if position.status == "OPEN":
             return check_open_position(db, position)
 
         # ---------------------------- PENDING POSITION --------------------------------
         current_price = get_live_price(position.trade_pair)
-        logger.error(f"Current Price Pair: {position.trade_pair}")
         if not current_price:
             return
 
