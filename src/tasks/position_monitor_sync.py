@@ -21,11 +21,7 @@ last_flush_time = time.time()
 objects_to_be_updated = []
 
 
-def object_exists(obj_list, new_obj):
-    excluded_keys = ['close_time', 'close_price', 'profit_loss', 'profit_loss_without_fee', 'taoshi_profit_loss',
-                     'taoshi_profit_loss_without_fee', 'initial_price', 'entry_price', 'hot_key', 'uuid', 'hot_key',
-                     'order_level', 'average_entry_price']
-    new_obj_filtered = {k: v for k, v in new_obj.items() if k not in excluded_keys}
+def object_exists(obj_list, new_obj_id):
 
     raw_data = get_queue_data()
     for item in raw_data:
@@ -33,9 +29,7 @@ def object_exists(obj_list, new_obj):
         obj_list.extend(redis_objects)
 
     for obj in obj_list:
-        obj_filtered = {k: v for k, v in obj.items() if k not in excluded_keys}
-
-        if obj_filtered == new_obj_filtered:
+        if obj["order_id"] == new_obj_id:
             return True
     return False
 
@@ -43,6 +37,9 @@ def object_exists(obj_list, new_obj):
 def open_position(position, current_price, entry_price=False):
     global objects_to_be_updated
     try:
+        if object_exists(objects_to_be_updated, position.order_id):
+            logger.info("Return back as Open Position already exists in queue!")
+            return
         new_object = {
             "order_id": position.order_id,
             "operation_type": "open",
@@ -54,9 +51,6 @@ def open_position(position, current_price, entry_price=False):
             new_object["entry_price"] = current_price
         else:
             new_object["initial_price"] = current_price
-        if object_exists(objects_to_be_updated, new_object):
-            logger.info("Return back as Open Position already exists in queue!")
-            return
         logger.info("Open Position Called!")
         open_submitted = asyncio.run(
             websocket_manager.submit_trade(position.trader_id, position.trade_pair, position.order_type,
@@ -91,6 +85,9 @@ def open_position(position, current_price, entry_price=False):
 def close_position(position, profit_loss):
     global objects_to_be_updated
     try:
+        if object_exists(objects_to_be_updated, position.order_id):
+            logger.info("Return back as Close Position already exists in queue!")
+            return
         new_object = {
             "order_id": position.order_id,
             "close_time": str(datetime.utcnow()),
@@ -100,9 +97,6 @@ def close_position(position, profit_loss):
             "old_status": position.status,
             "modified_by": "system",
         }
-        if object_exists(objects_to_be_updated, new_object):
-            logger.info("Return back as Close Position already exists in queue!")
-            return
         logger.info("Close Position Called!")
         close_submitted = asyncio.run(
             websocket_manager.submit_trade(position.trader_id, position.trade_pair, "FLAT", 1))
