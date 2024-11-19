@@ -5,7 +5,7 @@ from datetime import datetime
 import boto3
 from botocore.exceptions import NoCredentialsError, PartialCredentialsError
 from fastapi import APIRouter, HTTPException
-from weasyprint import HTML
+# from weasyprint import HTML
 
 from src.config import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, BUCKET_NAME
 from src.services.email_service import render_to_string, send_mail
@@ -45,7 +45,7 @@ def upload_certificate_to_s3(certificate_name, name, phase):
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_pdf:
         tmp_pdf_path = tmp_pdf.name
-        HTML(string=rendered_html).write_pdf(tmp_pdf_path)
+        # HTML(string=rendered_html).write_pdf(tmp_pdf_path)
 
         # Upload the generated PDF to S3
         try:
