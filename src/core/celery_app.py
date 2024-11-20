@@ -16,7 +16,7 @@ celery_app.conf.update(
         'src.tasks.redis_listener.event_listener': {'queue': 'event_listener'},
     },
     beat_schedule={
-        'manage_subscriptions-every-1-seconds': {
+        'send_notifications-every-1-second': {
             'task': 'src.tasks.send_notification.send_notifications',
             'schedule': 1.0,  # every 1 seconds
         },

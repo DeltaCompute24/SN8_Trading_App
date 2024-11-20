@@ -22,6 +22,6 @@ def send_notifications():
             discord = Discord(url=WEBHOOK_URL)
             discord.post(content=content)
 
-        pop_queue_right_item(count=length)
+        pop_queue_right_item(queue_name=ERROR_QUEUE_NAME, count=length)
     except Exception as e:
         pass
