@@ -13,6 +13,8 @@ from src.models.challenge import Challenge
 from src.services.api_service import call_main_net
 from src.services.email_service import send_mail
 from src.services.s3_services import send_certificate_email
+from src.utils.constants import ERROR_QUEUE_NAME
+from src.utils.redis_manager import push_to_redis_queue
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +35,7 @@ def get_monitored_challenges(db: Session, challenge="test"):
         logger.info(f"Retrieved {len(challenges)} monitored challenges")
         return challenges
     except Exception as e:
+        push_to_redis_queue(data=f"**Monitor Challenges** Database Error - {e}", queue_name=ERROR_QUEUE_NAME)
         logger.error(f"An error occurred while fetching monitored challenges: {e}")
         return []
 
@@ -136,6 +139,7 @@ def monitor_testnet():
 
         logger.info("Finished monitor_challenges task")
     except Exception as e:
+        push_to_redis_queue(data=f"**Monitor Challenges** Testnet Monitoring - {e}", queue_name=ERROR_QUEUE_NAME)
         logger.error(f"Error in monitor_challenges task testnet - {e}")
 
 
@@ -166,6 +170,7 @@ def monitor_mainnet():
                           content="Congratulations! You have passed the mainnet challenge!")
 
     except Exception as e:
+        push_to_redis_queue(data=f"**Monitor Challenges** Mainnet Monitoring - {e}", queue_name=ERROR_QUEUE_NAME)
         logger.error(f"Error in monitor_challenges task mainnet - {e}")
 
 

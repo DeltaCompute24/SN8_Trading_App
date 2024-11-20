@@ -16,7 +16,7 @@ indices_pairs = [
 REDIS_LIVE_PRICES_TABLE = 'live_prices'
 POSITIONS_TABLE = 'positions'
 OPERATION_QUEUE_NAME = "db_operations_queue"
-CHALLENGE_QUEUE_NAME = "challenges_queue"
+ERROR_QUEUE_NAME = "errors"
 
 # ----------------------------- MAINNET API CONSTANTS -----------------------------
 MAIN_POSITIONS_URL = "https://request.wildsage.io/miner-positions"

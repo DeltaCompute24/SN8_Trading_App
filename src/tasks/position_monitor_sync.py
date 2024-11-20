@@ -11,6 +11,7 @@ from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.models.transaction import Transaction
 from src.services.fee_service import get_taoshi_values
+from src.utils.constants import ERROR_QUEUE_NAME
 from src.utils.redis_manager import get_live_price, push_to_redis_queue, get_queue_data
 from src.utils.websocket_manager import websocket_manager
 
@@ -79,6 +80,7 @@ def open_position(position, current_price, entry_price=False):
 
         objects_to_be_updated.append(new_object)
     except Exception as e:
+        push_to_redis_queue(data=f"**Monitor Positions** While Opening Position - {e}", queue_name=ERROR_QUEUE_NAME)
         logger.error(f"An error occurred while opening position {position.position_id}: {e}")
 
 
@@ -120,6 +122,7 @@ def close_position(position, profit_loss):
             }
         )
     except Exception as e:
+        push_to_redis_queue(data=f"**Monitor Positions** While Closing Position - {e}", queue_name=ERROR_QUEUE_NAME)
         logger.error(f"An error occurred while closing position {position.position_id}: {e}")
 
 
@@ -184,6 +187,8 @@ def should_close_position(profit_loss, position):
         return close_result
 
     except Exception as e:
+        push_to_redis_queue(data=f"**Monitor Positions** While Determining if Position Should be Closed - {e}",
+                            queue_name=ERROR_QUEUE_NAME)
         logger.error(f"An error occurred while determining if position should be closed: {e}")
         return False
 
@@ -210,6 +215,8 @@ def update_position_profit(db, position, profit_loss, profit_loss_without_fee, t
         db.refresh(position)
         return position
     except Exception as e:
+        push_to_redis_queue(data=f"**Monitor Positions** While Updating Position Profit - {e}",
+                            queue_name=ERROR_QUEUE_NAME)
         logger.error(f"An error occurred while updating position {position.position_id}: {e}")
 
 
@@ -242,6 +249,8 @@ def update_position_prices(db, position, current_price):
         db.refresh(position)
         return position
     except Exception as e:
+        push_to_redis_queue(data=f"**Monitor Positions** While Updating Position Prices - {e}",
+                            queue_name=ERROR_QUEUE_NAME)
         logger.error(f"An error occurred while updating position {position.position_id}: {e}")
 
 
@@ -330,6 +339,7 @@ def monitor_position(db, position):
             check_pending_trailing_position(position, current_price)
 
     except Exception as e:
+        push_to_redis_queue(data=f"**Monitor Positions** While Monitoring Position - {e}", queue_name=ERROR_QUEUE_NAME)
         logger.error(f"An error occurred while monitoring position {position.position_id}: {e}")
 
 
@@ -350,6 +360,7 @@ def get_monitored_positions(db):
         logger.info(f"Retrieved {len(positions)} monitored positions")
         return positions
     except Exception as e:
+        push_to_redis_queue(data=f"**Monitor Positions** Database Error - {e}", queue_name=ERROR_QUEUE_NAME)
         logger.error(f"An error occurred while fetching monitored positions: {e}")
         return []
 
@@ -367,7 +378,7 @@ def monitor_positions_sync():
         if objects_to_be_updated and (current_time - last_flush_time) >= FLUSH_INTERVAL:
             logger.error(f"Going to Flush previous Objects!: {str(current_time - last_flush_time)}")
             last_flush_time = current_time
-            push_to_redis_queue(objects_to_be_updated)
+            push_to_redis_queue(json.dumps(objects_to_be_updated))
             objects_to_be_updated = []
 
         with TaskSessionLocal_() as db:
@@ -390,6 +401,7 @@ def monitor_positions_sync():
         logger.info("Finished monitor_positions_sync")
     except Exception as e:
         logger.error(f"An error occurred in monitor_positions_sync: {e}")
+        push_to_redis_queue(data=f"**Monitor Positions** Celery Task - {e}", queue_name=ERROR_QUEUE_NAME)
 
 
 @celery_app.task(name='src.tasks.position_monitor_sync.monitor_positions')

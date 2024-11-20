@@ -5,7 +5,8 @@ from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.models.challenge import Challenge
 from src.services.api_service import call_main_net, call_checkpoint_api
-from src.utils.redis_manager import set_hash_value
+from src.utils.constants import ERROR_QUEUE_NAME
+from src.utils.redis_manager import set_hash_value, push_to_redis_queue
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +19,7 @@ def monitor_taoshi():
     data = test_net_data | main_net_data
 
     if not data:
+        push_to_redis_queue(data=f"**Monitor Taoshi** => Validator Checkpoint and Mainnet api returns with status code other than 200", queue_name=ERROR_QUEUE_NAME)
         return
 
     with TaskSessionLocal_() as db:
@@ -47,4 +49,7 @@ def monitor_taoshi():
                              position["average_entry_price"]]
                     set_hash_value(key=f"{trade_pair}-{trader_id}", value=value)
                 except Exception as ex:
+                    push_to_redis_queue(
+                        data=f"**Monitor Taoshi** => Error Occurred While Fetching Position {trade_pair}-{trader_id}: {ex}",
+                        queue_name=ERROR_QUEUE_NAME)
                     logger.error(f"An error occurred while fetching position {trade_pair}-{trader_id}: {ex}")
