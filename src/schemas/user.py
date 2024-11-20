@@ -48,6 +48,7 @@ class ChallengeRead(ChallengeBase):
     register_on_main_net: Optional[datetime]
     pass_the_challenge: Optional[datetime]
     pass_the_main_net_challenge: Optional[datetime]
+    challenge_name: Optional[str]
     created_at: datetime
     updated_at: datetime
 
