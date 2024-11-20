@@ -11,7 +11,7 @@ from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.models.transaction import Transaction
 from src.services.fee_service import get_taoshi_values
-from src.utils.redis_manager import get_live_price, push_to_redis_queue, get_queue_data, delete_hash_value
+from src.utils.redis_manager import get_live_price, push_to_redis_queue, get_queue_data
 from src.utils.websocket_manager import websocket_manager
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,6 @@ objects_to_be_updated = []
 
 
 def object_exists(obj_list, new_obj_id):
-
     raw_data = get_queue_data()
     for item in raw_data:
         redis_objects = json.loads(item)
@@ -40,17 +39,7 @@ def open_position(position, current_price, entry_price=False):
         if object_exists(objects_to_be_updated, position.order_id):
             logger.info("Return back as Open Position already exists in queue!")
             return
-        new_object = {
-            "order_id": position.order_id,
-            "operation_type": "open",
-            "status": "OPEN",
-            "old_status": position.status,
-            "modified_by": "system",
-        }
-        if entry_price:
-            new_object["entry_price"] = current_price
-        else:
-            new_object["initial_price"] = current_price
+
         logger.info("Open Position Called!")
         open_submitted = asyncio.run(
             websocket_manager.submit_trade(position.trader_id, position.trade_pair, position.order_type,
@@ -68,15 +57,26 @@ def open_position(position, current_price, entry_price=False):
             if first_price != 0:
                 break
 
-        new_object["hot_key"] = hot_key
-        new_object["uuid"] = uuid
-        new_object["initial_price"] = first_price
-        new_object["profit_loss"] = profit_loss
-        new_object["profit_loss_without_fee"] = profit_loss_without_fee
-        new_object["taoshi_profit_loss"] = taoshi_profit_loss
-        new_object["taoshi_profit_loss_without_fee"] = taoshi_profit_loss_without_fee
-        new_object["order_level"] = len_order
-        new_object["average_entry_price"] = average_entry_price
+        new_object = {
+            "order_id": position.order_id,
+            "operation_type": "open",
+            "status": "OPEN",
+            "old_status": position.status,
+            "hot_key": hot_key,
+            "uuid": uuid,
+            "initial_price": first_price,
+            "profit_loss": profit_loss,
+            "profit_loss_without_fee": profit_loss_without_fee,
+            "taoshi_profit_loss": taoshi_profit_loss,
+            "taoshi_profit_loss_without_fee": taoshi_profit_loss_without_fee,
+            "order_level": len_order,
+            "average_entry_price": average_entry_price,
+            "modified_by": "system",
+
+        }
+        if entry_price:
+            new_object["entry_price"] = current_price
+
         objects_to_be_updated.append(new_object)
     except Exception as e:
         logger.error(f"An error occurred while opening position {position.position_id}: {e}")
@@ -88,15 +88,7 @@ def close_position(position, profit_loss):
         if object_exists(objects_to_be_updated, position.order_id):
             logger.info("Return back as Close Position already exists in queue!")
             return
-        new_object = {
-            "order_id": position.order_id,
-            "close_time": str(datetime.utcnow()),
-            "profit_loss": profit_loss,
-            "operation_type": "close",
-            "status": "CLOSED",
-            "old_status": position.status,
-            "modified_by": "system",
-        }
+
         logger.info("Close Position Called!")
         close_submitted = asyncio.run(
             websocket_manager.submit_trade(position.trader_id, position.trade_pair, "FLAT", 1))
@@ -110,14 +102,23 @@ def close_position(position, profit_loss):
             if close_price != 0:
                 break
 
-        new_object["close_price"] = close_price
-        new_object["profit_loss"] = profit_loss
-        new_object["profit_loss_without_fee"] = profit_loss_without_fee
-        new_object["taoshi_profit_loss"] = taoshi_profit_loss
-        new_object["taoshi_profit_loss_without_fee"] = taoshi_profit_loss_without_fee
-        new_object["order_level"] = len_order
-        new_object["average_entry_price"] = average_entry_price
-        objects_to_be_updated.append(new_object)
+        objects_to_be_updated.append(
+            {
+                "order_id": position.order_id,
+                "close_time": str(datetime.utcnow()),
+                "operation_type": "close",
+                "status": "CLOSED",
+                "old_status": position.status,
+                "close_price": close_price,
+                "profit_loss": profit_loss,
+                "profit_loss_without_fee": profit_loss_without_fee,
+                "taoshi_profit_loss": taoshi_profit_loss,
+                "taoshi_profit_loss_without_fee": taoshi_profit_loss_without_fee,
+                "order_level": len_order,
+                "average_entry_price": average_entry_price,
+                "modified_by": "system",
+            }
+        )
     except Exception as e:
         logger.error(f"An error occurred while closing position {position.position_id}: {e}")
 
