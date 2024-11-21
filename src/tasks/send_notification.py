@@ -10,17 +10,34 @@ from src.utils.redis_manager import get_queue_data, pop_queue_right_item
 logger = logging.getLogger(__name__)
 
 
+def notification_to_discord(content, username="Notification for Celery Task Errors"):
+    discord = Discord(url=WEBHOOK_URL)
+    discord.post(content=content, username=username)
+
+
 @celery_app.task(name='src.tasks.send_notification.send_notifications')
 def send_notifications():
     error_data = get_queue_data(queue_name=ERROR_QUEUE_NAME)
     length = len(error_data)
 
-    if length == 0:
-        return
     try:
+        available_tasks = ["celery@challenges_worker", "celery@taoshi_worker", "celery@redis_worker",
+                           "celery@position_worker"]
+        i = celery_app.control.inspect()
+        availability = i.ping()
+        message = ""
+        for task in available_tasks:
+            if task not in availability or availability[task] != {'ok': 'pong'}:
+                message += f"{task} is not active\n"
+
+        if message:
+            notification_to_discord(content=message, username="Celery Task Worker Not Active")
+
+        if length == 0:
+            return
+
         for content in error_data:
-            discord = Discord(url=WEBHOOK_URL)
-            discord.post(content=content)
+            notification_to_discord(content=content)
 
         pop_queue_right_item(queue_name=ERROR_QUEUE_NAME, count=length)
     except Exception as e:
