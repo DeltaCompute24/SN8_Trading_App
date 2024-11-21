@@ -91,7 +91,7 @@ def transaction_payload() -> dict:
     return {
         "trader_id": 4040,
         "trade_pair": "BTCUSD",
-        "leverage": 1,
+        "leverage": 0.1,
         "asset_type": "crypto",
         "stop_loss": 2,
         "take_profit": 2,
