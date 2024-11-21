@@ -9,6 +9,19 @@ from src.utils.redis_manager import get_queue_data, pop_queue_right_item
 
 logger = logging.getLogger(__name__)
 
+import re
+
+import yaml
+
+
+def get_available_tasks():
+    with open('docker-compose.yml', 'r') as file:
+        prime_service = yaml.safe_load(file)
+
+    input_string = prime_service["services"]["celery_worker"]["command"]
+    matches = re.findall(r'-n\s+(\S+)', input_string)
+    return [f"celery@{match}" for match in matches]
+
 
 def notification_to_discord(content, username="Notification for Celery Task Errors"):
     discord = Discord(url=WEBHOOK_URL)
@@ -21,8 +34,8 @@ def send_notifications():
     length = len(error_data)
 
     try:
-        available_tasks = ["celery@challenges_worker", "celery@taoshi_worker", "celery@redis_worker",
-                           "celery@position_worker"]
+        available_tasks = get_available_tasks()
+        print(available_tasks)
         i = celery_app.control.inspect()
         availability = i.ping()
         message = ""
