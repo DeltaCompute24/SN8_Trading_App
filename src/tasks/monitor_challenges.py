@@ -1,12 +1,13 @@
 import logging
 from datetime import datetime
+from tempfile import template
 
 import requests
 from sqlalchemy.future import select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import and_
 
-from src.config import CHECKPOINT_URL, STATISTICS_URL, STATISTICS_TOKEN, SWITCH_TO_MAINNET_URL
+from src.config import CHECKPOINT_URL, STATISTICS_URL, STATISTICS_TOKEN
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.models.challenge import Challenge
@@ -88,6 +89,7 @@ def monitor_testnet():
                     "profit_sum": profit_sum,
                 }
                 changed = False
+                context = {'name': name}
 
                 if profit_sum >= 2:  # 2%
                     changed = True
@@ -102,9 +104,8 @@ def monitor_testnet():
                         **c_data,
                         "status": "Passed",
                         "pass_the_challenge": datetime.utcnow(),
+                        "phase": 2,
                     }
-
-                    content = "Congratulations! You have entered to Phase 2 from Phase 1!"
 
                     # if _response.status_code == 200:
                     #     c_response = challenge.response
@@ -122,6 +123,8 @@ def monitor_testnet():
                     #     send_certificate_email(email, name, challenge)
 
                     subject = "Challenge Passed"
+                    content = "Congratulations! You have entered to Phase 2 from Phase 1!"
+                    template_name = "ChallengePassedPhase1Step2.html"
                     update_challenge(db, challenge, c_data)
                 elif draw_down <= -5:  # 5%
                     changed = True
@@ -133,9 +136,10 @@ def monitor_testnet():
                     subject = "Challenge Failed"
                     content = "Unfortunately! You have Failed!"
                     update_challenge(db, challenge, c_data)
+                    template_name = "ChallengeFailedPhase1.html"
 
                 if email and changed:
-                    send_mail(email, subject, content)
+                    send_mail(email, subject=subject, content=content, template_name=template_name, context=context)
 
         logger.info("Finished monitor_challenges task")
     except Exception as e:
@@ -166,8 +170,17 @@ def monitor_mainnet():
                     "pass_the_main_net_challenge": datetime.utcnow(),
                 }
                 update_challenge(db, challenge, c_data)
-                send_mail(challenge.user.email, subject="Mainnet Challenge Passed",
-                          content="Congratulations! You have passed the mainnet challenge!")
+                if challenge.phase == 1:
+                    template_name = "ChallengePassedPhase1Step1.html"
+                else:
+                    template_name = "ChallengePassedPhase2.html"
+                send_mail(
+                    challenge.user.email,
+                    subject="Mainnet Challenge Passed",
+                    content="Congratulations! You have passed the mainnet challenge!",
+                    template_name=template_name,
+                    context={'name': challenge.user.name, 'date': datetime.utcnow()}
+                )
 
     except Exception as e:
         push_to_redis_queue(data=f"**Monitor Challenges** Mainnet Monitoring - {e}", queue_name=ERROR_QUEUE_NAME)
