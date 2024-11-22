@@ -77,7 +77,7 @@ def create_payment(db: Session, payment_data: PaymentCreate):
     if payment_data.step not in [1, 2] or payment_data.phase not in [1, 2]:
         raise HTTPException(status_code=400, detail="Step or Phase can either be 1 or 2")
 
-    network = "main" if payment_data.step == 1 else "test"
+    network = "test" if (payment_data.step == 2 and payment_data.phase == 1) else "main"
     firebase_user = get_firebase_user(db, payment_data.firebase_id)
 
     if not firebase_user:

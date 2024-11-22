@@ -99,6 +99,7 @@ def monitor_testnet():
                         **c_data,
                         "status": "Passed",
                         "pass_the_challenge": datetime.utcnow(),
+                        "phase": 2,
                     }
 
                     content = "Congratulations! You have entered to Phase 2 from Phase 1!"
