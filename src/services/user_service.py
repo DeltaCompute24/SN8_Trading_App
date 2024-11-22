@@ -12,6 +12,7 @@ from src.models.challenge import Challenge
 from src.models.firebase_user import FirebaseUser
 from src.models.users import Users
 from src.schemas.user import UsersBase
+from src.services.email_service import send_mail
 from src.utils.logging import setup_logging
 
 logger = setup_logging()
@@ -57,8 +58,8 @@ def create_firebase_user(db: Session, firebase_id: str, name: str = "", email: s
     if not firebase_id:
         raise HTTPException(status_code=400, detail="Firebase id can't be Empty!")
     firebase_user = get_firebase_user(db, firebase_id)
+    username = construct_username(email)
     if not firebase_user:
-        username = construct_username(email)
         firebase_user = FirebaseUser(
             firebase_id=firebase_id,
             name=name,
@@ -66,9 +67,21 @@ def create_firebase_user(db: Session, firebase_id: str, name: str = "", email: s
             username=username,
         )
         db.add(firebase_user)
-        db.commit()
-        db.refresh(firebase_user)
-
+        # send email
+        send_mail(
+            email,
+            subject="Welcome to Delta Propshop",
+            template_name="WelcomeEmail.html",
+            context={
+                "name": name,
+            }
+        )
+    else:
+        firebase_user.name = name
+        firebase_user.email = email
+        firebase_user.username = username
+    db.commit()
+    db.refresh(firebase_user)
     return firebase_user
 
 
