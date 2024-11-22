@@ -35,6 +35,7 @@ class TestInitiatePosition:
 
     async def test_submit_trade_failed(self, async_client, transaction_payload):
         with (
+            patch(target="src.api.routes.initiate_position.get_latest_position", new=AsyncMock(return_value=None)),
             patch(target="src.api.routes.initiate_position.get_challenge", return_value="test"),
             patch(target="src.api.routes.initiate_position.websocket_manager.submit_trade", return_value=False)
         ):
