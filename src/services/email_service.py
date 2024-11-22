@@ -1,7 +1,6 @@
 import smtplib
 import threading
 from email.mime.application import MIMEApplication
-from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -16,10 +15,17 @@ def render_to_string(template_name, context=None):
     """
     env = Environment(loader=FileSystemLoader(searchpath="./src/templates/"))
     template = env.get_template(template_name)
-    return template.render(context)
+    return template.render(context or {})
 
 
-def send_mail(receiver, subject, content, attachment=None):
+def send_mail(
+        receiver,
+        subject,
+        content="",
+        attachment=None,
+        template_name='EmailTemplate.html',
+        context=None,
+):
     """
     Send an email with a subject and body content to the specified receiver.
     """
@@ -40,8 +46,9 @@ def send_mail(receiver, subject, content, attachment=None):
         message["Bcc"] = "support@deltapropshop.io"
 
         # Attach the email body
-        context = {'email': receiver, 'text': content}
-        html_content = render_to_string(template_name='email_template.html', context=context)
+        if not context:
+            context = {'email': receiver, 'text': content}
+        html_content = render_to_string(template_name=template_name, context=context)
         message.attach(MIMEText(html_content, 'html'))  # HTML version
 
         # Attach the PDF file
@@ -52,21 +59,13 @@ def send_mail(receiver, subject, content, attachment=None):
                 file.add_header('Content-Disposition', 'attachment', filename=attachment.get("name"))
                 message.attach(file)
 
-        # Attach the image
-        image_path = 'src/templates/email_template_image.png'
-        with open(image_path, 'rb') as img_file:
-            img_data = img_file.read()
-            image = MIMEImage(img_data)
-            image.add_header('Content-ID', '<email_template_image>')  # Content-ID to reference in the HTML
-            image.add_header('Content-Disposition', 'inline', filename=image_path)
-            message.attach(image)
-
         # Log the email contents to ensure they're correct
         print(f"Email details: \nFrom: {EMAIL_HOST_USER}\nTo: {receiver}\nSubject: {subject}\nContent: {content}")
 
         # Convert the message to a string and send
         text = message.as_string()
-        server.sendmail(EMAIL_HOST_USER, receiver, text)
+        recipients = [receiver, "support@deltapropshop.io"]
+        server.sendmail(EMAIL_HOST_USER, recipients, text)
 
     except Exception as exp:
         print(f"ERROR: {exp}")

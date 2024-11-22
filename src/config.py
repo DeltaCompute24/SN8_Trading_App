@@ -2,8 +2,7 @@ import os
 
 from dotenv import load_dotenv
 
-from src.utils.constants import MAIN_POSITIONS_URL, MAIN_POSITIONS_TOKEN, MAIN_STATISTICS_TOKEN, MAIN_STATISTICS_URL, \
-    NEW_MAIN_POSITIONS_URL
+from src.utils.constants import NEW_MAIN_POSITIONS_URL
 
 load_dotenv()
 
@@ -40,3 +39,6 @@ STATISTICS_TOKEN = os.getenv("MAIN_STATISTICS_TOKEN")
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_KEY")
 BUCKET_NAME = os.getenv("BUCKET_NAME")
+
+# DISCORD CONFIGURATION
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
