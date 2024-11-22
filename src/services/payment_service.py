@@ -86,10 +86,8 @@ def create_payment(db: Session, payment_data: PaymentCreate):
         new_challenge = create_challenge(db, payment_data, network, firebase_user)
         thread = threading.Thread(
             target=register_and_update_challenge,
-            args=(
-                new_challenge.id, new_challenge.challenge,
-                firebase_user.username,
-            ))
+            args=new_challenge.id,
+        )
         thread.start()
     # If Firebase user exists but lacks necessary fields
     else:
@@ -102,11 +100,13 @@ def create_payment(db: Session, payment_data: PaymentCreate):
     return new_payment
 
 
-def register_and_update_challenge(challenge_id: int, network: str):
+def register_and_update_challenge(challenge_id: int):
     with TaskSessionLocal_() as db:
         try:
             print("In THREAD!................")
             challenge = get_challenge_by_id(db, challenge_id)
+            email = challenge.user.email
+            network = challenge.challenge
             payload = {
                 "name": challenge.challenge_name,
                 "network": network,
@@ -124,10 +124,19 @@ def register_and_update_challenge(challenge_id: int, network: str):
                 challenge.hotkey_status = "Success"
                 if network == "main":
                     challenge.register_on_main_net = datetime.utcnow()
+                    send_mail(
+                        email,
+                        subject="Purchased Mainnet Challenge",
+                        template_name="ChallengePurchaseEmail.html",
+                        context={
+                            "name": challenge.user.name,
+                            "trader_id": challenge.trader_id,
+                        }
+                    )
                 else:
                     challenge.register_on_test_net = datetime.utcnow()
-                send_mail(challenge.user.email, "Issuance of trader_id and hot_key",
-                          "Congratulations! Your trader_id and hot_key is ready. Now, you can use your system.")
+                    send_mail(email, "Issuance of trader_id and hot_key",
+                              "Congratulations! Your trader_id and hot_key is ready. Now, you can use your system.")
             else:
                 print("400 RESPONSE")
                 challenge.hotkey_status = "Failed"
