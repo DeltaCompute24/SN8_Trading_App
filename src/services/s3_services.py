@@ -40,7 +40,7 @@ def upload_certificate_to_s3(certificate_name, name, phase):
     """
     # Certificate does not exist, generate a new one
     date = datetime.today().strftime("%b %d, %Y")
-    rendered_html = render_to_string(template_name="challenge_certificate.html",
+    rendered_html = render_to_string(template_name="ChallengeCertificate.html",
                                      context={"phase_number": phase, "name": name, "date": date})
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_pdf:
