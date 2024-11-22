@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Neuton:ital,wght@0,200;0,300;0,400;0,700;0,800;1,400&display=swap"
+        rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email</title>
+
+    <style>
+        .main-container {
+            background-color: black;
+            width: 600px;
+            margin: 0% auto;
+            background-image: url(https://trading-email-assets.s3.us-east-1.amazonaws.com/congratulationsBg.png.png);
+            background-repeat: no-repeat;
+            background-position: right;
+
+        }
+
+        .main-table-section {
+            padding: 10px 32px 30px 32px;
+            background: linear-gradient(219deg, #FF4E27 -5%, rgba(28, 28, 36, 0.17) 28%);
+            width: 100%;
+            padding-bottom: 80px;
+
+        }
+
+        .text-primary {
+            color: rgba(234, 73, 39, 1);
+        }
+
+
+        .text-secondary {
+            color: rgba(247, 244, 243, 1);
+        }
+
+        .logo {
+            margin: -10px;
+        }
+
+        .logo-text {
+            font-family: "Satoshi" , sans-serif;
+            font-size: 40px;
+            font-weight: 500;
+            line-height: 54px;
+            text-align: left;
+            text-underline-position: from-font;
+            text-decoration-skip-ink: none;
+            color: rgba(247, 244, 243, 1);
+            margin-left: 10px;
+
+
+        }
+
+        h1 {
+            font-family: "Satoshi" , sans-serif;
+            font-size: 52px;
+            font-weight: 700;
+            line-height: 70.2px;
+            text-align: center;
+            text-underline-position: from-font;
+            text-decoration-skip-ink: none;
+            margin: 0%;
+
+        }
+
+        h3 {
+            margin: 0%;
+            font-family: "Satoshi" , sans-serif;
+            font-size: 24px;
+            font-weight: 500;
+            line-height: 32.4px;
+            text-align: center;
+            text-underline-position: from-font;
+            text-decoration-skip-ink: none;
+            padding-bottom: 24px;
+
+        }
+
+        .userInfo-text {
+            width: 518px;
+            height: 400px;
+            background-image: url(https://trading-email-assets.s3.us-east-1.amazonaws.com/bestBg.png);
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: cover;
+            vertical-align: baseline;
+
+
+
+        }
+
+        .presented-text {
+            font-family: "Satoshi" , sans-serif;
+            font-size: 20px;
+            font-weight: 500;
+            line-height: 27px;
+            text-align: center;
+            text-underline-position: from-font;
+            text-decoration-skip-ink: none;
+            margin-top: 120px;
+
+        }
+
+        .userName {
+            font-family: "Satoshi" , sans-serif;
+            font-size: 64px;
+            font-weight: 500;
+            text-align: center;
+            text-underline-position: from-font;
+            text-decoration-skip-ink: none;
+            margin-top: 10px;
+            margin-bottom: 20px;
+
+        }
+
+        .date {
+            font-family: "Roboto Mono" , sans-serif;
+            font-size: 16px;
+            font-weight: 400;
+            line-height: 21.1px;
+            text-align: left;
+            text-underline-position: from-font;
+            text-decoration-skip-ink: none;
+            color: rgba(0, 0, 0, 0.6);
+            text-align: center;
+            margin: 0;
+            margin-top: 130px;
+
+
+        }
+
+        .icons-container {
+            margin-top: 110px;
+            height: 80px;
+            text-align: center;
+        }
+
+        .qr {
+            float: left;
+        }
+
+        .sign {
+            margin-top: 20px;
+        }
+
+        .country {
+            float: right;
+        }
+
+
+        @media only screen and (max-width: 600px) {
+            .main-table-section {
+                padding: 0px 16px !important;
+            }
+
+           
+
+            .company-name {
+                font-size: 29px !important;
+            }
+
+        }
+    </style>
+
+</head>
+
+<body>
+    <div class="main-container">
+        <table class="main-table-section">
+            <tr>
+                <td>
+                    <img class="logo" src="https://trading-email-assets.s3.us-east-1.amazonaws.com/logo.png" alt="logo" />
+                    <span class="text-primary logo-text">Delta Prop Shop</span>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <h1 class="text-secondary">Congratulations</h1>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <h3 class="text-secondary">FOR PASSING PHASE 2</h3>
+                </td>
+            </tr>
+            <tr>
+                <td class="userInfo-text text-secondary">
+                    <div>
+
+                        <p class="presented-text">PRESENTED TO:</p>
+                        <p class="userName">{{ name }}</p>
+                        <div>
+                            <p class="date">{{ date }}</p>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="icons-container">
+                        <img class="qr" src="https://trading-email-assets.s3.us-east-1.amazonaws.com/qr+code.png" alt="qr" />
+
+                        <img class="sign" src="https://trading-email-assets.s3.us-east-1.amazonaws.com/sign.png" class="sign" />
+
+                        <img class="country" src="https://trading-email-assets.s3.us-east-1.amazonaws.com/country.png" alt="country" />
+                    </div>
+                </td>
+
+            </tr>
+        </table>
+    </div>
+</body>
+
+</html>
