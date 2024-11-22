@@ -127,7 +127,7 @@ def register_and_update_challenge(challenge_id: int):
                     send_mail(
                         email,
                         subject="Purchased Mainnet Challenge",
-                        template_name="ChallengePurchaseEmail.html",
+                        template_name="ChallengeDetailStep1.html",
                         context={
                             "name": challenge.user.name,
                             "trader_id": challenge.trader_id,
