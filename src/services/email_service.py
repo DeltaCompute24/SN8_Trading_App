@@ -1,3 +1,4 @@
+import os
 import smtplib
 import threading
 from email.mime.application import MIMEApplication
@@ -7,13 +8,16 @@ from email.mime.text import MIMEText
 from jinja2 import Environment, FileSystemLoader
 
 from src.config import EMAIL_HOST, EMAIL_PORT, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD
+from src.utils.constants import ERROR_QUEUE_NAME
+from src.utils.redis_manager import push_to_redis_queue
 
 
 def render_to_string(template_name, context=None):
     """
     Render the template with the context and return as a string
     """
-    env = Environment(loader=FileSystemLoader(searchpath="./src/templates/"))
+    templates_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'templates')
+    env = Environment(loader=FileSystemLoader(searchpath=templates_path))
     template = env.get_template(template_name)
     return template.render(context or {})
 
@@ -43,7 +47,7 @@ def send_mail(
         message['From'] = EMAIL_HOST_USER
         message['To'] = receiver
         message['Subject'] = subject
-        message["Bcc"] = "support@deltapropshop.io"
+        message["Bcc"] = EMAIL_HOST_USER
 
         # Attach the email body
         if not context:
@@ -64,11 +68,12 @@ def send_mail(
 
         # Convert the message to a string and send
         text = message.as_string()
-        recipients = [receiver, "support@deltapropshop.io"]
+        recipients = [receiver, EMAIL_HOST_USER]
         server.sendmail(EMAIL_HOST_USER, recipients, text)
 
     except Exception as exp:
         print(f"ERROR: {exp}")
+        push_to_redis_queue(data=f"**SEND EMAIL ERROR** => {exp}", queue_name=ERROR_QUEUE_NAME)
     finally:
         # Close the server connection
         if server:

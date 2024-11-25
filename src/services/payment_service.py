@@ -87,7 +87,7 @@ def create_payment(db: Session, payment_data: PaymentCreate):
         thread = threading.Thread(
             target=register_and_update_challenge,
             args=(
-                new_challenge.id, new_challenge.challenge,
+                new_challenge.id,
             ))
         thread.start()
     # If Firebase user exists but lacks necessary fields
@@ -123,21 +123,26 @@ def register_and_update_challenge(challenge_id: int):
                 challenge.status = "In Challenge"
                 challenge.message = "Challenge Updated Successfully!"
                 challenge.hotkey_status = "Success"
+                context = {
+                    "name": challenge.user.name,
+                    "trader_id": challenge.trader_id,
+                }
                 if network == "main":
                     challenge.register_on_main_net = datetime.utcnow()
                     send_mail(
                         email,
                         subject="Purchased Mainnet Challenge",
                         template_name="ChallengeDetailStep1.html",
-                        context={
-                            "name": challenge.user.name,
-                            "trader_id": challenge.trader_id,
-                        }
+                        context=context,
                     )
                 else:
                     challenge.register_on_test_net = datetime.utcnow()
-                    send_mail(email, "Issuance of trader_id and hot_key",
-                              "Congratulations! Your trader_id and hot_key is ready. Now, you can use your system.")
+                    send_mail(
+                        email,
+                        subject="Purchased Testnet Challenge",
+                        template_name="ChallengeDetailStep2.html",
+                        context=context,
+                    )
             else:
                 print("400 RESPONSE")
                 challenge.hotkey_status = "Failed"
