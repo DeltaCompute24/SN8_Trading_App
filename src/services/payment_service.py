@@ -87,7 +87,7 @@ def create_payment(db: Session, payment_data: PaymentCreate):
         thread = threading.Thread(
             target=register_and_update_challenge,
             args=(
-                new_challenge.id, new_challenge.challenge,
+                new_challenge.id,
             ))
         thread.start()
     # If Firebase user exists but lacks necessary fields
