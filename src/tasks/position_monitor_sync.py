@@ -58,6 +58,13 @@ def open_position(position, current_price, entry_price=False):
             if first_price != 0:
                 break
 
+        if first_price == 0:
+            push_to_redis_queue(
+                data=f"**Monitor Positions** While Opening Position - Price is Zero -- Trade is not Submitted",
+                queue_name=ERROR_QUEUE_NAME,
+            )
+            return
+
         new_object = {
             "order_id": position.order_id,
             "operation_type": "open",
@@ -101,9 +108,15 @@ def close_position(position, profit_loss):
             close_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee, uuid, hot_key, len_order, average_entry_price = get_taoshi_values(
                 position.trader_id, position.trade_pair, position_uuid=position.uuid, challenge=position.source)
             # 10 times
-            if close_price != 0:
+            if close_price != 0 and position.order_level < len_order:
                 break
 
+        if close_price == 0:
+            push_to_redis_queue(
+                data=f"**Monitor Positions** While Closing Position - Price is Zero",
+                queue_name=ERROR_QUEUE_NAME,
+            )
+            return
         objects_to_be_updated.append(
             {
                 "order_id": position.order_id,
@@ -302,6 +315,8 @@ def check_open_position(db, position):
         position_uuid=position.uuid,
     )
     if price == 0:
+        push_to_redis_queue(data=f"**Monitor Positions** While Checking Open Position - Price is Zero",
+                            queue_name=ERROR_QUEUE_NAME)
         return False
 
     position = update_position_profit(db, position, profit_loss, profit_loss_without_fee, taoshi_profit_loss,
