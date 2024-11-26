@@ -11,7 +11,8 @@ from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.models.transaction import Transaction
 from src.services.fee_service import get_taoshi_values
-from src.utils.redis_manager import get_live_price, push_to_redis_queue, get_queue_data, delete_hash_value
+from src.utils.constants import ERROR_QUEUE_NAME
+from src.utils.redis_manager import get_live_price, push_to_redis_queue, get_queue_data
 from src.utils.websocket_manager import websocket_manager
 
 logger = logging.getLogger(__name__)
@@ -21,21 +22,14 @@ last_flush_time = time.time()
 objects_to_be_updated = []
 
 
-def object_exists(obj_list, new_obj):
-    excluded_keys = ['close_time', 'close_price', 'profit_loss', 'profit_loss_without_fee', 'taoshi_profit_loss',
-                     'taoshi_profit_loss_without_fee', 'initial_price', 'entry_price', 'hot_key', 'uuid', 'hot_key',
-                     'order_level', 'average_entry_price']
-    new_obj_filtered = {k: v for k, v in new_obj.items() if k not in excluded_keys}
-
+def object_exists(obj_list, new_obj_id):
     raw_data = get_queue_data()
     for item in raw_data:
         redis_objects = json.loads(item)
         obj_list.extend(redis_objects)
 
     for obj in obj_list:
-        obj_filtered = {k: v for k, v in obj.items() if k not in excluded_keys}
-
-        if obj_filtered == new_obj_filtered:
+        if obj["order_id"] == new_obj_id:
             return True
     return False
 
@@ -43,78 +37,105 @@ def object_exists(obj_list, new_obj):
 def open_position(position, current_price, entry_price=False):
     global objects_to_be_updated
     try:
-        new_object = {
-            "order_id": position.order_id,
-            "operation_type": "open",
-            "status": "OPEN",
-            "old_status": position.status,
-            "modified_by": "system",
-        }
-        if entry_price:
-            new_object["entry_price"] = current_price
-        else:
-            new_object["initial_price"] = current_price
-        if object_exists(objects_to_be_updated, new_object):
+        if object_exists(objects_to_be_updated, position.order_id):
             logger.info("Return back as Open Position already exists in queue!")
             return
+
         logger.info("Open Position Called!")
         open_submitted = asyncio.run(
             websocket_manager.submit_trade(position.trader_id, position.trade_pair, position.order_type,
                                            position.leverage))
         if not open_submitted:
             return
-        first_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee, uuid, hot_key, len_order, average_entry_price = get_taoshi_values(
-            position.trader_id,
-            position.trade_pair,
-            challenge=position.source,
-        )
-        new_object["hot_key"] = hot_key
-        new_object["uuid"] = uuid
-        new_object["initial_price"] = first_price
-        new_object["profit_loss"] = profit_loss
-        new_object["profit_loss_without_fee"] = profit_loss_without_fee
-        new_object["taoshi_profit_loss"] = taoshi_profit_loss
-        new_object["taoshi_profit_loss_without_fee"] = taoshi_profit_loss_without_fee
-        new_object["order_level"] = len_order
-        new_object["average_entry_price"] = average_entry_price
+        for i in range(10):
+            time.sleep(1)
+            first_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee, uuid, hot_key, len_order, average_entry_price = get_taoshi_values(
+                position.trader_id,
+                position.trade_pair,
+                challenge=position.source,
+            )
+            # 10 times
+            if first_price != 0:
+                break
+
+        if first_price == 0:
+            push_to_redis_queue(
+                data=f"**Monitor Positions** While Opening Position - Price is Zero -- Trade is not Submitted",
+                queue_name=ERROR_QUEUE_NAME,
+            )
+            return
+
+        new_object = {
+            "order_id": position.order_id,
+            "operation_type": "open",
+            "status": "OPEN",
+            "old_status": position.status,
+            "hot_key": hot_key,
+            "uuid": uuid,
+            "initial_price": first_price,
+            "profit_loss": profit_loss,
+            "profit_loss_without_fee": profit_loss_without_fee,
+            "taoshi_profit_loss": taoshi_profit_loss,
+            "taoshi_profit_loss_without_fee": taoshi_profit_loss_without_fee,
+            "order_level": len_order,
+            "average_entry_price": average_entry_price,
+            "modified_by": "system",
+
+        }
+        if entry_price:
+            new_object["entry_price"] = current_price
+
         objects_to_be_updated.append(new_object)
     except Exception as e:
+        push_to_redis_queue(data=f"**Monitor Positions** While Opening Position - {e}", queue_name=ERROR_QUEUE_NAME)
         logger.error(f"An error occurred while opening position {position.position_id}: {e}")
 
 
 def close_position(position, profit_loss):
     global objects_to_be_updated
     try:
-        new_object = {
-            "order_id": position.order_id,
-            "close_time": str(datetime.utcnow()),
-            "profit_loss": profit_loss,
-            "operation_type": "close",
-            "status": "CLOSED",
-            "old_status": position.status,
-            "modified_by": "system",
-        }
-        if object_exists(objects_to_be_updated, new_object):
+        if object_exists(objects_to_be_updated, position.order_id):
             logger.info("Return back as Close Position already exists in queue!")
             return
+
         logger.info("Close Position Called!")
         close_submitted = asyncio.run(
             websocket_manager.submit_trade(position.trader_id, position.trade_pair, "FLAT", 1))
-        if close_submitted:
+        if not close_submitted:
+            return
+        for i in range(10):
+            time.sleep(1)
             close_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee, uuid, hot_key, len_order, average_entry_price = get_taoshi_values(
                 position.trader_id, position.trade_pair, position_uuid=position.uuid, challenge=position.source)
-            if close_price == 0:
-                return
-            new_object["close_price"] = close_price
-            new_object["profit_loss"] = profit_loss
-            new_object["profit_loss_without_fee"] = profit_loss_without_fee
-            new_object["taoshi_profit_loss"] = taoshi_profit_loss
-            new_object["taoshi_profit_loss_without_fee"] = taoshi_profit_loss_without_fee
-            new_object["order_level"] = len_order
-            new_object["average_entry_price"] = average_entry_price
-            objects_to_be_updated.append(new_object)
-            delete_hash_value(f"{position.trade_pair}-{position.trader_id}")
+            # 10 times
+            if close_price != 0 and position.order_level < len_order:
+                break
+
+        if close_price == 0:
+            push_to_redis_queue(
+                data=f"**Monitor Positions** While Closing Position - Price is Zero",
+                queue_name=ERROR_QUEUE_NAME,
+            )
+            return
+        objects_to_be_updated.append(
+            {
+                "order_id": position.order_id,
+                "close_time": str(datetime.utcnow()),
+                "operation_type": "close",
+                "status": "CLOSED",
+                "old_status": position.status,
+                "close_price": close_price,
+                "profit_loss": profit_loss,
+                "profit_loss_without_fee": profit_loss_without_fee,
+                "taoshi_profit_loss": taoshi_profit_loss,
+                "taoshi_profit_loss_without_fee": taoshi_profit_loss_without_fee,
+                "order_level": len_order,
+                "average_entry_price": average_entry_price,
+                "modified_by": "system",
+            }
+        )
     except Exception as e:
+        push_to_redis_queue(data=f"**Monitor Positions** While Closing Position - {e}", queue_name=ERROR_QUEUE_NAME)
         logger.error(f"An error occurred while closing position {position.position_id}: {e}")
 
 
@@ -179,6 +200,8 @@ def should_close_position(profit_loss, position):
         return close_result
 
     except Exception as e:
+        push_to_redis_queue(data=f"**Monitor Positions** While Determining if Position Should be Closed - {e}",
+                            queue_name=ERROR_QUEUE_NAME)
         logger.error(f"An error occurred while determining if position should be closed: {e}")
         return False
 
@@ -205,6 +228,8 @@ def update_position_profit(db, position, profit_loss, profit_loss_without_fee, t
         db.refresh(position)
         return position
     except Exception as e:
+        push_to_redis_queue(data=f"**Monitor Positions** While Updating Position Profit - {e}",
+                            queue_name=ERROR_QUEUE_NAME)
         logger.error(f"An error occurred while updating position {position.position_id}: {e}")
 
 
@@ -223,7 +248,7 @@ def update_position_prices(db, position, current_price):
             changed = True
 
         if not changed:
-            return
+            return position
 
         data = {
             "min_price": min_price,
@@ -237,6 +262,8 @@ def update_position_prices(db, position, current_price):
         db.refresh(position)
         return position
     except Exception as e:
+        push_to_redis_queue(data=f"**Monitor Positions** While Updating Position Prices - {e}",
+                            queue_name=ERROR_QUEUE_NAME)
         logger.error(f"An error occurred while updating position {position.position_id}: {e}")
 
 
@@ -257,7 +284,7 @@ def check_pending_trailing_position(position, current_price):
             (position.order_type == "SHORT" and current_price <= trailing_price)
     )
 
-    logger.info(f"Determining whether to open pending trailing position: {opened}")
+    logger.error(f"Determining whether to open pending trailing position: {opened}")
     if opened:
         open_position(position, current_price, entry_price=True)
 
@@ -270,7 +297,7 @@ def check_pending_position(position, current_price):
             (position.upward == 0 and current_price <= position.entry_price) or
             (position.upward == 1 and current_price >= position.entry_price)
     )
-    logger.info(f"Determining whether to open pending position: {opened}")
+    logger.error(f"Determining whether to open pending position: {opened}")
 
     if opened:
         open_position(position, current_price)
@@ -288,6 +315,8 @@ def check_open_position(db, position):
         position_uuid=position.uuid,
     )
     if price == 0:
+        push_to_redis_queue(data=f"**Monitor Positions** While Checking Open Position - Price is Zero",
+                            queue_name=ERROR_QUEUE_NAME)
         return False
 
     position = update_position_profit(db, position, profit_loss, profit_loss_without_fee, taoshi_profit_loss,
@@ -307,13 +336,13 @@ def monitor_position(db, position):
     """
     global objects_to_be_updated
     try:
+        logger.error(f"Current Pair: {position.trader_id}-{position.trade_pair}")
         # ---------------------------- OPENED POSITION ---------------------------------
         if position.status == "OPEN":
             return check_open_position(db, position)
 
         # ---------------------------- PENDING POSITION --------------------------------
         current_price = get_live_price(position.trade_pair)
-        logger.error(f"Current Price Pair: {position.trade_pair}")
         if not current_price:
             return
 
@@ -325,6 +354,7 @@ def monitor_position(db, position):
             check_pending_trailing_position(position, current_price)
 
     except Exception as e:
+        push_to_redis_queue(data=f"**Monitor Positions** While Monitoring Position - {e}", queue_name=ERROR_QUEUE_NAME)
         logger.error(f"An error occurred while monitoring position {position.position_id}: {e}")
 
 
@@ -345,6 +375,7 @@ def get_monitored_positions(db):
         logger.info(f"Retrieved {len(positions)} monitored positions")
         return positions
     except Exception as e:
+        push_to_redis_queue(data=f"**Monitor Positions** Database Error - {e}", queue_name=ERROR_QUEUE_NAME)
         logger.error(f"An error occurred while fetching monitored positions: {e}")
         return []
 
@@ -362,7 +393,7 @@ def monitor_positions_sync():
         if objects_to_be_updated and (current_time - last_flush_time) >= FLUSH_INTERVAL:
             logger.error(f"Going to Flush previous Objects!: {str(current_time - last_flush_time)}")
             last_flush_time = current_time
-            push_to_redis_queue(objects_to_be_updated)
+            push_to_redis_queue(json.dumps(objects_to_be_updated))
             objects_to_be_updated = []
 
         with TaskSessionLocal_() as db:
@@ -385,6 +416,7 @@ def monitor_positions_sync():
         logger.info("Finished monitor_positions_sync")
     except Exception as e:
         logger.error(f"An error occurred in monitor_positions_sync: {e}")
+        push_to_redis_queue(data=f"**Monitor Positions** Celery Task - {e}", queue_name=ERROR_QUEUE_NAME)
 
 
 @celery_app.task(name='src.tasks.position_monitor_sync.monitor_positions')

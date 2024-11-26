@@ -48,19 +48,19 @@ def set_live_price(key: str, value: dict):
 
 
 def push_to_redis_queue(data, queue_name=OPERATION_QUEUE_NAME):
-    redis_client.lpush(queue_name, json.dumps(data))
+    redis_client.lpush(queue_name, data)
 
 
 def get_queue_data(queue_name=OPERATION_QUEUE_NAME):
     return redis_client.lrange(queue_name, 0, -1)
 
 
-def get_queue_left_item(queue_name=OPERATION_QUEUE_NAME):
+def get_queue_right_item(queue_name=OPERATION_QUEUE_NAME):
     return redis_client.lindex(queue_name, -1)
 
 
-def pop_queue_right_item(queue_name=OPERATION_QUEUE_NAME):
-    redis_client.rpop(queue_name)
+def pop_queue_right_item(queue_name=OPERATION_QUEUE_NAME, count=1):
+    redis_client.rpop(queue_name, count=count)
 
 
 def delete_hash_value(key, hash_name=REDIS_LIVE_PRICES_TABLE):

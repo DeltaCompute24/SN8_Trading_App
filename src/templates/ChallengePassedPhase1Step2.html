@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Neuton:ital,wght@0,200;0,300;0,400;0,700;0,800;1,400&display=swap"
+        rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email</title>
+
+    <style>
+        /* common Styles Starts Here */
+        .main-container {
+            background-color: black;
+            width: 600px;
+            margin: 0% auto;
+        }
+
+        .main-table-section {
+            padding: 0px 32px;
+            background-image: url(https://trading-email-assets.s3.us-east-1.amazonaws.com/popcorn.png);
+            background-repeat: no-repeat;
+            background-position: right;
+            width: 100%;
+
+        }
+
+        .company-name {
+            font-family: "Neuton", serif;
+            font-size: 36.59px;
+            font-weight: 500;
+            line-height: 49.4px;
+            color: rgba(247, 246, 243, 1);
+            margin: 0px;
+            margin-left: 15px;
+
+        }
+
+        .text-secondary {
+            color: rgba(247, 244, 243, 1);
+        }
+
+        .text-primary {
+            color: rgba(234, 73, 39, 1);
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .background-primary {
+            background-color: rgba(234, 73, 39, 1);
+        }
+
+        h1 {
+            font-family: "Satoshi" , sans-serif;
+            font-size: 48px;
+            font-weight: 500;
+            line-height: 52.8px;
+            text-align: center;
+            margin: 0px;
+        }
+
+        h2 {
+            font-family: "Satoshi" , sans-serif;
+            font-size: 32px;
+            font-weight: 500;
+            line-height: 35.2px;
+        }
+
+        h5 {
+            font-family: "Satoshi" , sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            line-height: 27px;
+            margin: 0%;
+
+        }
+
+        h6 {
+            font-family: "Satoshi" , sans-serif;
+            font-size: 16.78px;
+            font-weight: 700;
+            line-height: 22.66px;
+            margin: 0%;
+
+        }
+
+        .pt-24px {
+            padding-top: 24px;
+        }
+
+        .pb-24px {
+            padding-bottom: 24px;
+        }
+
+
+
+        .custom-background-box {
+            width: 100%;
+            padding: 30px 20px;
+            border-radius: 10.19px;
+            border: 0.64px solid rgba(62, 62, 62, 1);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 99.99%, rgba(153, 153, 153, 0.04) 100%);
+            margin-top: 32px;
+        }
+
+        .name-section {
+            padding-top: 32px;
+            text-align: center;
+        }
+
+        .name-row .name-section .user-name {
+            margin-left: 15px;
+            font-family: "Neuton", serif;
+            font-size: 31.7px;
+            font-weight: 700;
+            line-height: 42.79px;
+            letter-spacing: -0.03em;
+            text-align: left;
+            text-underline-position: from-font;
+            text-decoration-skip-ink: none;
+            color: rgba(255, 255, 255, 1);
+
+        }
+
+        .divider-td {
+            padding-top: 12px;
+            padding-bottom: 12px;
+        }
+
+        .divider {
+
+            background-color: rgba(68, 68, 68, 1);
+            height: 1px;
+            width: 100%;
+        }
+
+        .discordImage {
+            margin: -4px;
+        }
+
+
+
+        .discord-section .discord-text {
+            font-family: "Roboto Mono" , sans-serif;
+            font-size: 16px;
+            font-weight: 300;
+            line-height: 21.1px;
+            text-align: center;
+            text-underline-position: from-font;
+            text-decoration-skip-ink: none;
+            margin-left: 8px;
+            position: relative;
+            top: -5px;
+
+        }
+
+
+
+        .footer-section {
+            margin-top: 32px;
+            border-top: 1px solid rgba(152, 151, 157, 1);
+            background-image: url(https://trading-email-assets.s3.us-east-1.amazonaws.com/footer-background.png);
+            background-repeat: no-repeat;
+            background-position: left bottom;
+
+
+        }
+
+        .footer {
+            text-align: center;
+            height: 153px;
+        }
+
+        .footer .footer-text {
+            font-family: "Roboto Mono" , sans-serif;
+            font-size: 16px;
+            font-weight: 300;
+            line-height: 21.1px;
+            text-align: center;
+            text-underline-position: from-font;
+            text-decoration-skip-ink: none;
+            color: rgba(247, 246, 243, 1);
+            display: block;
+            margin-top: 24px;
+
+        }
+
+
+        /* common Styles end Here */
+
+
+
+
+
+
+        table {
+            margin: 0% auto;
+        }
+
+        .header {
+            height: 80px;
+        }
+
+        .header .header-data {
+            text-align: center;
+            margin: 0% auto;
+        }
+
+
+        .welcome-row .heading {
+            padding: 40px 20px;
+            border-radius: 10.19px;
+            border: 0.64px solid rgba(62, 62, 62, 1)
+        }
+
+
+
+
+        .button-row {
+            text-align: center;
+        }
+
+        .button-row td {
+            padding-top: 20px;
+        }
+
+        .button-row .delta-button {
+            width: 232px;
+            height: 58px;
+            background: rgba(234, 73, 39, 1);
+            font-family: "Roboto Mono" , sans-serif;
+            font-size: 20px;
+            font-weight: 300;
+            line-height: 26.38px;
+            text-underline-position: from-font;
+            text-decoration-skip-ink: none;
+            color: rgba(255, 255, 255, 1);
+            outline: none;
+            border: none;
+
+        }
+
+        .button-row-Share .delta-button {
+            width: 100%;
+
+        }
+
+
+        .info-row .info-row-text {
+            padding-top: 24px;
+            font-family: "Neuton", serif;
+            font-size: 20px;
+            font-weight: 500;
+            line-height: 27px;
+            text-align: left;
+            text-underline-position: from-font;
+            text-decoration-skip-ink: none;
+            color: rgba(247, 246, 243, 1);
+
+        }
+
+
+
+        .sign-section {
+            margin-top: 32px;
+            width: 100%;
+        }
+
+        .sign-section .sign-div {
+            text-align: end;
+            position: relative;
+            top: 5px;
+        }
+
+        .sign-section .sign-div .sign-image {
+            border-bottom: 0.81px solid rgba(247, 246, 243, 1)
+        }
+
+        .sign-section .sender-info {
+            font-family: "Satoshi" , sans-serif;
+            font-size: 20px;
+            font-weight: 500;
+            line-height: 22px;
+            text-align: left;
+            text-underline-position: from-font;
+            text-decoration-skip-ink: none;
+            color: rgba(247, 246, 243, 1);
+
+        }
+
+
+        .custom-unorder-list {
+            list-style-image: url(https://trading-email-assets.s3.us-east-1.amazonaws.com/star-icon.png);
+        }
+
+        .goodluck-text {
+            font-family: "Satoshi" , sans-serif;
+            font-size: 20px;
+            font-weight: 500;
+            line-height: 22px;
+            text-align: left;
+            text-underline-position: from-font;
+            text-decoration-skip-ink: none;
+            color: rgba(247, 246, 243, 1);
+
+        }
+
+        .order-list-items li {
+            font-family: "Satoshi" , sans-serif;
+            font-size: 20px;
+            font-weight: 400;
+            line-height: 27px;
+            text-align: left;
+            text-underline-position: from-font;
+            text-decoration-skip-ink: none;
+
+        }
+
+        .logo-image {
+            margin: -10px;
+        }
+
+        @media only screen and (max-width: 600px) {
+            .main-table-section {
+                padding: 0px 16px !important;
+            }
+
+            .company-name {
+                font-size: 29px !important;
+            }
+
+            .welcome-row .heading {
+                font-size: 32px !important;
+                line-height: 39.6px !important;
+            }
+
+            .name-row .name-section .user-name {
+                font-size: 20px !important;
+                line-height: 29px !important;
+            }
+
+            h1 {
+                font-size: 30px !important;
+                font-weight: 500 !important;
+                text-align: center !important;
+            }
+
+            h2 {
+                font-size: 20px !important;
+                line-height: 27px !important;
+            }
+        }
+    </style>
+
+</head>
+
+<body>
+    <div class="main-container">
+        <table class="main-table-section">
+            <tr>
+                <td>
+                    <h5 class="text-secondary">Subject:</h5>
+                </td>
+            </tr>
+            <tr class="welcome-row">
+
+                <td colspan="1" class="heading">
+                    <h1 class="text-primary"> 🎉 Congratulations on <br /> Completing Phase 1! </h1>
+
+                </td>
+            </tr>
+            <tr class="header">
+                <td colspan="1" class="header-data">
+                    <img class="logo-image" src="https://trading-email-assets.s3.us-east-1.amazonaws.com/logo.png" alt="logo" />
+                    <span class="company-name">Delta Prop Shop</span>
+                </td>
+            </tr>
+            <tr class="">
+
+                <td colspan="1" class="heading">
+                    <h1 class="text-primary">Here are your Phase 2 <br />
+                        Challenge Details</h1>
+
+                </td>
+            </tr>
+            <tr class="button-row">
+                <td>
+                    <button class="delta-button" type="button"> Delta Prop Shop</button>
+                </td>
+            </tr>
+            <tr class="name-row">
+                <td class="name-section">
+                    <img src="https://trading-email-assets.s3.us-east-1.amazonaws.com/starIcon.png" alt="logo" />
+                    <span class="user-name">Hi, {{ name }}</span>
+                </td>
+            </tr>
+
+
+            <tr class="">
+                <td>
+                    <table class="custom-background-box">
+                        <tr>
+                            <td colspan="2" class="text-center pb-24px ">
+                                <h5 class="text-secondary text-center">Challenge Phase 2 Details</h5>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-center">
+                                <h6 class="text-secondary ">Account ID</h6>
+                            </td>
+                            <td class="text-center">
+                                <h6 class="text-primary">{{ trader_id }}</h6>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" class="divider-td">
+                                <div class="divider"></div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="text-center">
+                                <h6 class="text-secondary">Platform</h6>
+                            </td>
+                            <td class="text-center">
+                                <h6 class="text-primary">DeltaTradePro</h6>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+
+            <tr class="">
+                <td>
+                    <table class="custom-background-box">
+                        <tr>
+                            <td colspan="2" class="text-center pb-24px ">
+                                <h5 class="text-secondary text-center">Phase 2 Challenge Criteria</h5>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="">
+                                <ul class="custom-unorder-list">
+                                    <li>
+                                        <span class="text-secondary ">2% Return.</span>
+                                    </li>
+                                </ul>
+                            </td>
+                            <td>
+                                <ul class="custom-unorder-list">
+                                    <li>
+                                        <span class="text-secondary ">5% Max Drawdown.</span>
+                                    </li>
+                                </ul>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <ul class="custom-unorder-list">
+                                    <li>
+                                        <span class="text-secondary ">No 24hr period unrealized gain can surpass 40% of the total.</span>
+                                    </li>
+                                </ul>
+                            </td>
+                            <td>
+                                <ul class="custom-unorder-list">
+                                    <li>
+                                        <span class="text-secondary ">No single position returns can account for more than 35% of overall returns.</span>
+
+                                    </li>
+                                </ul>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+
+            <tr>
+                <td class="pt-24px">
+                    <h5 class="text-secondary text-center">
+                        How to begin?
+                    </h5>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <ol class="text-secondary order-list-items">
+                        <li>Sign in to your Delta Prop Shop account.</li>
+                        <li>Navigate to the Accounts page and identify your Active Challenge with the challenge Account
+                            ID listed above.</li>
+                        <li> Click the Trading Dashboard link to begin trading.</li>
+                        <li>Check the Metrics link to see your progress towards passing the Challenge.</li>
+                        <li>Join the Discord server for more information and FAQ.</li>
+                    </ol>
+                </td>
+            </tr>
+
+            <tr class="button-row-Share button-row ">
+                <td>
+                    <button class="delta-button" type="button"> Share Your Certificates Socially</button>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <table class="discord-section custom-background-box">
+                        <tr>
+                            <td>
+                                <img class="discordImage" src="https://trading-email-assets.s3.us-east-1.amazonaws.com/discordIcon.png" alt="popcorn" />
+                                <span class="discord-text text-secondary">Discord Server</span>
+                            </td>
+                        </tr>
+
+                    </table>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <table class="sign-section">
+                        <tr>
+                            <td>
+                                <span class="sender-info">Sincerely,</br>
+                                    Whit Dhamer</br>
+                                    CEO and Founder</span>
+                            </td>
+                            <td class="sign-div">
+                                <img class="sign-image" src="https://trading-email-assets.s3.us-east-1.amazonaws.com/sign.png" alt="sign" />
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+
+        <div class="footer-section">
+            <table>
+                <tr class="footer">
+                    <td>
+                        <img src="https://trading-email-assets.s3.us-east-1.amazonaws.com/logo.png" />
+                        <span class="footer-text">@Delta Prop Shop 2024</span>
+                    </td>
+
+                </tr>
+            </table>
+        </div>
+    </div>
+</body>
+
+</html>
