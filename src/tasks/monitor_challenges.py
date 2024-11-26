@@ -1,13 +1,12 @@
 import logging
 from datetime import datetime
-from tempfile import template
 
 import requests
 from sqlalchemy.future import select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import and_
 
-from src.config import CHECKPOINT_URL, STATISTICS_URL, STATISTICS_TOKEN
+from src.config import CHECKPOINT_URL, NEW_POSITIONS_URL
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.models.challenge import Challenge
@@ -108,7 +107,7 @@ def monitor_testnet():
                     }
 
                     # if _response.status_code == 200:
-                    #     c_response = challenge.response
+                    #     c_response = challenge.response or {}
                     #     c_response["main_net_response"] = _response.json()
                     #     c_data = {
                     #         **c_data,
@@ -122,10 +121,8 @@ def monitor_testnet():
                     #     content = f"{content} Your testnet key is also converted to hot_key!"
                     #     send_certificate_email(email, name, challenge)
 
-                    subject = "Challenge Passed"
-                    content = "Congratulations! You have entered to Phase 2 from Phase 1!"
+                    subject = "Congratulations on Completing Phase 1!"
                     template_name = "ChallengePassedPhase1Step2.html"
-                    update_challenge(db, challenge, c_data)
                 elif draw_down <= -5:  # 5%
                     changed = True
                     c_data = {
@@ -133,13 +130,12 @@ def monitor_testnet():
                         "status": "Failed",
                         "active": "0",
                     }
-                    subject = "Challenge Failed"
-                    content = "Unfortunately! You have Failed!"
-                    update_challenge(db, challenge, c_data)
+                    subject = "Phase 1 Challenge Failed"
                     template_name = "ChallengeFailedPhase1.html"
 
-                if email and changed:
-                    send_mail(email, subject=subject, content=content, template_name=template_name, context=context)
+                if changed:
+                    update_challenge(db, challenge, c_data)
+                    send_mail(email, subject=subject, template_name=template_name, context=context)
 
         logger.info("Finished monitor_challenges task")
     except Exception as e:
@@ -149,38 +145,58 @@ def monitor_testnet():
 
 def monitor_mainnet():
     try:
-        response = call_main_net(url=STATISTICS_URL, token=STATISTICS_TOKEN)
+        response = call_main_net(url=NEW_POSITIONS_URL)
         if not response:
             return
-        data = {}
-        for item in response["data"]:
-            data[item["hotkey"]] = item["challengeperiod"]["status"]
+        success = response["challengeperiod"]["success"]
+        eliminations = {}
+        for elimination in response["eliminations"]:
+            eliminations[elimination["hotkey"]] = elimination
 
         with TaskSessionLocal_() as db:
             for challenge in get_monitored_challenges(db, challenge="main"):
                 hot_key = challenge.hot_key
-                status = data.get(hot_key)
+                elimination = eliminations.get(hot_key)
+                changed = False
 
-                if not status or status != "success":
-                    continue
+                if success.get(hot_key):
+                    changed = True
+                    c_data = {
+                        "status": "Passed",
+                        "active": "0",
+                        "pass_the_main_net_challenge": datetime.utcnow(),
+                    }
+                    if challenge.phase == 1:
+                        template_name = "ChallengePassedPhase1Step1.html"
+                        subject = "Congratulations on Completing Phase 1!"
+                    else:
+                        template_name = "ChallengePassedPhase2.html"
+                        subject = "Congratulations on Completing Phase 2!"
+                elif elimination:
+                    changed = True
+                    c_response = challenge.response or {}
+                    c_response["failed_response"] = elimination
+                    c_data = {
+                        "status": "Failed",
+                        "active": "0",
+                        "response": c_response,
+                        "draw_down": elimination.get("dd"),
+                    }
+                    if challenge.phase == 1:
+                        template_name = "ChallengeFailedPhase1.html"
+                        subject = "Phase 1 Challenge Failed"
+                    else:
+                        template_name = "ChallengeFailedPhase2.html"
+                        subject = "Phase 2 Challenge Failed"
 
-                c_data = {
-                    "status": "Passed",
-                    "active": "0",
-                    "pass_the_main_net_challenge": datetime.utcnow(),
-                }
-                update_challenge(db, challenge, c_data)
-                if challenge.phase == 1:
-                    template_name = "ChallengePassedPhase1Step1.html"
-                else:
-                    template_name = "ChallengePassedPhase2.html"
-                send_mail(
-                    challenge.user.email,
-                    subject="Mainnet Challenge Passed",
-                    content="Congratulations! You have passed the mainnet challenge!",
-                    template_name=template_name,
-                    context={'name': challenge.user.name, 'date': datetime.utcnow()}
-                )
+                if changed:
+                    update_challenge(db, challenge, c_data)
+                    send_mail(
+                        challenge.user.email,
+                        subject=subject,
+                        template_name=template_name,
+                        context={'name': challenge.user.name, 'date': datetime.utcnow()}
+                    )
 
     except Exception as e:
         push_to_redis_queue(data=f"**Monitor Challenges** Mainnet Monitoring - {e}", queue_name=ERROR_QUEUE_NAME)
