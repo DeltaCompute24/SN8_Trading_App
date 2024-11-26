@@ -122,8 +122,7 @@ def monitor_testnet():
                     #     content = f"{content} Your testnet key is also converted to hot_key!"
                     #     send_certificate_email(email, name, challenge)
 
-                    subject = "Challenge Passed"
-                    content = "Congratulations! You have entered to Phase 2 from Phase 1!"
+                    subject = "Congratulations on Completing Phase 1!"
                     template_name = "ChallengePassedPhase1Step2.html"
                     update_challenge(db, challenge, c_data)
                 elif draw_down <= -5:  # 5%
@@ -133,13 +132,12 @@ def monitor_testnet():
                         "status": "Failed",
                         "active": "0",
                     }
-                    subject = "Challenge Failed"
-                    content = "Unfortunately! You have Failed!"
+                    subject = "Phase 1Challenge Failed"
                     update_challenge(db, challenge, c_data)
                     template_name = "ChallengeFailedPhase1.html"
 
                 if email and changed:
-                    send_mail(email, subject=subject, content=content, template_name=template_name, context=context)
+                    send_mail(email, subject=subject, template_name=template_name, context=context)
 
         logger.info("Finished monitor_challenges task")
     except Exception as e:
@@ -172,12 +170,13 @@ def monitor_mainnet():
                 update_challenge(db, challenge, c_data)
                 if challenge.phase == 1:
                     template_name = "ChallengePassedPhase1Step1.html"
+                    subject = "Congratulations on Completing Phase 1!"
                 else:
                     template_name = "ChallengePassedPhase2.html"
+                    subject = "Congratulations on Completing Phase 2!"
                 send_mail(
                     challenge.user.email,
-                    subject="Mainnet Challenge Passed",
-                    content="Congratulations! You have passed the mainnet challenge!",
+                    subject=subject,
                     template_name=template_name,
                     context={'name': challenge.user.name, 'date': datetime.utcnow()}
                 )
