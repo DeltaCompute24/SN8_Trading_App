@@ -131,7 +131,7 @@ def register_and_update_challenge(challenge_id: int):
                     challenge.register_on_main_net = datetime.utcnow()
                     send_mail(
                         email,
-                        subject="Purchased Mainnet Challenge",
+                        subject="Step 1 Challenge Details",
                         template_name="ChallengeDetailStep1.html",
                         context=context,
                     )
@@ -139,7 +139,7 @@ def register_and_update_challenge(challenge_id: int):
                     challenge.register_on_test_net = datetime.utcnow()
                     send_mail(
                         email,
-                        subject="Purchased Testnet Challenge",
+                        subject="Step 2 Challenge Details",
                         template_name="ChallengeDetailStep2.html",
                         context=context,
                     )
