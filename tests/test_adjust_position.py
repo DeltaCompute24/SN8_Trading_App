@@ -22,18 +22,18 @@ class TestAdjustPosition:
                 "detail": "No open position found for this trade pair and trader"}
 
     async def test_different_leverages(self, async_client, transaction_payload, transaction_object):
+        transaction_payload["leverage"] = 0.01
         with (
-            patch(target="src.api.routes.adjust_position.get_open_position",
-                  new=AsyncMock(return_value=transaction_object)),
+            patch(target="src.api.routes.adjust_position.get_open_position", new=AsyncMock(return_value=transaction_object)),
             patch(target="src.api.routes.adjust_position.websocket_manager.submit_trade", return_value=False)
         ):
             response = await async_client.post(url, json=transaction_payload)
             # assert response
             assert response.status_code == 500
-            assert response.json() == {
-                "detail": "500: Failed to submit adjustment"}
+            assert response.json() == {"detail": "500: Failed to submit adjustment"}
 
     async def test_first_price_is_zero(self, async_client, transaction_payload, transaction_object):
+        transaction_payload["leverage"] = 0.01
         with (
             patch(target="src.api.routes.adjust_position.get_open_position",
                   new=AsyncMock(return_value=transaction_object)),
@@ -49,12 +49,14 @@ class TestAdjustPosition:
             assert src.api.routes.adjust_position.get_taoshi_values.call_count == 12
 
     async def test_successful(self, async_client, transaction_payload, transaction_object):
+        transaction_payload["leverage"] = 0.01
         adjust_response = {
             "message": "Position adjusted successfully",
             "data": {
                 "position_id": transaction_object.position_id,
                 "trader_id": transaction_object.trader_id,
                 "trade_pair": transaction_object.trade_pair,
+                "leverage": transaction_object.leverage,
                 "cumulative_leverage": transaction_object.cumulative_leverage,
                 "cumulative_order_type": transaction_object.cumulative_order_type,
                 "cumulative_stop_loss": transaction_object.cumulative_stop_loss,
@@ -83,13 +85,13 @@ class TestAdjustPosition:
             assert src.api.routes.adjust_position.get_taoshi_values.call_count == 1
 
     async def test_same_leverages(self, async_client, transaction_payload, transaction_object):
-        transaction_payload["leverage"] = 0.1
         adjust_response = {
             "message": "Position adjusted successfully",
             "data": {
                 "position_id": transaction_object.position_id,
                 "trader_id": transaction_object.trader_id,
                 "trade_pair": transaction_object.trade_pair,
+                "leverage": transaction_object.leverage,
                 "cumulative_leverage": transaction_object.cumulative_leverage,
                 "cumulative_order_type": transaction_object.cumulative_order_type,
                 "cumulative_stop_loss": transaction_object.cumulative_stop_loss,

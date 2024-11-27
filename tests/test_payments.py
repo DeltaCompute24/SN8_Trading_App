@@ -91,7 +91,7 @@ class TestPayment:
 
             assert response.status_code == 200
             assert response.json() == payment_response
-            src.services.payment_service.register_and_update_challenge.assert_called_once_with(1, "main", "email")
+            src.services.payment_service.register_and_update_challenge.assert_called_once_with(1)
 
     # -------------------------------- Test Get Payment -----------------------------------
     def test_get_payment_not_found(self, client):

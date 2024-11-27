@@ -202,6 +202,7 @@ def challenge_object():
         register_on_main_net=None,
         pass_the_challenge=None,
         pass_the_main_net_challenge=None,
+        challenge_name="",
         created_at="2021-08-01 00:00:00",
         updated_at="2021-08-01 00:00:00",
     )
@@ -228,6 +229,7 @@ def payment_read(payment_object):
         "register_on_main_net": None,
         "pass_the_challenge": None,
         "pass_the_main_net_challenge": None,
+        "challenge_name": "",
         "created_at": "2021-08-01T00:00:00",
         "updated_at": "2021-08-01T00:00:00",
     }
