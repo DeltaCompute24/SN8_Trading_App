@@ -1,16 +1,16 @@
 import logging
 from datetime import datetime
 
-import requests
+import asyncio
 from sqlalchemy.future import select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import and_
 
-from src.config import CHECKPOINT_URL, NEW_POSITIONS_URL
+from src.config import NEW_POSITIONS_URL
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.models.challenge import Challenge
-from src.services.api_service import call_main_net
+from src.services.api_service import call_main_net, testnet_websocket
 from src.services.email_service import send_mail
 from src.services.s3_services import send_certificate_email
 from src.utils.constants import ERROR_QUEUE_NAME
@@ -52,11 +52,7 @@ def update_challenge(db: Session, challenge, data):
 
 def monitor_testnet():
     try:
-        response = requests.get(CHECKPOINT_URL)
-        if response.status_code != 200:
-            return
-
-        data = response.json()
+        data = asyncio.run(testnet_websocket(monitor=True))
 
         if not data:
             return

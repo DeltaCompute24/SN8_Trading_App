@@ -1,3 +1,4 @@
+import asyncio
 from typing import Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -9,7 +10,7 @@ from sqlalchemy.sql import and_
 from src.database import get_db
 from src.models.transaction import Transaction
 from src.schemas.transaction import Transaction as TransactionSchema
-from src.services.api_service import call_main_net, call_checkpoint_api
+from src.services.api_service import call_main_net, testnet_websocket
 from src.services.user_service import get_challenge, get_hot_key
 from src.utils.logging import setup_logging
 
@@ -33,7 +34,7 @@ async def get_positions(
         logger.error("A status can only be open, pending and closed")
         raise HTTPException(status_code=400, detail="A status can only be open, pending and closed!")
 
-    source = get_challenge(trader_id, source=True) or "main"
+    source = get_challenge(trader_id, source=True)
 
     # Base query
     query = select(Transaction)
@@ -60,8 +61,11 @@ async def get_positions(
 
     if source == "main":
         data = call_main_net()
+    elif source == "test":
+        data = await testnet_websocket()
     else:
-        data = call_checkpoint_api()
+        test_net = await testnet_websocket()
+        data = call_main_net() | test_net
 
     for position in positions:
         position.fee = abs((position.profit_loss_without_fee or 0.0) - (position.profit_loss or 0.0))

@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime
 
 from sqlalchemy.future import select
@@ -7,9 +8,9 @@ from sqlalchemy.sql import func
 
 from src.models.transaction import Transaction
 from src.models.users import Users
-from src.services.api_service import call_main_net, call_checkpoint_api
+from src.services.api_service import call_main_net, testnet_websocket
 from src.services.user_service import get_challenge_for_hotkey
-from src.validations.position import forex_polygon_pairs, indices_pairs, crypto_polygon_pairs
+from src.utils.constants import forex_pairs, indices_pairs, crypto_pairs
 
 
 def convert_timestamp_to_datetime(timestamp_ms):
@@ -25,9 +26,9 @@ def get_position_id_or_trade_order(db, trader_id):
 
 
 def get_asset_type(trade_pair):
-    if trade_pair in crypto_polygon_pairs:
+    if trade_pair in crypto_pairs:
         return "crypto"
-    if trade_pair in forex_polygon_pairs:
+    if trade_pair in forex_pairs:
         return "forex"
     if trade_pair in indices_pairs:
         return "indices"
@@ -179,7 +180,7 @@ def process_data(db: Session, data, source):
 
 def populate_transactions(db: Session):
     main_net_data = call_main_net()
-    test_net_data = call_checkpoint_api()
+    test_net_data = asyncio.run(testnet_websocket())
 
     process_data(db, main_net_data, source="main")
     process_data(db, test_net_data, source="test")
