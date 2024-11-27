@@ -139,24 +139,24 @@ def close_position(position, profit_loss):
         logger.error(f"An error occurred while closing position {position.position_id}: {e}")
 
 
-def check_take_profit(take_profit, profit_loss) -> bool:
+def check_take_profit(trailing, take_profit, profit_loss) -> bool:
     """
     Position should be closed if it reaches the expected profit
     """
     # if profit_loss < 0 it means there is no profit so return False
-    if profit_loss < 0:
+    if trailing or profit_loss < 0:
         return False
     if take_profit is not None and take_profit != 0 and profit_loss >= take_profit:
         return True
     return False
 
 
-def check_stop_loss(stop_loss, profit_loss) -> bool:
+def check_stop_loss(trailing, stop_loss, profit_loss) -> bool:
     """
     Position should be closed if it reaches the expected loss
     """
     # if profit_loss > 0 it means there is no loss so return False
-    if profit_loss > 0:
+    if trailing or profit_loss > 0:
         return False
 
     if stop_loss is not None and stop_loss != 0 and profit_loss <= -stop_loss:
@@ -191,8 +191,8 @@ def should_close_position(profit_loss, position):
 
         close_result = (
                 check_trailing_stop_loss(trailing, stop_loss, max_profit, profit_loss) or
-                check_stop_loss(stop_loss, profit_loss) or
-                check_take_profit(take_profit, profit_loss)
+                check_stop_loss(trailing, stop_loss, profit_loss) or
+                check_take_profit(trailing, take_profit, profit_loss)
         )
 
         print(f"Determining whether to close position: {close_result}")
