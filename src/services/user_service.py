@@ -73,7 +73,7 @@ def create_firebase_user(db: Session, firebase_id: str, name: str = "", email: s
             subject="Welcome to Delta Prop Shop",
             template_name="WelcomeEmail.html",
             context={
-                "name": name,
+                "name": name or "User",
             }
         )
     else:

@@ -27,7 +27,7 @@ def send_mail(
         subject,
         content="",
         attachment=None,
-        template_name='EmailTemplate.html',
+        template_name='PaymentConfirmed.html',
         context=None,
 ):
     """

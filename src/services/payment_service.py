@@ -97,7 +97,12 @@ def create_payment(db: Session, payment_data: PaymentCreate):
 
     new_payment = create_payment_entry(db, payment_data, new_challenge)
     if firebase_user and firebase_user.email:
-        send_mail_in_thread(firebase_user.email, "Payment Confirmed", "Your payment is confirmed!")
+        first_name = firebase_user.name or "User"
+        send_mail_in_thread(
+            receiver=firebase_user.email,
+            subject=f"{first_name}, Payment Confirmed",
+            content="",
+        )
     return new_payment
 
 
@@ -124,7 +129,7 @@ def register_and_update_challenge(challenge_id: int):
                 challenge.message = "Challenge Updated Successfully!"
                 challenge.hotkey_status = "Success"
                 context = {
-                    "name": challenge.user.name,
+                    "name": challenge.user.name or "User",
                     "trader_id": challenge.trader_id,
                 }
                 if network == "main":
