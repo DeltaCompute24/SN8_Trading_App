@@ -213,3 +213,4 @@ def monitor_challenges():
     monitor_testnet()
     # mainnet challenges
     monitor_mainnet()
+
