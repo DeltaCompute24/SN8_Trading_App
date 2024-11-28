@@ -49,3 +49,9 @@ celery_app.conf.update(
 celery_app.autodiscover_tasks(['src.tasks'])
 
 # Ensure tasks are loaded
+import src.tasks.position_monitor_sync
+import src.tasks.redis_listener
+import src.tasks.monitor_miner_positions
+import src.tasks.monitor_mainnet_challenges
+import src.tasks.send_notification
+import src.tasks.testnet_validator
