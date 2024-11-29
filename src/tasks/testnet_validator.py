@@ -6,8 +6,8 @@ from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.services.api_service import testnet_websocket
 from src.services.email_service import send_mail
-from src.tasks.monitor_miner_positions import populate_redis_positions
 from src.tasks.monitor_mainnet_challenges import get_monitored_challenges, update_challenge
+from src.tasks.monitor_miner_positions import populate_redis_positions
 from src.utils.constants import ERROR_QUEUE_NAME
 from src.utils.redis_manager import push_to_redis_queue
 
@@ -71,7 +71,6 @@ def monitor_testnet_challenges(positions, perf_ledgers):
                     #         "register_on_main_net": datetime.utcnow(),
                     #     }
                     #     content = f"{content} Your testnet key is also converted to hot_key!"
-                    #     send_certificate_email(email, name, challenge)
 
                     subject = "Congratulations on Completing Phase 1!"
                     template_name = "ChallengePassedPhase1Step2.html"
@@ -91,7 +90,8 @@ def monitor_testnet_challenges(positions, perf_ledgers):
 
         logger.info("Finished monitor_challenges task")
     except Exception as e:
-        push_to_redis_queue(data=f"**Monitor Testnet Challenges** Testnet Monitoring - {e}", queue_name=ERROR_QUEUE_NAME)
+        push_to_redis_queue(data=f"**Monitor Testnet Challenges** Testnet Monitoring - {e}",
+                            queue_name=ERROR_QUEUE_NAME)
         logger.error(f"Error in monitor_challenges task testnet - {e}")
 
 

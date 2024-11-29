@@ -5,7 +5,7 @@ from datetime import datetime
 import boto3
 from botocore.exceptions import NoCredentialsError, PartialCredentialsError
 from fastapi import APIRouter, HTTPException
-# from weasyprint import HTML
+from weasyprint import HTML
 
 from src.config import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, BUCKET_NAME
 from src.services.email_service import render_to_string, send_mail
@@ -40,12 +40,12 @@ def upload_certificate_to_s3(certificate_name, name, phase):
     """
     # Certificate does not exist, generate a new one
     date = datetime.today().strftime("%b %d, %Y")
-    rendered_html = render_to_string(template_name="ChallengeCertificate.html",
-                                     context={"phase_number": phase, "name": name, "date": date})
+    rendered_html = render_to_string(template_name="CongratulationsCertificate.html",
+                                     context={"phase": phase, "name": name, "date": date})
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_pdf:
         tmp_pdf_path = tmp_pdf.name
-        # HTML(string=rendered_html).write_pdf(tmp_pdf_path)
+        HTML(string=rendered_html).write_pdf(tmp_pdf_path)
 
         # Upload the generated PDF to S3
         try:
@@ -60,12 +60,9 @@ def get_certificate(certificate_name, name, phase):
     Get the certificate from S3 if it exists and return the path to the downloaded certificate
     """
     tmp_pdf_path = get_certificate_from_s3(certificate_name)
-    if tmp_pdf_path:
-        file_message = "Certificate already exists in S3, and was downloaded for email."
-    else:
+    if not tmp_pdf_path:
         tmp_pdf_path = upload_certificate_to_s3(certificate_name, name, phase)
-        file_message = "Certificate created and uploaded to S3."
-    return tmp_pdf_path, file_message
+    return tmp_pdf_path
 
 
 def send_certificate_email(email, name, data):
@@ -73,11 +70,11 @@ def send_certificate_email(email, name, data):
     Send the certificate email to the user
     """
     certificate_name = f"{data.hot_key}/{data.phase}/{data.step}/certificate.pdf"
-    tmp_pdf_path, file_message = get_certificate(certificate_name, name, data.phase)
+    tmp_pdf_path = get_certificate(certificate_name, name, data.phase)
 
     # Define the email subject, body, and recipient details
-    subject = f"Your Phase {data.phase} Certificate"
-    body = f"{file_message} Please find the certificate attached."
+    subject = f"Phase {data.phase} Certificate"
+    body = "You have successfully Passed. Please find the certificate attached."
 
     # Send the email with the PDF attachment
     try:
@@ -85,6 +82,7 @@ def send_certificate_email(email, name, data):
             receiver=email,
             subject=subject,
             content=body,
+            template_name="",
             attachment={"path": tmp_pdf_path, "name": certificate_name},
         )
     except Exception as e:
@@ -93,5 +91,3 @@ def send_certificate_email(email, name, data):
         # Clean up the temporary PDF file
         if tmp_pdf_path and os.path.exists(tmp_pdf_path):
             os.remove(tmp_pdf_path)
-
-    return file_message

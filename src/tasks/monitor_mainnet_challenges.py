@@ -11,6 +11,7 @@ from src.database_tasks import TaskSessionLocal_
 from src.models.challenge import Challenge
 from src.services.api_service import call_main_net
 from src.services.email_service import send_mail
+from src.services.s3_services import send_certificate_email
 from src.utils.constants import ERROR_QUEUE_NAME
 from src.utils.redis_manager import push_to_redis_queue
 
@@ -80,6 +81,7 @@ def monitor_mainnet_challenges():
                     else:
                         template_name = "ChallengePassedPhase2.html"
                         subject = "Congratulations on Completing Phase 2!"
+                    send_certificate_email(challenge.user.email, challenge.user.name, challenge)
                 elif elimination:
                     changed = True
                     c_response = challenge.response or {}

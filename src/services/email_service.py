@@ -49,11 +49,12 @@ def send_mail(
         message['Subject'] = subject
         message["Bcc"] = EMAIL_HOST_USER
 
-        # Attach the email body
-        if not context:
-            context = {'email': receiver, 'text': content}
-        html_content = render_to_string(template_name=template_name, context=context)
-        message.attach(MIMEText(html_content, 'html'))  # HTML version
+        # Attach the template body
+        if template_name:
+            if not context:
+                context = {'email': receiver, 'text': content}
+            html_content = render_to_string(template_name=template_name, context=context)
+            message.attach(MIMEText(html_content, 'html'))  # HTML version
 
         # Attach the PDF file
         if attachment:
