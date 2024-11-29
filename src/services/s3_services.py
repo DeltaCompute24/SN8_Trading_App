@@ -65,13 +65,15 @@ def get_certificate(certificate_name, name, phase):
     return tmp_pdf_path
 
 
-def send_certificate_email(email, name, data):
+def send_certificate_email(email, name, data, celery_task=False):
     """
     Send the certificate email to the user
     """
     certificate_name = f"{data.hot_key}/{data.phase}/{data.step}/certificate.pdf"
     tmp_pdf_path = get_certificate(certificate_name, name, data.phase)
-
+    attachment = {"path": tmp_pdf_path, "name": "certificate.pdf"},
+    if celery_task:
+        return attachment
     # Define the email subject, body, and recipient details
     subject = f"Phase {data.phase} Certificate"
     body = "You have successfully Passed. Please find the certificate attached."
@@ -83,7 +85,7 @@ def send_certificate_email(email, name, data):
             subject=subject,
             content=body,
             template_name="",
-            attachment={"path": tmp_pdf_path, "name": certificate_name},
+            attachment=attachment,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error sending email: {str(e)}")
