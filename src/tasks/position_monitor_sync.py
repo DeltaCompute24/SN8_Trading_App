@@ -37,10 +37,6 @@ def object_exists(obj_list, new_obj_id):
 def open_position(position, current_price, entry_price=False):
     global objects_to_be_updated
     try:
-        if object_exists(objects_to_be_updated, position.order_id):
-            logger.info("Return back as Open Position already exists in queue!")
-            return
-
         logger.info("Open Position Called!")
         open_submitted = asyncio.run(
             websocket_manager.submit_trade(position.trader_id, position.trade_pair, position.order_type,
@@ -97,10 +93,6 @@ def open_position(position, current_price, entry_price=False):
 def close_position(position, profit_loss):
     global objects_to_be_updated
     try:
-        if object_exists(objects_to_be_updated, position.order_id):
-            logger.info("Return back as Close Position already exists in queue!")
-            return
-
         logger.info("Close Position Called!")
         close_submitted = asyncio.run(
             websocket_manager.submit_trade(position.trader_id, position.trade_pair, "FLAT", 1))
@@ -109,7 +101,11 @@ def close_position(position, profit_loss):
         for i in range(10):
             time.sleep(1)
             close_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee, uuid, hot_key, len_order, average_entry_price = get_taoshi_values(
-                position.trader_id, position.trade_pair, position_uuid=position.uuid, challenge=position.source)
+                position.trader_id,
+                position.trade_pair,
+                position_uuid=position.uuid,
+                challenge=position.source
+            )
             # 10 times
             if close_price != 0 and position.order_level < len_order:
                 break
@@ -348,6 +344,9 @@ def monitor_position(db, position):
     if status is PENDING then check if it meets the criteria to OPEN the position
     """
     global objects_to_be_updated
+    if object_exists(objects_to_be_updated, position.order_id):
+        logger.info("Return back as Close Position already exists in queue!")
+        return
     try:
         logger.error(f"Current Pair: {position.trader_id}-{position.trade_pair}")
         # ---------------------------- OPENED POSITION ---------------------------------
