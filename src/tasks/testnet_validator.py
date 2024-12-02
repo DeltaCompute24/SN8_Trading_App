@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from datetime import datetime
 
@@ -6,8 +5,8 @@ from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.services.api_service import testnet_websocket
 from src.services.email_service import send_mail
-from src.tasks.monitor_miner_positions import populate_redis_positions
 from src.tasks.monitor_mainnet_challenges import get_monitored_challenges, update_challenge
+from src.tasks.monitor_miner_positions import populate_redis_positions
 from src.utils.constants import ERROR_QUEUE_NAME
 from src.utils.redis_manager import push_to_redis_queue
 
@@ -91,14 +90,15 @@ def monitor_testnet_challenges(positions, perf_ledgers):
 
         logger.info("Finished monitor_challenges task")
     except Exception as e:
-        push_to_redis_queue(data=f"**Monitor Testnet Challenges** Testnet Monitoring - {e}", queue_name=ERROR_QUEUE_NAME)
+        push_to_redis_queue(data=f"**Monitor Testnet Challenges** Testnet Monitoring - {e}",
+                            queue_name=ERROR_QUEUE_NAME)
         logger.error(f"Error in monitor_challenges task testnet - {e}")
 
 
 @celery_app.task(name='src.tasks.testnet_validator.testnet_validator')
 def testnet_validator():
     logger.info("Starting monitor testnet validator task")
-    test_net_data = asyncio.run(testnet_websocket(monitor=True))
+    test_net_data = testnet_websocket(monitor=True)
 
     if not test_net_data:
         push_to_redis_queue(
