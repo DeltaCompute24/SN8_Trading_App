@@ -1,28 +1,43 @@
 forex_pairs = [
-    'NZDUSD', 'NZDCAD', 'EURCAD', 'EURUSD', 'EURJPY', 'AUDJPY', 'AUDUSD', 'AUDCAD', 'EURNZD', 'AUDNZD',
-    'USDCAD', 'EURGBP', 'USDJPY', 'EURCHF', 'GBPUSD', 'CADJPY', 'NZDJPY', 'USDCHF', 'GBPJPY', 'CHFJPY',
-    'CADCHF', 'USDMXN',
+    # forex
+    'AUDCAD', 'AUDUSD', 'AUDJPY', 'AUDNZD',
+    'CADCHF', 'CADJPY', 'CHFJPY',
+    'EURCAD', 'EURUSD', 'EURCHF', 'EURGBP', 'EURJPY', 'EURNZD',
+    'NZDCAD', 'NZDJPY', 'NZDUSD',
+    'GBPUSD', 'GBPJPY',
+    'USDCAD', 'USDCHF', 'USDJPY', 'USDMXN',
+    # "Commodities" (Bundle with Forex for now)
+    'XAUUSD', 'XAGUSD',
+]
+
+equities_pairs = [
+    'NVDA', 'AAPL', 'TSLA', 'AMZN', 'MSFT', 'GOOG', 'META',
 ]
 
 crypto_pairs = [
-    'BTCUSD', 'ETHUSD',
+    'BTCUSD', 'ETHUSD', 'SOLUSD', 'XRPUSD', 'DOGEUSD',
 ]
 
 indices_pairs = [
-    'GDAXI', 'NDX', 'VIX', 'SPX', 'DJI', 'FTSE',
+    'SPX', 'DJI', 'NDX', 'VIX', 'FTSE', 'GDAXI',
 ]
 
 # ----------------------------- REDIS CONSTANTS --------------------------------
 REDIS_LIVE_PRICES_TABLE = 'live_prices'
 POSITIONS_TABLE = 'positions'
-OPERATION_QUEUE_NAME = "db_operations_queue"
-ERROR_QUEUE_NAME = "errors"
-TESTNET_TABLE = "testnet"
+OPERATION_QUEUE_NAME = 'db_operations_queue'
+ERROR_QUEUE_NAME = 'errors'
+TESTNET_TABLE = 'testnet'
 
 # -------------------- Assets Minimum and Maximum Leverages -------------------------
 CRYPTO_MIN_LEVERAGE = 0.01
 CRYPTO_MAX_LEVERAGE = 0.5
+
 FOREX_MIN_LEVERAGE = 0.1
 FOREX_MAX_LEVERAGE = 5
+
 INDICES_MIN_LEVERAGE = 0.1
 INDICES_MAX_LEVERAGE = 5
+
+EQUITIES_MIN_LEVERAGE = 0.1
+EQUITIES_MAX_LEVERAGE = 5
