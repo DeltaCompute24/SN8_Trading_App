@@ -31,12 +31,12 @@ services:
       - redis
     restart: always
     command: >
-      sh -c "celery -A src.core.celery_app worker -n position_worker --loglevel=info -Q position_monitoring &
+      sh -c "celery -A src.core.celery_app worker -n monitor_position_worker --loglevel=info -Q position_monitoring &
                celery -A src.core.celery_app worker -n redis_worker --loglevel=info -Q event_listener &
                celery -A src.core.celery_app worker -n notification_worker --loglevel=info -Q send_notifications &
-               celery -A src.core.celery_app worker -n mainnet_challenges --loglevel=info -Q monitor_mainnet_challenges &
-               celery -A src.core.celery_app worker -n monitor_miner --loglevel=info -Q monitor_miner &
-               celery -A src.core.celery_app worker -n monitor_testnet --loglevel=info -Q testnet_validator"
+               celery -A src.core.celery_app worker -n mainnet_challenges_worker --loglevel=info -Q monitor_mainnet_challenges &
+               celery -A src.core.celery_app worker -n monitor_mainnet_worker --loglevel=info -Q monitor_miner &
+               celery -A src.core.celery_app worker -n monitor_testnet_worker --loglevel=info -Q testnet_validator"
 
   celery_beat:
     build: .
