@@ -40,7 +40,10 @@ def monitor_testnet_challenges(positions, perf_ledgers):
                     "profit_sum": profit_sum,
                 }
                 changed = False
-                context = {'name': name}
+                context = {
+                    "name": name,
+                    "trader_id": challenge.trader_id,
+                }
 
                 if profit_sum >= 2:  # 2%
                     changed = True
