@@ -30,7 +30,7 @@ def get_payment(db: Session, payment_id: int):
     return payment
 
 
-def create_challenge(db, payment_data, network, user, status="In Progress",
+def create_challenge(db, payment_data, network, phase, user, status="In Progress",
                      message="Trader_id and hot_key will be created"):
     _challenge = Challenge(
         trader_id=0,
@@ -42,7 +42,7 @@ def create_challenge(db, payment_data, network, user, status="In Progress",
         hotkey_status=status,
         message=message,
         step=payment_data.step,
-        phase=payment_data.phase,
+        phase=phase,
     )
     db.add(_challenge)
     db.commit()
@@ -57,7 +57,7 @@ def create_challenge(db, payment_data, network, user, status="In Progress",
     return _challenge
 
 
-def create_payment_entry(db, payment_data, challenge=None):
+def create_payment_entry(db, payment_data, phase, challenge=None):
     _payment = Payment(
         firebase_id=payment_data.firebase_id,
         amount=payment_data.amount,
@@ -65,7 +65,7 @@ def create_payment_entry(db, payment_data, challenge=None):
         challenge=challenge,
         challenge_id=challenge.id if challenge else None,
         step=payment_data.step,
-        phase=payment_data.phase,
+        phase=phase,
     )
     db.add(_payment)
     db.commit()
@@ -74,16 +74,21 @@ def create_payment_entry(db, payment_data, challenge=None):
 
 
 def create_payment(db: Session, payment_data: PaymentCreate):
-    if payment_data.step not in [1, 2] or payment_data.phase not in [1, 2]:
+    if payment_data.step not in [1, 2]:
         raise HTTPException(status_code=400, detail="Step or Phase can either be 1 or 2")
 
-    network = "test" if (payment_data.step == 2 and payment_data.phase == 1) else "main"
+    if payment_data.step == 2:
+        phase = 1
+        network = "test"
+    else:
+        phase = 2
+        network = "main"
     firebase_user = get_firebase_user(db, payment_data.firebase_id)
 
     if not firebase_user:
         new_challenge = None
     elif firebase_user.username:
-        new_challenge = create_challenge(db, payment_data, network, firebase_user)
+        new_challenge = create_challenge(db, payment_data, network, phase, firebase_user)
         thread = threading.Thread(
             target=register_and_update_challenge,
             args=(
@@ -92,10 +97,10 @@ def create_payment(db: Session, payment_data: PaymentCreate):
         thread.start()
     # If Firebase user exists but lacks necessary fields
     else:
-        new_challenge = create_challenge(db, payment_data, network, firebase_user, status="Failed",
+        new_challenge = create_challenge(db, payment_data, network, phase, firebase_user, status="Failed",
                                          message="User's Email and Name is Empty!")
 
-    new_payment = create_payment_entry(db, payment_data, new_challenge)
+    new_payment = create_payment_entry(db, payment_data, phase, new_challenge)
     if firebase_user and firebase_user.email:
         first_name = firebase_user.name or "User"
         send_mail_in_thread(
