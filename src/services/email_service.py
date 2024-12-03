@@ -1,13 +1,12 @@
 import os
 import smtplib
-import threading
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 from jinja2 import Environment, FileSystemLoader
 
-from src.config import EMAIL_HOST, EMAIL_PORT, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD
+from src.config import EMAIL_HOST, EMAIL_PORT, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD, SUPPORT_EMAIL
 from src.utils.constants import ERROR_QUEUE_NAME
 from src.utils.redis_manager import push_to_redis_queue
 
@@ -47,7 +46,7 @@ def send_mail(
         message['From'] = EMAIL_HOST_USER
         message['To'] = receiver
         message['Subject'] = subject
-        message["Bcc"] = EMAIL_HOST_USER
+        message["Bcc"] = SUPPORT_EMAIL
 
         # Attach the email body
         if not context:
@@ -68,7 +67,7 @@ def send_mail(
 
         # Convert the message to a string and send
         text = message.as_string()
-        recipients = [receiver, EMAIL_HOST_USER]
+        recipients = [receiver, SUPPORT_EMAIL]
         server.sendmail(EMAIL_HOST_USER, recipients, text)
 
     except Exception as exp:
@@ -78,8 +77,3 @@ def send_mail(
         # Close the server connection
         if server:
             server.quit()
-
-
-def send_mail_in_thread(receiver, subject, content):
-    email_thread = threading.Thread(target=send_mail, args=(receiver, subject, content))
-    email_thread.start()
