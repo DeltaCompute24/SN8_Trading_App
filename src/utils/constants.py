@@ -10,7 +10,7 @@ forex_pairs = [
     'XAUUSD', 'XAGUSD',
 ]
 
-equities_pairs = [
+stocks_pairs = [
     'NVDA', 'AAPL', 'TSLA', 'AMZN', 'MSFT', 'GOOG', 'META',
 ]
 
@@ -39,5 +39,5 @@ FOREX_MAX_LEVERAGE = 5
 INDICES_MIN_LEVERAGE = 0.1
 INDICES_MAX_LEVERAGE = 5
 
-EQUITIES_MIN_LEVERAGE = 0.1
-EQUITIES_MAX_LEVERAGE = 5
+STOCKS_MIN_LEVERAGE = 0.1
+STOCKS_MAX_LEVERAGE = 5
