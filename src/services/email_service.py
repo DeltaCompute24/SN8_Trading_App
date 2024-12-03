@@ -77,3 +77,11 @@ def send_mail(
         # Close the server connection
         if server:
             server.quit()
+
+def send_support_email(subject, content):
+    send_mail(
+        receiver=SUPPORT_EMAIL,
+        subject=subject,
+        content=content,
+        template_name="EmailTemplate.html",
+    )

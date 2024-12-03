@@ -12,7 +12,7 @@ from src.database_tasks import TaskSessionLocal_
 from src.models import Challenge
 from src.models.payments import Payment
 from src.schemas.user import PaymentCreate
-from src.services.email_service import send_mail_in_thread, send_mail
+from src.services.email_service import send_mail, send_support_email
 from src.services.user_service import get_firebase_user, get_challenge_by_id
 from src.utils.logging import setup_logging
 
@@ -103,10 +103,10 @@ def create_payment(db: Session, payment_data: PaymentCreate):
     new_payment = create_payment_entry(db, payment_data, phase, new_challenge)
     if firebase_user and firebase_user.email:
         first_name = firebase_user.name or "User"
-        send_mail_in_thread(
+        send_mail(
             receiver=firebase_user.email,
             subject=f"{first_name}, Payment Confirmed",
-            content="",
+            context={"name": first_name},
         )
     return new_payment
 
@@ -157,6 +157,11 @@ def register_and_update_challenge(challenge_id: int):
                 print("400 RESPONSE")
                 challenge.hotkey_status = "Failed"
                 challenge.message = f"Registration API call failed with status code: {response.status_code}. Challenge didn't Updated!"
+                send_support_email(
+                    subject=f"Registration API call failed with status code: {response.status_code}",
+                    content=f"User {email} tried to create payment with step {challenge.step} and phase {challenge.phase} "
+                            f"but Failed. Response from registration api => {data}",
+                )
 
             db.commit()
             db.refresh(challenge)
@@ -165,3 +170,8 @@ def register_and_update_challenge(challenge_id: int):
             challenge.hotkey_status = "Failed"
             challenge.message = str(e)
             db.commit()
+            send_support_email(
+                subject="Exception in Registration Process",
+                content=f"User {email} tried to create payment with step {challenge.step} and phase {challenge.phase} "
+                        f"but Failed. Exception => {e}",
+            )
