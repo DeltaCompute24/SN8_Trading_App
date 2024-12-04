@@ -195,7 +195,10 @@ def monitor_mainnet():
                         challenge.user.email,
                         subject=subject,
                         template_name=template_name,
-                        context={'name': challenge.user.name, 'date': datetime.utcnow()}
+                        context={
+                            'name': challenge.user.name or "User",
+                            'date': datetime.utcnow()
+                        }
                     )
 
     except Exception as e:
@@ -210,3 +213,4 @@ def monitor_challenges():
     monitor_testnet()
     # mainnet challenges
     monitor_mainnet()
+

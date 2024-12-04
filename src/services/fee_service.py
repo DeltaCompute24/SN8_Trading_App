@@ -1,8 +1,11 @@
 import ast
+import logging
 from datetime import datetime, timedelta
 
 from src.services.api_service import get_profit_and_current_price
 from src.utils.redis_manager import set_hash_value, get_hash_value
+
+logger = logging.getLogger(__name__)
 
 
 def get_assets_fee(asset_type):
@@ -25,6 +28,7 @@ def get_taoshi_values(trader_id, trade_pair, position_uuid=None, challenge="main
 
         difference = abs(current_time - position_time)
         if difference < timedelta(seconds=5):
+            logger.error("********Realtime Price Taken from Redis***********")
             return position[1:]
 
     # if position doesn't exist and belongs to main net

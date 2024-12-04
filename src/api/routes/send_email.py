@@ -20,10 +20,11 @@ async def send_welcome_email(email_input: EmailInput):
     logger.info(f"Send Welcome Email to User: {email}")
 
     try:
-        if _type == "payment-confirmed":
-            send_mail(email, "Payment Confirmed", "Your payment is confirmed!")
-        else:
-            send_mail(email, "Setup Completed", "Your setup has completed!")
+        send_mail(
+            receiver=email,
+            subject=f"User, {_type.replace('-', ' ').title()}",
+            context={"name": "User"}
+        )
         return {
             "detail": "Email sent Successfully!"
         }
