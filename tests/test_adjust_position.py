@@ -73,7 +73,6 @@ class TestAdjustPosition:
             patch(target="src.api.routes.adjust_position.get_taoshi_values", return_value=(1, 1, 1, 1, 1, 1, 1, 3, 1)),
             patch("src.api.routes.adjust_position.create_transaction", new=AsyncMock(return_value=transaction_object)),
             patch("src.api.routes.adjust_position.close_transaction", new=AsyncMock()),
-            patch("src.api.routes.adjust_position.get_db", new=AsyncMock()),
             patch("src.api.routes.adjust_position.MonitoredPositionCreate", new=AsyncMock()),
             patch("src.api.routes.adjust_position.update_monitored_positions", new=AsyncMock()),
         ):
@@ -106,7 +105,6 @@ class TestAdjustPosition:
                   new=AsyncMock(return_value=transaction_object)),
             patch("src.api.routes.adjust_position.create_transaction", new=AsyncMock(return_value=transaction_object)),
             patch("src.api.routes.adjust_position.close_transaction", new=AsyncMock()),
-            patch("src.api.routes.adjust_position.get_db", new=AsyncMock()),
             patch("src.api.routes.adjust_position.MonitoredPositionCreate", new=AsyncMock()),
             patch("src.api.routes.adjust_position.update_monitored_positions", new=AsyncMock()),
         ):

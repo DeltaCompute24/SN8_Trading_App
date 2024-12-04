@@ -8,10 +8,9 @@ from dotenv import load_dotenv
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
-from sqlmodel import SQLModel
 from starlette.testclient import TestClient
 
-from src.database import get_db
+from src.database import get_db, Base
 from src.main import app
 from src.models import FirebaseUser, Challenge
 from src.models.transaction import Transaction
@@ -31,12 +30,12 @@ async def async_db_engine():
     )
 
     async with async_engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
+        await conn.run_sync(Base.metadata.create_all)
 
     yield async_engine
 
     async with async_engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.drop_all)
+        await conn.run_sync(Base.metadata.drop_all)
 
 
 # truncate all table to isolate tests
@@ -57,10 +56,6 @@ async def async_db_session(async_db_engine):
         yield session
 
         await session.rollback()
-
-        for table in reversed(SQLModel.metadata.sorted_tables):
-            await session.execute(f'TRUNCATE {table.name} CASCADE;')
-            await session.commit()
 
 
 @pytest_asyncio.fixture

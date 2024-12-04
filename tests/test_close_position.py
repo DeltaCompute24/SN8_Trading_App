@@ -53,7 +53,6 @@ class TestClosePosition:
             patch(target="src.api.routes.close_position.websocket_manager.submit_trade", return_value=True),
             patch(target="src.api.routes.close_position.get_taoshi_values", return_value=(1, 1, 1, 1, 1, 1, 1, 3, 1)),
             patch("src.api.routes.close_position.close_transaction", new=AsyncMock()),
-            patch("src.api.routes.close_position.get_db", new=AsyncMock()),
         ):
             response = await async_client.post(url, json=transaction_payload)
             # assert response
@@ -62,14 +61,13 @@ class TestClosePosition:
             # get_taoshi_values should be called one time because first_price is 0
             assert src.api.routes.close_position.get_taoshi_values.call_count == 1
 
-    async def test_same_leverages(self, async_client, transaction_payload, transaction_object):
+    async def test_pending_successful(self, async_client, transaction_payload, transaction_object):
         transaction_object.status = "PENDING"
 
         with (
             patch(target="src.api.routes.close_position.get_latest_position",
                   new=AsyncMock(return_value=transaction_object)),
             patch("src.api.routes.close_position.close_transaction", new=AsyncMock()),
-            patch("src.api.routes.close_position.get_db", new=AsyncMock()),
         ):
             response = await async_client.post(url, json=transaction_payload)
             # assert response
