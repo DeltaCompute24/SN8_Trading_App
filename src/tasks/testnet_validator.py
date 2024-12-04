@@ -2,6 +2,9 @@ import asyncio
 import logging
 from datetime import datetime
 
+import requests
+
+from src.config import SWITCH_TO_MAINNET_URL
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.services.api_service import testnet_websocket
@@ -40,16 +43,19 @@ def monitor_testnet_challenges(positions, perf_ledgers):
                     "profit_sum": profit_sum,
                 }
                 changed = False
-                context = {'name': name}
+                context = {
+                    "name": name,
+                    "trader_id": challenge.trader_id,
+                }
 
                 if profit_sum >= 2:  # 2%
                     changed = True
-                    network = "main" if challenge.challenge == "test" else "test"
+                    network = "main"
                     payload = {
                         "name": challenge.challenge_name,
                         "trader_id": challenge.trader_id,
                     }
-                    # _response = requests.post(SWITCH_TO_MAINNET_URL, json=payload)
+                    _response = requests.post(SWITCH_TO_MAINNET_URL, json=payload)
 
                     c_data = {
                         **c_data,
@@ -58,20 +64,20 @@ def monitor_testnet_challenges(positions, perf_ledgers):
                         "phase": 2,
                     }
 
-                    # if _response.status_code == 200:
-                    #     c_response = challenge.response or {}
-                    #     c_response["main_net_response"] = _response.json()
-                    #     c_data = {
-                    #         **c_data,
-                    #         "challenge": network,
-                    #         "status": "In Challenge",
-                    #         "active": "1",
-                    #         "trader_id": data.get("trader_id"),
-                    #         "response": c_response,
-                    #         "register_on_main_net": datetime.utcnow(),
-                    #     }
-                    #     content = f"{content} Your testnet key is also converted to hot_key!"
-
+                    if _response.status_code == 200:
+                        data = _response.json()
+                        c_response = challenge.response or {}
+                        c_response["main_net_response"] = data
+                        c_data = {
+                            **c_data,
+                            "challenge": network,
+                            "status": "In Challenge",
+                            "active": "1",
+                            "trader_id": data.get("trader_id"),
+                            "response": c_response,
+                            "register_on_main_net": datetime.utcnow(),
+                        }
+                        context["trader_id"] = data.get("trader_id")
                     subject = "Congratulations on Completing Phase 1!"
                     template_name = "ChallengePassedPhase1Step2.html"
                 elif draw_down <= -5:  # 5%
