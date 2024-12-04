@@ -32,15 +32,15 @@ celery_app.conf.update(
         },
         'monitor_mainnet_challenges_every_1_second': {
             'task': 'src.tasks.monitor_mainnet_challenges.monitor_mainnet_challenges',
-            'schedule': 1.0,  # every 1 second
+            'schedule': 2.0,  # every 1 second
         },
         'monitor_miner_every_1_second': {
             'task': 'src.tasks.monitor_miner_positions.monitor_miner',
-            'schedule': 1.0,  # every 1 second
+            'schedule': 2.0,  # every 1 second
         },
         'testnet_validator_every_1_second': {
             'task': 'src.tasks.testnet_validator.testnet_validator',
-            'schedule': 1.0,  # every 1 second
+            'schedule': 2.0,  # every 1 second
         },
     },
     timezone='UTC',
