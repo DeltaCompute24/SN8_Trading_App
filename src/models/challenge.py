@@ -38,3 +38,6 @@ class Challenge(Base):
 
     # One-to-one relationship with Payment
     payment = relationship("Payment", back_populates="challenge", uselist=False)
+
+    # One-to-one relationship with Payment
+    tournament = relationship("Tournament", back_populates="challenge", uselist=False)
