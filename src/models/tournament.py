@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Column, Integer, DateTime, ForeignKey, String
+from sqlalchemy import Column, Integer, DateTime, String
 from sqlalchemy.orm import relationship
 
 from src.database import Base
@@ -16,6 +16,5 @@ class Tournament(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Back-reference to Challenge
-    challenge_id = Column(Integer, ForeignKey("challenges.id"), unique=True)
-    challenge = relationship("Challenge", back_populates="tournament")
+    # One-to-many relationship: A tournament can have multiple challenges
+    challenges = relationship("Challenge", back_populates="tournament")
