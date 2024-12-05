@@ -19,6 +19,7 @@ from src.schemas.user import PaymentIdRead, PaymentRead
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL_TEST")
+DATABASE_URL_SYNC = DATABASE_URL.replace("asyncpg", "psycopg2")
 
 
 # drop all database every time when test complete
@@ -41,14 +42,13 @@ async def async_db_engine():
 # truncate all table to isolate tests
 @pytest_asyncio.fixture
 async def async_db_session(async_db_engine):
-    async_session = (
-        sessionmaker(
-            expire_on_commit=False,
-            autocommit=False,
-            autoflush=False,
-            bind=async_db_engine,
-            class_=AsyncSession,
-        ))
+    async_session = sessionmaker(
+        expire_on_commit=False,
+        autocommit=False,
+        autoflush=False,
+        bind=async_db_engine,
+        class_=AsyncSession,
+    )
 
     async with async_session() as session:
         await session.begin()
@@ -230,4 +230,17 @@ def payment_read(payment_object):
     }
     return payment_object, PaymentRead(
         **payment_object.dict(),
+    )
+
+
+@pytest.fixture
+def user_object():
+    return FirebaseUser(
+        id=1,
+        firebase_id="firebase",
+        email="email@gmail.com",
+        name="name",
+        username="email",
+        created_at="2021-08-01 00:00:00",
+        updated_at="2021-08-01 00:00:00",
     )
