@@ -30,19 +30,22 @@ def get_payment(db: Session, payment_id: int):
     return payment
 
 
-def create_challenge(db, payment_data, network, user, status="In Progress",
-                     message="Trader_id and hot_key will be created"):
+def create_challenge(db, payment_data, network, user, challenge_status="In Challenge", status="In Progress",
+                     step=None, phase=None, message="Trader_id and hot_key will be created"):
+    step_value = payment_data["step"] if isinstance(payment_data, dict) else getattr(payment_data, "step", None)
+    phase_value = payment_data["phase"] if isinstance(payment_data, dict) else getattr(payment_data, "phase", None)
+
     _challenge = Challenge(
         trader_id=0,
         hot_key="",
         user_id=user.id,
         active="0",
-        status="In Challenge",
+        status=challenge_status,
         challenge=network,
         hotkey_status=status,
         message=message,
-        step=payment_data.step,
-        phase=payment_data.phase,
+        step=step_value if step_value else step,
+        phase=phase_value if phase_value else phase,
     )
     db.add(_challenge)
     db.commit()
@@ -58,14 +61,23 @@ def create_challenge(db, payment_data, network, user, status="In Progress",
 
 
 def create_payment_entry(db, payment_data, challenge=None):
+    # Check if payment_data is a dictionary or an object and extract necessary values
+    firebase_id = payment_data["firebase_id"] if isinstance(payment_data, dict) else getattr(payment_data,
+                                                                                             "firebase_id", None)
+    amount = payment_data["amount"] if isinstance(payment_data, dict) else getattr(payment_data, "amount", None)
+    referral_code = payment_data["referral_code"] if isinstance(payment_data, dict) else getattr(payment_data,
+                                                                                                 "referral_code", None)
+    step = payment_data["step"] if isinstance(payment_data, dict) else getattr(payment_data, "step", None)
+    phase = payment_data["phase"] if isinstance(payment_data, dict) else getattr(payment_data, "phase", None)
+
     _payment = Payment(
-        firebase_id=payment_data.firebase_id,
-        amount=payment_data.amount,
-        referral_code=payment_data.referral_code,
+        firebase_id=firebase_id,
+        amount=amount,
+        referral_code=referral_code,
         challenge=challenge,
         challenge_id=challenge.id if challenge else None,
-        step=payment_data.step,
-        phase=payment_data.phase,
+        step=step,
+        phase=phase,
     )
     db.add(_payment)
     db.commit()
@@ -106,7 +118,7 @@ def create_payment(db: Session, payment_data: PaymentCreate):
     return new_payment
 
 
-def register_and_update_challenge(challenge_id: int):
+def register_and_update_challenge(challenge_id: int, challenge_status="In Challenge"):
     with TaskSessionLocal_() as db:
         try:
             print("In THREAD!................")
@@ -125,7 +137,7 @@ def register_and_update_challenge(challenge_id: int):
                 challenge.trader_id = data.get("trader_id")
                 challenge.hot_key = data.get("hot_key")
                 challenge.active = "1"
-                challenge.status = "In Challenge"
+                challenge.status = challenge_status
                 challenge.message = "Challenge Updated Successfully!"
                 challenge.hotkey_status = "Success"
                 context = {
