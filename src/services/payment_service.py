@@ -83,7 +83,10 @@ def create_payment(db: Session, payment_data: PaymentCreate):
     else:
         phase = 2
         network = "main"
+
     firebase_user = get_firebase_user(db, payment_data.firebase_id)
+    if firebase_user and firebase_user.email == "dev@delta-mining.com" and payment_data.step == 1:
+        raise HTTPException(status_code=400, detail=f"You '{firebase_user.email}' can't register minor as mainnet!")
 
     if not firebase_user:
         new_challenge = None
