@@ -10,7 +10,7 @@ from src.services.tournament_service import (
     create_tournament,
     get_tournament_by_id,
     update_tournament,
-    delete_tournament,
+    delete_tournament, register_payment,
 )
 from src.utils.logging import setup_logging
 
@@ -30,10 +30,10 @@ def get_db():
 def create_tournament_endpoint(tournament_data: TournamentCreate, db: Session = Depends(get_db)):
     try:
         tournament = create_tournament(db, tournament_data)
-        logger.error(f"Tournament created successfully with tournament_id={tournament.id}")
+        logger.info(f"Tournament created successfully with tournament_id={tournament.id}")
         return tournament
     except Exception as e:
-        logger.error(f"Error creating tournament: {e}")
+        logger.info(f"Error creating tournament: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -47,7 +47,7 @@ def get_all_tournaments_endpoint(db: Session = Depends(get_db)):
 def get_tournament_by_id_endpoint(tournament_id: int, db: Session = Depends(get_db)):
     tournament = get_tournament_by_id(db, tournament_id)
     if not tournament:
-        logger.error(f"Tournament with id={tournament_id} not found")
+        logger.info(f"Tournament with id={tournament_id} not found")
         raise HTTPException(status_code=404, detail="Tournament Not Found")
     return tournament
 
@@ -56,7 +56,7 @@ def get_tournament_by_id_endpoint(tournament_id: int, db: Session = Depends(get_
 def update_tournament_endpoint(tournament_id: int, tournament_data: TournamentUpdate, db: Session = Depends(get_db)):
     tournament = update_tournament(db, tournament_id, tournament_data)
     if not tournament:
-        logger.error(f"Tournament with id={tournament_id} not found")
+        logger.info(f"Tournament with id={tournament_id} not found")
         raise HTTPException(status_code=404, detail="Tournament Not Found")
     return tournament
 
@@ -65,6 +65,24 @@ def update_tournament_endpoint(tournament_id: int, tournament_data: TournamentUp
 def delete_tournament_endpoint(tournament_id: int, db: Session = Depends(get_db)):
     tournament = delete_tournament(db, tournament_id)
     if not tournament:
-        logger.warning(f"Tournament with id={tournament_id} not found")
+        logger.info(f"Tournament with id={tournament_id} not found")
         raise HTTPException(status_code=404, detail="Tournament Not Found")
     return {"message": "Tournament deleted successfully"}
+
+
+@router.post("/register-payment")
+def register_tournament_endpoint(
+        tournament_id: int,
+        firebase_id: str,
+        amount: float,
+        referral_code: str = None,
+        db: Session = Depends(get_db)
+):
+    logger.info(f"Registering for tournament {tournament_id} with firebase_id={firebase_id}")
+    try:
+        # Create Challenge and Associate with Tournament
+        message = register_payment(db, tournament_id, firebase_id, amount, referral_code)
+        return message
+    except Exception as e:
+        logger.info(f"Error during registration: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal Server Error as {e}")
