@@ -1,5 +1,3 @@
-import threading
-
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -8,7 +6,7 @@ from sqlalchemy.sql import and_
 from src.models.tournament import Tournament
 from src.schemas.tournament import TournamentCreate, TournamentUpdate
 from src.services.email_service import send_mail
-from src.services.payment_service import create_challenge, register_and_update_challenge, create_payment_entry
+from src.services.payment_service import create_challenge, create_payment_entry
 from src.services.user_service import get_firebase_user
 
 
@@ -74,7 +72,7 @@ def register_payment(db, tournament_id, firebase_id, amount, referral_code):
         "firebase_id": firebase_id,
     }
 
-    # Create Challenge and Associate with Tournament
+    # Create Challenge
     new_challenge = create_challenge(
         db,
         payment_data=payment_data,
@@ -83,23 +81,24 @@ def register_payment(db, tournament_id, firebase_id, amount, referral_code):
         challenge_status="Tournament",
         step=2,
         phase=1,
-        tournament_id=tournament_id
     )
 
-    # Thread to handle challenge updates
-    thread = threading.Thread(target=register_and_update_challenge,
-                              args=(new_challenge.id, "Tournament", tournament_id))
-    thread.start()
+    # Associate Challenge with Tournament
+    new_challenge.tournament_id = tournament.id
+    tournament.challenges.append(new_challenge)
+    db.add(new_challenge)
+    db.commit()
+    db.refresh(new_challenge)
 
     # Create Payment Entry
-    new_payment = create_payment_entry(db, payment_data, new_challenge)
+    create_payment_entry(db, payment_data, new_challenge)
 
     # Send Confirmation Email
     send_mail(
         receiver=firebase_user.email,
         template_name="EmailTemplate.html",
         subject="Tournament Registration Confirmed",
-        content=f"You are successfully registered in the tournament{tournament.name}",
+        content=f"You are successfully registered in the tournament {tournament.name}",
         context={
             "username": firebase_user.username,
             "tournament": tournament.name,
