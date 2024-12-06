@@ -17,4 +17,4 @@ class Tournament(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # One-to-many relationship: A tournament can have multiple challenges
-    challenges = relationship("Challenge", back_populates="tournament")
+    challenges = relationship("Challenge", back_populates="tournament", cascade="all, delete-orphan")
