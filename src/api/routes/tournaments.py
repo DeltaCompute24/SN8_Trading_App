@@ -2,6 +2,7 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy.orm import joinedload
 
 from src.database_tasks import TaskSessionLocal_
 from src.models import Tournament
@@ -40,7 +41,7 @@ def create_tournament_endpoint(tournament_data: TournamentCreate, db: Session = 
 @router.get("/", response_model=List[TournamentRead])
 def get_all_tournaments_endpoint(db: Session = Depends(get_db)):
     logger.info("Fetching all tournaments")
-    return db.query(Tournament).all()
+    return db.query(Tournament).options(joinedload(Tournament.challenges)).all()
 
 
 @router.get("/{tournament_id}", response_model=TournamentRead)
