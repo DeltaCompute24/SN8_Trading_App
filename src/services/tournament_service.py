@@ -78,15 +78,17 @@ def register_payment(db, tournament_id, firebase_id, amount, referral_code):
     new_challenge = create_challenge(
         db,
         payment_data=payment_data,
-        network="test",  # You can change this to 'main' if needed
+        network="test",
         user=firebase_user,
         challenge_status="Tournament",
         step=2,
-        phase=1
+        phase=1,
+        tournament_id=tournament_id
     )
 
     # Thread to handle challenge updates
-    thread = threading.Thread(target=register_and_update_challenge, args=(new_challenge.id, "Tournament"))
+    thread = threading.Thread(target=register_and_update_challenge,
+                              args=(new_challenge.id, "Tournament", tournament_id))
     thread.start()
 
     # Create Payment Entry
