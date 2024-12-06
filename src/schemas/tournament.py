@@ -32,7 +32,7 @@ class TournamentRead(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    challenge: Optional[ChallengeRead] = None
+    challenges: list[ChallengeRead] = []
 
     class Config:
         orm_mode = True
