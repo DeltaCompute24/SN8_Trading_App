@@ -1,3 +1,5 @@
+import threading
+
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -6,7 +8,7 @@ from sqlalchemy.sql import and_
 from src.models.tournament import Tournament
 from src.schemas.tournament import TournamentCreate, TournamentUpdate
 from src.services.email_service import send_mail
-from src.services.payment_service import create_challenge, create_payment_entry
+from src.services.payment_service import create_challenge, create_payment_entry, register_and_update_challenge
 from src.services.user_service import get_firebase_user
 
 
@@ -89,6 +91,11 @@ def register_payment(db, tournament_id, firebase_id, amount, referral_code):
     db.add(new_challenge)
     db.commit()
     db.refresh(new_challenge)
+
+    # Thread to handle challenge updates
+    thread = threading.Thread(target=register_and_update_challenge,
+                              args=(new_challenge.id, "Tournament"))
+    thread.start()
 
     # Create Payment Entry
     create_payment_entry(db, payment_data, new_challenge)
