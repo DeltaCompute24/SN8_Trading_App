@@ -31,7 +31,7 @@ def get_payment(db: Session, payment_id: int):
 
 
 def create_challenge(db, payment_data, network, user, challenge_status="In Challenge", status="In Progress",
-                     step=None, phase=None, message="Trader_id and hot_key will be created", tournament_id=None):
+                     step=None, phase=None, message="Trader_id and hot_key will be created"):
     step_value = payment_data["step"] if isinstance(payment_data, dict) else getattr(payment_data, "step", None)
     phase_value = payment_data["phase"] if isinstance(payment_data, dict) else getattr(payment_data, "phase", None)
 
@@ -46,7 +46,6 @@ def create_challenge(db, payment_data, network, user, challenge_status="In Chall
         message=message,
         step=step_value if step_value else step,
         phase=phase_value if phase_value else phase,
-        tournament_id=tournament_id
     )
     db.add(_challenge)
     db.commit()
@@ -119,7 +118,7 @@ def create_payment(db: Session, payment_data: PaymentCreate):
     return new_payment
 
 
-def register_and_update_challenge(challenge_id: int, challenge_status="In Challenge", tournament_id=None):
+def register_and_update_challenge(challenge_id: int, challenge_status="In Challenge"):
     with TaskSessionLocal_() as db:
         try:
             print("In THREAD!................")
@@ -141,7 +140,6 @@ def register_and_update_challenge(challenge_id: int, challenge_status="In Challe
                 challenge.status = challenge_status
                 challenge.message = "Challenge Updated Successfully!"
                 challenge.hotkey_status = "Success"
-                challenge.tournament_id = tournament_id
                 context = {
                     "name": challenge.user.name or "User",
                     "trader_id": challenge.trader_id,
