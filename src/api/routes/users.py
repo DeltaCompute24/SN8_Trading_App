@@ -5,10 +5,8 @@ from sqlalchemy.orm import Session
 
 from src.database_tasks import TaskSessionLocal_
 from src.models.firebase_user import FirebaseUser
-from src.schemas.user import ChallengeUpdate
 from src.schemas.user import FirebaseUserRead, FirebaseUserCreate, FirebaseUserUpdate
-from src.services.email_service import send_mail_in_thread
-from src.services.user_service import get_firebase_user, create_firebase_user, get_challenge_by_id, construct_username
+from src.services.user_service import get_firebase_user, create_firebase_user, construct_username
 from src.utils.logging import setup_logging
 
 logger = setup_logging()
@@ -65,30 +63,3 @@ def update_user(firebase_id: str, user_data: FirebaseUserUpdate, db: Session = D
     db.refresh(user)
     logger.info(f"User updated successfully with firebase_id={firebase_id}")
     return user
-
-
-# @router.put("/challenge/{challenge_id}", response_model=ChallengeRead)
-def update_challenge(
-        challenge_id: int,
-        challenge_data: ChallengeUpdate,
-        db: Session = Depends(get_db),
-):
-    try:
-        challenge = get_challenge_by_id(db, challenge_id)
-        if not challenge:
-            raise HTTPException(status_code=404, detail="Challenge Not Found!")
-
-        challenge.hot_key = challenge_data.hot_key
-        challenge.trader_id = challenge_data.trader_id
-        challenge.active = "1"
-        challenge.status = "In Challenge"
-
-        db.commit()
-        db.refresh(challenge)
-        if challenge.user.email:
-            send_mail_in_thread(challenge.user.email, "Issuance of trader_id and hot_key",
-                                "Congratulations! Your trader_id and hot_key is ready. Now, you can use your system.")
-        return challenge
-    except Exception as e:
-        logger.error(f"Error creating payment: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
