@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from datetime import datetime
 
@@ -114,7 +113,7 @@ def monitor_testnet_challenges(positions, perf_ledgers):
 @celery_app.task(name='src.tasks.testnet_validator.testnet_validator')
 def testnet_validator():
     logger.info("Starting monitor testnet validator task")
-    test_net_data = asyncio.run(testnet_websocket(monitor=True))
+    test_net_data = testnet_websocket(monitor=True)
 
     if not test_net_data:
         push_to_redis_queue(
