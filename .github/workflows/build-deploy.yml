@@ -30,7 +30,7 @@ jobs:
         run: docker build -f docker/fastapi/Dockerfile -t fastapi .
 
       - name: Build celery image
-        run: docker build -f docker/celery/Dockerfile -t celery_worker .
+        run: docker build -f docker/celery/DockerFile -t celery_worker .
 
       - name: Login ECR Repository
         run: |
