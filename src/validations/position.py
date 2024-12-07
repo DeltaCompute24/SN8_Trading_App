@@ -50,13 +50,13 @@ def validate_order_type(order_type):
 
 
 def validate_leverage(asset_type, leverage):
-    if asset_type == "crypto" and leverage < CRYPTO_MIN_LEVERAGE or leverage > CRYPTO_MAX_LEVERAGE:
+    if asset_type == "crypto" and (leverage < CRYPTO_MIN_LEVERAGE or leverage > CRYPTO_MAX_LEVERAGE):
         raise HTTPException(status_code=400,
                             detail=f"Invalid leverage for asset type {asset_type}! Valid Range: {CRYPTO_MIN_LEVERAGE} - {CRYPTO_MAX_LEVERAGE}")
-    elif asset_type == "forex" and leverage < FOREX_MIN_LEVERAGE or leverage > FOREX_MAX_LEVERAGE:
+    elif asset_type == "forex" and (leverage < FOREX_MIN_LEVERAGE or leverage > FOREX_MAX_LEVERAGE):
         raise HTTPException(status_code=400,
                             detail=f"Invalid leverage for asset type {asset_type}! Valid Range: {FOREX_MIN_LEVERAGE} - {FOREX_MAX_LEVERAGE}")
-    elif asset_type == "indices" and leverage < INDICES_MIN_LEVERAGE or leverage > INDICES_MAX_LEVERAGE:
+    elif asset_type == "indices" and (leverage < INDICES_MIN_LEVERAGE or leverage > INDICES_MAX_LEVERAGE):
         raise HTTPException(status_code=400,
                             detail=f"Invalid leverage for asset type {asset_type}! Valid Range: {INDICES_MIN_LEVERAGE} - {INDICES_MAX_LEVERAGE}")
     elif asset_type == "stocks" and leverage < STOCKS_MIN_LEVERAGE or leverage > STOCKS_MAX_LEVERAGE:
