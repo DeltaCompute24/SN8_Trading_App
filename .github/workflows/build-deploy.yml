@@ -43,7 +43,7 @@ jobs:
 
       - name: Tag and push celery-workers image
         run: |
-          docker tag sn8_trading_app-celery_worker:latest 288792505174.dkr.ecr.us-east-1.amazonaws.com/defi-backend-celery_worker:latest    
+          docker tag celery_worker:latest 288792505174.dkr.ecr.us-east-1.amazonaws.com/defi-backend-celery_worker:latest    
           docker push 288792505174.dkr.ecr.us-east-1.amazonaws.com/defi-backend-celery_worker:latest
 
       - name: Deploy ECS task
