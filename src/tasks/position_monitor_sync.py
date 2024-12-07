@@ -37,10 +37,6 @@ def object_exists(obj_list, new_obj_id):
 def open_position(position, current_price, entry_price=False):
     global objects_to_be_updated
     try:
-        if object_exists(objects_to_be_updated, position.order_id):
-            logger.info("Return back as Open Position already exists in queue!")
-            return
-
         logger.info("Open Position Called!")
         open_submitted = asyncio.run(
             websocket_manager.submit_trade(position.trader_id, position.trade_pair, position.order_type,
@@ -59,10 +55,10 @@ def open_position(position, current_price, entry_price=False):
                 break
 
         if first_price == 0:
-            push_to_redis_queue(
-                data=f"**Monitor Positions** While Opening Position - Price is Zero -- Trade is not Submitted",
-                queue_name=ERROR_QUEUE_NAME,
-            )
+            # push_to_redis_queue(
+            #     data=f"**Monitor Positions** While Opening Position {position.trader_id}-{position.trade_pair}-{position.order_id} - Price is Zero -- Trade is not Submitted",
+            #     queue_name=ERROR_QUEUE_NAME,
+            # )
             return
 
         new_object = {
@@ -87,17 +83,16 @@ def open_position(position, current_price, entry_price=False):
 
         objects_to_be_updated.append(new_object)
     except Exception as e:
-        push_to_redis_queue(data=f"**Monitor Positions** While Opening Position - {e}", queue_name=ERROR_QUEUE_NAME)
+        push_to_redis_queue(
+            data=f"**Monitor Positions** While Opening Position {position.trader_id}-{position.trade_pair}-{position.order_id} - {e}",
+            queue_name=ERROR_QUEUE_NAME
+        )
         logger.error(f"An error occurred while opening position {position.position_id}: {e}")
 
 
 def close_position(position, profit_loss):
     global objects_to_be_updated
     try:
-        if object_exists(objects_to_be_updated, position.order_id):
-            logger.info("Return back as Close Position already exists in queue!")
-            return
-
         logger.info("Close Position Called!")
         close_submitted = asyncio.run(
             websocket_manager.submit_trade(position.trader_id, position.trade_pair, "FLAT", 1))
@@ -106,14 +101,18 @@ def close_position(position, profit_loss):
         for i in range(10):
             time.sleep(1)
             close_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee, uuid, hot_key, len_order, average_entry_price = get_taoshi_values(
-                position.trader_id, position.trade_pair, position_uuid=position.uuid, challenge=position.source)
+                position.trader_id,
+                position.trade_pair,
+                position_uuid=position.uuid,
+                challenge=position.source
+            )
             # 10 times
             if close_price != 0 and position.order_level < len_order:
                 break
 
         if close_price == 0:
             push_to_redis_queue(
-                data=f"**Monitor Positions** While Closing Position - Price is Zero",
+                data=f"**Monitor Positions** While Closing Position {position.trader_id}-{position.trade_pair}-{position.order_id} - Price is Zero",
                 queue_name=ERROR_QUEUE_NAME,
             )
             return
@@ -135,28 +134,30 @@ def close_position(position, profit_loss):
             }
         )
     except Exception as e:
-        push_to_redis_queue(data=f"**Monitor Positions** While Closing Position - {e}", queue_name=ERROR_QUEUE_NAME)
+        push_to_redis_queue(
+            data=f"**Monitor Positions** While Closing Position {position.trader_id}-{position.trade_pair}-{position.order_id} - {e}",
+            queue_name=ERROR_QUEUE_NAME)
         logger.error(f"An error occurred while closing position {position.position_id}: {e}")
 
 
-def check_take_profit(take_profit, profit_loss) -> bool:
+def check_take_profit(trailing, take_profit, profit_loss) -> bool:
     """
     Position should be closed if it reaches the expected profit
     """
     # if profit_loss < 0 it means there is no profit so return False
-    if profit_loss < 0:
+    if trailing or profit_loss < 0:
         return False
     if take_profit is not None and take_profit != 0 and profit_loss >= take_profit:
         return True
     return False
 
 
-def check_stop_loss(stop_loss, profit_loss) -> bool:
+def check_stop_loss(trailing, stop_loss, profit_loss) -> bool:
     """
     Position should be closed if it reaches the expected loss
     """
     # if profit_loss > 0 it means there is no loss so return False
-    if profit_loss > 0:
+    if trailing or profit_loss > 0:
         return False
 
     if stop_loss is not None and stop_loss != 0 and profit_loss <= -stop_loss:
@@ -191,8 +192,8 @@ def should_close_position(profit_loss, position):
 
         close_result = (
                 check_trailing_stop_loss(trailing, stop_loss, max_profit, profit_loss) or
-                check_stop_loss(stop_loss, profit_loss) or
-                check_take_profit(take_profit, profit_loss)
+                check_stop_loss(trailing, stop_loss, profit_loss) or
+                check_take_profit(trailing, take_profit, profit_loss)
         )
 
         print(f"Determining whether to close position: {close_result}")
@@ -200,8 +201,10 @@ def should_close_position(profit_loss, position):
         return close_result
 
     except Exception as e:
-        push_to_redis_queue(data=f"**Monitor Positions** While Determining if Position Should be Closed - {e}",
-                            queue_name=ERROR_QUEUE_NAME)
+        push_to_redis_queue(
+            data=f"**Monitor Positions** While Determining if Position Should be Closed {position.trader_id}-{position.trade_pair}-{position.order_id} - {e}",
+            queue_name=ERROR_QUEUE_NAME
+        )
         logger.error(f"An error occurred while determining if position should be closed: {e}")
         return False
 
@@ -228,8 +231,10 @@ def update_position_profit(db, position, profit_loss, profit_loss_without_fee, t
         db.refresh(position)
         return position
     except Exception as e:
-        push_to_redis_queue(data=f"**Monitor Positions** While Updating Position Profit - {e}",
-                            queue_name=ERROR_QUEUE_NAME)
+        push_to_redis_queue(
+            data=f"**Monitor Positions** While Updating Position Profit {position.trader_id}-{position.trade_pair}-{position.order_id} - {e}",
+            queue_name=ERROR_QUEUE_NAME
+        )
         logger.error(f"An error occurred while updating position {position.position_id}: {e}")
 
 
@@ -262,8 +267,10 @@ def update_position_prices(db, position, current_price):
         db.refresh(position)
         return position
     except Exception as e:
-        push_to_redis_queue(data=f"**Monitor Positions** While Updating Position Prices - {e}",
-                            queue_name=ERROR_QUEUE_NAME)
+        push_to_redis_queue(
+            data=f"**Monitor Positions** While Updating Position Prices {position.trader_id}-{position.trade_pair}-{position.order_id} - {e}",
+            queue_name=ERROR_QUEUE_NAME
+        )
         logger.error(f"An error occurred while updating position {position.position_id}: {e}")
 
 
@@ -315,8 +322,10 @@ def check_open_position(db, position):
         position_uuid=position.uuid,
     )
     if price == 0:
-        push_to_redis_queue(data=f"**Monitor Positions** While Checking Open Position - Price is Zero",
-                            queue_name=ERROR_QUEUE_NAME)
+        # push_to_redis_queue(
+        #     data=f"**Monitor Positions** While Checking Open Position {position.trader_id}-{position.trade_pair}-{position.order_id} - Price is Zero",
+        #     queue_name=ERROR_QUEUE_NAME
+        # )
         return False
 
     position = update_position_profit(db, position, profit_loss, profit_loss_without_fee, taoshi_profit_loss,
@@ -335,6 +344,9 @@ def monitor_position(db, position):
     if status is PENDING then check if it meets the criteria to OPEN the position
     """
     global objects_to_be_updated
+    if object_exists(objects_to_be_updated, position.order_id):
+        logger.info("Return back as Close Position already exists in queue!")
+        return
     try:
         logger.error(f"Current Pair: {position.trader_id}-{position.trade_pair}")
         # ---------------------------- OPENED POSITION ---------------------------------
@@ -354,7 +366,10 @@ def monitor_position(db, position):
             check_pending_trailing_position(position, current_price)
 
     except Exception as e:
-        push_to_redis_queue(data=f"**Monitor Positions** While Monitoring Position - {e}", queue_name=ERROR_QUEUE_NAME)
+        push_to_redis_queue(
+            data=f"**Monitor Positions** While Monitoring Position {position.trader_id}-{position.trade_pair}-{position.order_id} - {e}",
+            queue_name=ERROR_QUEUE_NAME
+        )
         logger.error(f"An error occurred while monitoring position {position.position_id}: {e}")
 
 

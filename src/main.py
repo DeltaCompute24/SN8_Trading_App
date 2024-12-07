@@ -22,7 +22,8 @@ from src.api.routes.users_balance import router as balance_routers
 from src.api.routes.websocket import router as prices_websocket
 from src.database import engine, Base, DATABASE_URL
 from src.services.user_service import populate_ambassadors
-from src.utils.websocket_manager import forex_websocket_manager, crypto_websocket_manager
+from src.utils.testnet_websocket import testnet_websocket_manager
+from src.utils.websocket_manager import forex_websocket_manager, crypto_websocket_manager, stocks_websocket_manager
 
 app = FastAPI()
 
@@ -58,8 +59,12 @@ async def startup_event():
     print()
     environment = os.getenv("ENVIRONMENT") or "dev"
     if environment == "prod":
+        asyncio.create_task(stocks_websocket_manager.listen_for_prices_multiple())
         asyncio.create_task(forex_websocket_manager.listen_for_prices_multiple())
         asyncio.create_task(crypto_websocket_manager.listen_for_prices_multiple())
+        asyncio.create_task(testnet_websocket_manager.run_testnet())
+    # Uncomment the following line if you want to use indices_websocket_manager
+    # asyncio.create_task(indices_websocket_manager.listen_for_prices_multiple())
 
     default_db_url = DATABASE_URL.rsplit("/", 1)[0] + "/postgres"
     default_engine = create_async_engine(default_db_url, echo=True)

@@ -4,7 +4,7 @@ services:
   fastapi:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: docker/fastapi/Dockerfile
     ports:
       - "80:80"
     volumes:
@@ -20,7 +20,9 @@ services:
       - "6379:6379"
 
   celery_worker:
-    build: .
+    build:
+      context: .
+      dockerfile: docker/celery/Dockerfile
     volumes:
       - .:/app
     env_file:
@@ -29,14 +31,18 @@ services:
       - redis
     restart: always
     command: >
-      sh -c "celery -A src.core.celery_app worker -n position_worker --loglevel=info -Q position_monitoring &
-               celery -A src.core.celery_app worker -n taoshi_worker --loglevel=info -Q monitor_taoshi &
-               celery -A src.core.celery_app worker -n challenges_worker --loglevel=info -Q monitor_challenges &
-               celery -A src.core.celery_app worker -n redis_worker --loglevel=info -Q event_listener &
-               celery -A src.core.celery_app worker -n notification_worker --loglevel=info -Q send_notifications"
+      bash -c "celery -A src.core.celery_app worker -n monitor_position_worker --loglevel=info -Q position_monitoring &
+      celery -A src.core.celery_app worker -n redis_worker --loglevel=info -Q event_listener &
+      celery -A src.core.celery_app worker -n notification_worker --loglevel=info -Q send_notifications &
+      celery -A src.core.celery_app worker -n mainnet_challenges_worker --loglevel=info -Q monitor_mainnet_challenges &
+      celery -A src.core.celery_app worker -n monitor_mainnet_worker --loglevel=info -Q monitor_miner &
+      celery -A src.core.celery_app worker -n monitor_testnet_worker --loglevel=info -Q testnet_validator &
+      wait -n"
 
   celery_beat:
-    build: .
+    build:
+      context: .
+      dockerfile: docker/celery/Dockerfile
     volumes:
       - .:/app
     env_file:

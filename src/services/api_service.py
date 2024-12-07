@@ -1,7 +1,13 @@
-import requests
+import asyncio
+import json
 
-from src.config import CHECKPOINT_URL, POSITIONS_URL, POSITIONS_TOKEN
+import requests
+import websockets
+
+from src.config import POSITIONS_URL, POSITIONS_TOKEN, TESTNET_CHECKPOINT_URL
 from src.services.user_service import get_hot_key
+from src.utils.constants import TESTNET_TABLE
+from src.utils.redis_manager import get_hash_value
 
 
 def call_main_net(url=POSITIONS_URL, token=POSITIONS_TOKEN):
@@ -16,19 +22,22 @@ def call_main_net(url=POSITIONS_URL, token=POSITIONS_TOKEN):
     return response.json()
 
 
-def call_checkpoint_api():
-    response = requests.get(CHECKPOINT_URL)
-    if response.status_code != 200:
+def testnet_websocket(monitor=False):
+    try:
+        testnet_data = json.loads(get_hash_value(key="0", hash_name=TESTNET_TABLE))
+        if monitor:
+            return testnet_data
+        return testnet_data["positions"]
+    except Exception as e:
+        print(f"Error: {e}")
         return {}
-
-    return response.json()["positions"]
 
 
 def get_position(trader_id, trade_pair, main=True, position_uuid=None):
     if main:
         data = call_main_net()
     else:
-        data = call_checkpoint_api()
+        data = testnet_websocket()
 
     if not data:
         return

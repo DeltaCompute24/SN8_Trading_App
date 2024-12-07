@@ -97,7 +97,6 @@ class PaymentCreate(BaseModel):
     firebase_id: str
     amount: float
     step: Literal[1, 2]
-    phase: Literal[1, 2]
     referral_code: Optional[str] = None
 
 

@@ -1,34 +1,43 @@
 forex_pairs = [
-    'NZDUSD', 'NZDCAD', 'EURCAD', 'EURUSD', 'EURJPY', 'AUDJPY', 'AUDUSD', 'AUDCAD', 'EURNZD', 'AUDNZD',
-    'USDCAD', 'EURGBP', 'USDJPY', 'EURCHF', 'GBPUSD', 'CADJPY', 'NZDJPY', 'USDCHF', 'GBPJPY', 'CHFJPY',
-    'CADCHF', 'USDMXN',
+    # forex
+    'AUDCAD', 'AUDUSD', 'AUDJPY', 'AUDNZD',
+    'CADCHF', 'CADJPY', 'CHFJPY',
+    'EURCAD', 'EURUSD', 'EURCHF', 'EURGBP', 'EURJPY', 'EURNZD',
+    'NZDCAD', 'NZDJPY', 'NZDUSD',
+    'GBPUSD', 'GBPJPY',
+    'USDCAD', 'USDCHF', 'USDJPY', 'USDMXN',
+    # "Commodities" (Bundle with Forex for now)
+    'XAUUSD', 'XAGUSD',
+]
+
+stocks_pairs = [
+    'NVDA', 'AAPL', 'TSLA', 'AMZN', 'MSFT', 'GOOG', 'META',
 ]
 
 crypto_pairs = [
-    'BTCUSD', 'ETHUSD',
+    'BTCUSD', 'ETHUSD', 'SOLUSD', 'XRPUSD', 'DOGEUSD',
 ]
 
 indices_pairs = [
-    'GDAXI', 'NDX', 'VIX', 'SPX', 'DJI', 'FTSE',
+    'SPX', 'DJI', 'NDX', 'VIX', 'FTSE', 'GDAXI',
 ]
 
 # ----------------------------- REDIS CONSTANTS --------------------------------
 REDIS_LIVE_PRICES_TABLE = 'live_prices'
 POSITIONS_TABLE = 'positions'
-OPERATION_QUEUE_NAME = "db_operations_queue"
-ERROR_QUEUE_NAME = "errors"
-
-# ----------------------------- MAINNET API CONSTANTS -----------------------------
-MAIN_POSITIONS_URL = "https://request.wildsage.io/miner-positions"
-MAIN_POSITIONS_TOKEN = "req_3ZR8ckpEyNZR3HjP9x8rXHj1"
-MAIN_STATISTICS_URL = "https://request.wildsage.io/statistics"
-MAIN_STATISTICS_TOKEN = "req_3ZY8hrPfrzMfkzZHNr9QNQw5"
-NEW_MAIN_POSITIONS_URL = "http://165.227.89.220:8888/download?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NjA0NTQ5NTIsImlhdCI6MTcyODkxODk1Mn0.d0Mxm6-0YoALCZDyFrj1A0JpgAtdMuUw9sX9aoLh5pI"
+OPERATION_QUEUE_NAME = 'db_operations_queue'
+ERROR_QUEUE_NAME = 'errors'
+TESTNET_TABLE = 'testnet'
 
 # -------------------- Assets Minimum and Maximum Leverages -------------------------
 CRYPTO_MIN_LEVERAGE = 0.01
 CRYPTO_MAX_LEVERAGE = 0.5
+
 FOREX_MIN_LEVERAGE = 0.1
 FOREX_MAX_LEVERAGE = 5
+
 INDICES_MIN_LEVERAGE = 0.1
 INDICES_MAX_LEVERAGE = 5
+
+STOCKS_MIN_LEVERAGE = 0.1
+STOCKS_MAX_LEVERAGE = 5

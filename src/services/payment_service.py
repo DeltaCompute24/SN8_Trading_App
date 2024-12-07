@@ -12,7 +12,7 @@ from src.database_tasks import TaskSessionLocal_
 from src.models import Challenge
 from src.models.payments import Payment
 from src.schemas.user import PaymentCreate
-from src.services.email_service import send_mail_in_thread, send_mail
+from src.services.email_service import send_mail, send_support_email
 from src.services.user_service import get_firebase_user, get_challenge_by_id
 from src.utils.logging import setup_logging
 
@@ -30,7 +30,7 @@ def get_payment(db: Session, payment_id: int):
     return payment
 
 
-def create_challenge(db, payment_data, network, user, status="In Progress",
+def create_challenge(db, payment_data, network, phase, user, status="In Progress",
                      message="Trader_id and hot_key will be created"):
     _challenge = Challenge(
         trader_id=0,
@@ -42,7 +42,7 @@ def create_challenge(db, payment_data, network, user, status="In Progress",
         hotkey_status=status,
         message=message,
         step=payment_data.step,
-        phase=payment_data.phase,
+        phase=phase,
     )
     db.add(_challenge)
     db.commit()
@@ -57,7 +57,7 @@ def create_challenge(db, payment_data, network, user, status="In Progress",
     return _challenge
 
 
-def create_payment_entry(db, payment_data, challenge=None):
+def create_payment_entry(db, payment_data, phase, challenge=None):
     _payment = Payment(
         firebase_id=payment_data.firebase_id,
         amount=payment_data.amount,
@@ -65,7 +65,7 @@ def create_payment_entry(db, payment_data, challenge=None):
         challenge=challenge,
         challenge_id=challenge.id if challenge else None,
         step=payment_data.step,
-        phase=payment_data.phase,
+        phase=phase,
     )
     db.add(_payment)
     db.commit()
@@ -74,16 +74,24 @@ def create_payment_entry(db, payment_data, challenge=None):
 
 
 def create_payment(db: Session, payment_data: PaymentCreate):
-    if payment_data.step not in [1, 2] or payment_data.phase not in [1, 2]:
+    if payment_data.step not in [1, 2]:
         raise HTTPException(status_code=400, detail="Step or Phase can either be 1 or 2")
 
-    network = "test" if (payment_data.step == 2 and payment_data.phase == 1) else "main"
+    if payment_data.step == 2:
+        phase = 1
+        network = "test"
+    else:
+        phase = 2
+        network = "main"
+
     firebase_user = get_firebase_user(db, payment_data.firebase_id)
+    if firebase_user and firebase_user.email == "dev@delta-mining.com" and payment_data.step == 1:
+        raise HTTPException(status_code=400, detail=f"You '{firebase_user.email}' can't register minor as mainnet!")
 
     if not firebase_user:
         new_challenge = None
     elif firebase_user.username:
-        new_challenge = create_challenge(db, payment_data, network, firebase_user)
+        new_challenge = create_challenge(db, payment_data, network, phase, firebase_user)
         thread = threading.Thread(
             target=register_and_update_challenge,
             args=(
@@ -92,12 +100,17 @@ def create_payment(db: Session, payment_data: PaymentCreate):
         thread.start()
     # If Firebase user exists but lacks necessary fields
     else:
-        new_challenge = create_challenge(db, payment_data, network, firebase_user, status="Failed",
+        new_challenge = create_challenge(db, payment_data, network, phase, firebase_user, status="Failed",
                                          message="User's Email and Name is Empty!")
 
-    new_payment = create_payment_entry(db, payment_data, new_challenge)
+    new_payment = create_payment_entry(db, payment_data, phase, new_challenge)
     if firebase_user and firebase_user.email:
-        send_mail_in_thread(firebase_user.email, "Payment Confirmed", "Your payment is confirmed!")
+        first_name = firebase_user.name or "User"
+        send_mail(
+            receiver=firebase_user.email,
+            subject=f"{first_name}, Payment Confirmed",
+            context={"name": first_name},
+        )
     return new_payment
 
 
@@ -124,7 +137,7 @@ def register_and_update_challenge(challenge_id: int):
                 challenge.message = "Challenge Updated Successfully!"
                 challenge.hotkey_status = "Success"
                 context = {
-                    "name": challenge.user.name,
+                    "name": challenge.user.name or "User",
                     "trader_id": challenge.trader_id,
                 }
                 if network == "main":
@@ -147,6 +160,11 @@ def register_and_update_challenge(challenge_id: int):
                 print("400 RESPONSE")
                 challenge.hotkey_status = "Failed"
                 challenge.message = f"Registration API call failed with status code: {response.status_code}. Challenge didn't Updated!"
+                send_support_email(
+                    subject=f"Registration API call failed with status code: {response.status_code}",
+                    content=f"User {email} tried to create payment with step {challenge.step} and phase {challenge.phase} "
+                            f"but Failed. Response from registration api => {data}",
+                )
 
             db.commit()
             db.refresh(challenge)
@@ -155,3 +173,8 @@ def register_and_update_challenge(challenge_id: int):
             challenge.hotkey_status = "Failed"
             challenge.message = str(e)
             db.commit()
+            send_support_email(
+                subject="Exception in Registration Process",
+                content=f"User {email} tried to create payment with step {challenge.step} and phase {challenge.phase} "
+                        f"but Failed. Exception => {e}",
+            )
