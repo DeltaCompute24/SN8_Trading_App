@@ -44,7 +44,7 @@ celery_app.conf.update(
         },
         'send_registration_reminder-daily': {
             'task': 'src.tasks.tournament_notifications.send_registration_reminder',
-            'schedule': 21600.0,  # Runs every 6 hours
+            'schedule': 21600.0,  # Runs every 6 hour
         },
         'send_tournament_start_email-minute': {
             'task': 'src.tasks.tournament_notifications.send_tournament_start_email',
