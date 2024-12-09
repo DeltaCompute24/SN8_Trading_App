@@ -1,9 +1,7 @@
 import logging
 from datetime import timedelta, datetime
-
 from celery import shared_task
 from sqlalchemy.orm import Session
-
 from src.database import SessionLocal
 from src.models import Tournament, Challenge
 from src.services.email_service import send_mail
@@ -27,35 +25,34 @@ def get_tournament_registrants(tournament_id: int, db: Session):
 
 @shared_task(name="src.tasks.tournament_notifications.send_registration_reminder")
 def send_registration_reminder():
-    """Send reminder email to registrants 1 day after registration."""
     db = SessionLocal()
     try:
         now = datetime.utcnow()
-        one_day_ago = now - timedelta(days=1)
+        six_hours_ago_start = now - timedelta(hours=6)
+        six_hours_ago_end = now - timedelta(hours=5, seconds=59)
 
-        # Fetch tournament registrants who registered 24 hours ago and haven't been emailed yet
+        # Fetch challenges created exactly 6 hours ago and status is "Tournament"
         challenges = db.query(Challenge).filter(
-            Challenge.created_at <= one_day_ago,
-            # Challenge.reminder_email_sent == False,
+            Challenge.created_at >= six_hours_ago_start,
+            Challenge.created_at <= six_hours_ago_end,
             Challenge.status == "Tournament"
         ).all()
 
         for challenge in challenges:
             user = challenge.user
 
-            # Send email
-            subject = "Reminder: Join Our Tournament Discord"
+            subject = "Reminder: Join Our Discord!"
             context = {
-                "header": "Don't Miss Out!",
-                "body": f"Hi {user.name},\n\nDon't forget to join our Discord channel for the latest updates and discussions about the tournament!",
-                "footer": "We can't wait to see you there!"
+                "name": user.name,
             }
-
-            send_mail(user.email, subject=subject, context=context)
+            send_mail(
+                receiver=user.email,
+                subject=subject,
+                template_name='RegistrationReminder.html',
+                context=context
+            )
             logger.info(f"Sent registration reminder to {user.name} ({user.email})")
 
-            # Update the reminder_email_sent flag
-            # challenge.reminder_email_sent = True
             db.add(challenge)
 
         db.commit()
@@ -73,11 +70,14 @@ def send_tournament_start_email():
     db = SessionLocal()
     try:
         now = datetime.utcnow()
+        one_minute_later = now + timedelta(minutes=1)
+        logger.info(f"Checking for tournaments that start between {now} and {one_minute_later}")
 
-        # Fetch tournaments that have just started
+        # Fetch tournaments that are starting within the next 1 minute
         tournaments = db.query(Tournament).filter(
-            Tournament.start_time <= now,
-            Tournament.end_time >= now
+            Tournament.start_time >= now,
+            Tournament.start_time < one_minute_later,
+            Tournament.end_time > now  # Ensures the tournament is still ongoing
         ).all()
 
         for tournament in tournaments:
@@ -85,16 +85,22 @@ def send_tournament_start_email():
             for challenge in challenges:
                 user = challenge.user
 
-                subject = "Tournament is Live!"
+                # Send email using the tournament start email template
+                subject = "The Tournament Has Started!"
                 context = {
-                    "header": "The Tournament is Live!",
-                    "body": f"Hi {user.name},\n\nThe {tournament.name} tournament has officially started. Head over to the platform and make your move!",
-                    "footer": "Good luck and have fun!"
+                    "name": user.name,
+                    "tournament_name": tournament.name
                 }
 
-                send_mail(user.email, subject=subject, context=context)
+                send_mail(
+                    receiver=user.email,
+                    subject=subject,
+                    template_name='TournamentStartEmail.html',
+                    context=context
+                )
 
-                logger.info(f"Sent tournament start email to {user.name} ({user.email}) for tournament {tournament.name}")
+                logger.info(
+                    f"Sent tournament start email to {user.name} ({user.email}) for tournament {tournament.name}")
 
     except Exception as e:
         logger.error(f"Error in send_tournament_start_email task: {e}")
@@ -109,11 +115,16 @@ def send_tournament_start_reminder():
     db = SessionLocal()
     try:
         now = datetime.utcnow()
-        tournament_start_time = now + timedelta(days=1)
+        reminder_time_start = now + timedelta(days=1)
+        reminder_time_end = reminder_time_start + timedelta(minutes=1)  # Covers up to 24 hours + 59 seconds
 
-        # Fetch tournaments starting in 1 day
+        logger.info(
+            f"Checking for tournaments starting between {reminder_time_start} and {reminder_time_end} for reminders")
+
+        # Fetch tournaments starting exactly 24 hours from now (within the range)
         tournaments = db.query(Tournament).filter(
-            Tournament.start_time == tournament_start_time
+            Tournament.start_time >= reminder_time_start,
+            Tournament.start_time < reminder_time_end
         ).all()
 
         for tournament in tournaments:
@@ -121,16 +132,22 @@ def send_tournament_start_reminder():
             for challenge in challenges:
                 user = challenge.user
 
-                subject = "Tournament Starts in 1 Day!"
+                # Send email using the tournament start reminder template
+                subject = "Tournament Starts in 24 Hours!"
                 context = {
-                    "header": "Get Ready for the Action!",
-                    "body": f"Hi {user.name},\n\nThe {tournament.name} tournament starts in just 1 day. Make sure you're ready to participate!",
-                    "footer": "See you in the tournament!"
+                    "name": user.name,
+                    "tournament_name": tournament.name
                 }
 
-                send_mail(user.email, subject=subject, context=context)
+                send_mail(
+                    receiver=user.email,
+                    subject=subject,
+                    template_name='TournamentStartReminder.html',
+                    context=context
+                )
 
-                logger.info(f"Sent tournament start reminder to {user.name} ({user.email}) for tournament {tournament.name}")
+                logger.info(
+                    f"Sent tournament start reminder to {user.name} ({user.email}) for tournament {tournament.name}")
 
     except Exception as e:
         logger.error(f"Error in send_tournament_start_reminder task: {e}")

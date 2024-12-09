@@ -1,5 +1,4 @@
 from celery import Celery
-
 from src.config import CELERY_BROKER_URL, CELERY_RESULT_BACKEND
 
 celery_app = Celery(
@@ -15,7 +14,8 @@ celery_app.conf.update(
         'src.tasks.redis_listener.event_listener': {'queue': 'event_listener'},
         'src.tasks.monitor_mainnet_challenges.monitor_mainnet_challenges': {'queue': 'monitor_mainnet_challenges'},
         'src.tasks.monitor_miner_positions.monitor_miner': {'queue': 'monitor_miner'},
-        'src.tasks.testnet_validator.testnet_validator': {'queue': 'testnet_validator'}
+        'src.tasks.testnet_validator.testnet_validator': {'queue': 'testnet_validator'},
+        'src.tasks.tournament_notifications.*': {'queue': 'tournament_notifications'},
     },
     beat_schedule={
         'send_notifications-every-1-second': {
@@ -42,6 +42,18 @@ celery_app.conf.update(
             'task': 'src.tasks.testnet_validator.testnet_validator',
             'schedule': 2.0,  # every 1 second
         },
+        'send_registration_reminder-daily': {
+            'task': 'src.tasks.tournament_notifications.send_registration_reminder',
+            'schedule': 21600.0,  # Runs every 6 hours
+        },
+        'send_tournament_start_email-minute': {
+            'task': 'src.tasks.tournament_notifications.send_tournament_start_email',
+            'schedule': 60.0,  # Runs every 1 minute
+        },
+        'send_tournament_start_reminder-minute': {
+            'task': 'src.tasks.tournament_notifications.send_tournament_start_reminder',
+            'schedule': 60.0,  # Runs every 1 minute
+        },
     },
     timezone='UTC',
 )
@@ -55,3 +67,4 @@ import src.tasks.monitor_miner_positions
 import src.tasks.monitor_mainnet_challenges
 import src.tasks.send_notification
 import src.tasks.testnet_validator
+import src.tasks.tournament_notifications

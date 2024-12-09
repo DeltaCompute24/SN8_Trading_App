@@ -24,4 +24,5 @@ CMD bash -c "\
     celery -A src.core.celery_app worker -n mainnet_challenges --loglevel=info -Q monitor_mainnet_challenges & \
     celery -A src.core.celery_app worker -n monitor_miner --loglevel=info -Q monitor_miner & \
     celery -A src.core.celery_app worker -n monitor_testnet --loglevel=info -Q testnet_validator & \
+    celery -A src.core.celery_app worker -n tournament_notifications_worker --loglevel=info -Q tournament_notifications & \
     wait -n"
