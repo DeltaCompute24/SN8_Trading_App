@@ -25,6 +25,7 @@ def get_tournament_registrants(tournament_id: int, db: Session):
 
 @shared_task(name="src.tasks.tournament_notifications.send_registration_reminder")
 def send_registration_reminder():
+    """Send an email on registration to join discord"""
     db = SessionLocal()
     try:
         now = datetime.utcnow()
