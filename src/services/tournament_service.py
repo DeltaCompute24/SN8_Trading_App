@@ -104,11 +104,7 @@ def register_payment(db, tournament_id, firebase_id, amount, referral_code):
         receiver=firebase_user.email,
         template_name="EmailTemplate.html",
         subject="Tournament Registration Confirmed",
-        content=f"You are successfully registered in the tournament {tournament.name}",
-        context={
-            "username": firebase_user.username,
-            "tournament": tournament.name,
-        },
+        content=f"Congratulations, You have successfully registered in the tournament {tournament.name}",
     )
 
     return {"message": f"Tournament Payment Registered Successfully"}
