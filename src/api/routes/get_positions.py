@@ -62,9 +62,9 @@ async def get_positions(
     if source == "main":
         data = call_main_net()
     elif source == "test":
-        data = await testnet_websocket()
+        data = testnet_websocket()
     else:
-        test_net = await testnet_websocket()
+        test_net = testnet_websocket()
         data = call_main_net() | test_net
 
     for position in positions:

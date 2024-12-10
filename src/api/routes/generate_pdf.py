@@ -19,7 +19,7 @@ async def generate_certificate(user_data: GeneratePdfSchema, db: Session = Depen
     if not user:
         raise HTTPException(status_code=400, detail="User doesn't exist for this firebase_id")
 
-    file_message = send_certificate_email(user.email, user.name, user_data)
+    send_certificate_email(user.email, user.name, user_data)
 
     # Return a message indicating the result
-    return {"message": file_message}
+    return {"message": "Certificate Generated!"}
