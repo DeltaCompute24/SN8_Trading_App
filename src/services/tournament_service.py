@@ -4,7 +4,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import and_
-
+from sqlalchemy.ext.asyncio import AsyncSession
 from src.models.tournament import Tournament
 from src.schemas.tournament import TournamentCreate, TournamentUpdate
 from src.services.email_service import send_mail
@@ -36,7 +36,7 @@ def get_tournament_by_id(db: Session, tournament_id: int):
 
 
 def update_tournament(db: Session, tournament_id: int, tournament_data: TournamentUpdate):
-    tournament = db.query(Tournament).filter(Tournament.id == tournament_id).first()
+    tournament = get_tournament_by_id(db, tournament_id)
     if tournament:
         tournament.name = tournament_data.name or tournament.name
         tournament.start_time = tournament_data.start_time or tournament.start_time
@@ -47,7 +47,7 @@ def update_tournament(db: Session, tournament_id: int, tournament_data: Tourname
 
 
 def delete_tournament(db: Session, tournament_id: int):
-    tournament = db.query(Tournament).filter(Tournament.id == tournament_id).first()
+    tournament = get_tournament_by_id(db, tournament_id)
     if tournament:
         db.delete(tournament)
         db.commit()
@@ -61,7 +61,7 @@ def register_payment(db, tournament_id, firebase_id, amount, referral_code):
         raise HTTPException(status_code=400, detail="Invalid Firebase user data")
 
     # Fetch Tournament
-    tournament = db.query(Tournament).filter(Tournament.id == tournament_id).first()
+    tournament = get_tournament_by_id(db, tournament_id)
     if not tournament:
         raise HTTPException(status_code=404, detail="Tournament Not Found")
 
@@ -112,3 +112,18 @@ def register_payment(db, tournament_id, firebase_id, amount, referral_code):
     )
 
     return {"message": f"Tournament Payment Registered Successfully"}
+
+
+async def get_tournament(db: AsyncSession, tournament_id: int):
+    """
+    Fetch a tournament by its ID using AsyncSession.
+
+    Args:
+        db: The asynchronous database session.
+        tournament_id: The ID of the tournament to fetch.
+
+    Returns:
+        The Tournament object or None if not found.
+    """
+    result = await db.execute(select(Tournament).where(Tournament.id == tournament_id))
+    return result.scalars().first()
