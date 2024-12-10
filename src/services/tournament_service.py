@@ -2,14 +2,15 @@ import threading
 
 from fastapi import HTTPException
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import and_
-from sqlalchemy.ext.asyncio import AsyncSession
+
 from src.models.tournament import Tournament
 from src.schemas.tournament import TournamentCreate, TournamentUpdate
 from src.services.email_service import send_mail
 from src.services.payment_service import create_challenge, create_payment_entry, register_and_update_challenge
-from src.services.user_service import get_firebase_user
+from src.services.user_service import get_firebase_user, convert_time_to_est
 
 
 def create_tournament(db: Session, tournament_data: TournamentCreate):
@@ -64,6 +65,9 @@ def register_payment(db, tournament_id, firebase_id, amount, referral_code):
     tournament = get_tournament_by_id(db, tournament_id)
     if not tournament:
         raise HTTPException(status_code=404, detail="Tournament Not Found")
+
+    if tournament.end_time >= convert_time_to_est():
+        raise HTTPException(status_code=404, detail="Tournament has ended!")
 
     # Prepare Payment Data
     payment_data = {
