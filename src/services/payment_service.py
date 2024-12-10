@@ -32,8 +32,6 @@ def get_payment(db: Session, payment_id: int):
 
 def create_challenge(db, payment_data, network, phase, user, challenge_status="In Challenge", status="In Progress",
                      message="Trader_id and hot_key will be created"):
-    step_value = payment_data["step"] if isinstance(payment_data, dict) else getattr(payment_data, "step", None)
-    phase_value = payment_data["phase"] if isinstance(payment_data, dict) else phase
     _challenge = Challenge(
         trader_id=0,
         hot_key="",
@@ -43,8 +41,8 @@ def create_challenge(db, payment_data, network, phase, user, challenge_status="I
         challenge=network,
         hotkey_status=status,
         message=message,
-        step=step_value,
-        phase=phase_value,
+        step=payment_data.step,
+        phase=phase,
     )
     db.add(_challenge)
     db.commit()
@@ -60,22 +58,13 @@ def create_challenge(db, payment_data, network, phase, user, challenge_status="I
 
 
 def create_payment_entry(db, payment_data, phase, challenge=None):
-    # Check if payment_data is a dictionary or an object and extract necessary values
-    firebase_id = payment_data["firebase_id"] if isinstance(payment_data, dict) else getattr(payment_data,
-                                                                                             "firebase_id", None)
-    amount = payment_data["amount"] if isinstance(payment_data, dict) else getattr(payment_data, "amount", None)
-    referral_code = payment_data["referral_code"] if isinstance(payment_data, dict) else getattr(payment_data,
-                                                                                                 "referral_code", None)
-    step = payment_data["step"] if isinstance(payment_data, dict) else getattr(payment_data, "step", None)
-    phase = payment_data["phase"] if isinstance(payment_data, dict) else phase
-
     _payment = Payment(
-        firebase_id=firebase_id,
-        amount=amount,
-        referral_code=referral_code,
+        firebase_id=payment_data.firebase_id,
+        amount=payment_data.amount,
+        referral_code=payment_data.referral_code,
         challenge=challenge,
         challenge_id=challenge.id if challenge else None,
-        step=step,
+        step=payment_data.step,
         phase=phase,
     )
     db.add(_payment)
