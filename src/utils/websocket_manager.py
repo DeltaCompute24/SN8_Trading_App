@@ -7,7 +7,7 @@ import websockets
 from throttler import Throttler
 
 from src.config import POLYGON_API_KEY, SIGNAL_API_KEY, SIGNAL_API_BASE_URL
-from src.utils.constants import forex_pairs, crypto_pairs, indices_pairs
+from src.utils.constants import forex_pairs, crypto_pairs, indices_pairs, stocks_pairs
 from src.utils.logging import setup_logging
 from src.utils.redis_manager import set_live_price
 
@@ -174,8 +174,15 @@ class IndicesWebSocketManager(WebSocketManager):
         return f"{prefix}{formatted_pair}"
 
 
+class StocksWebSocketManager(WebSocketManager):
+    def __init__(self):
+        super().__init__("stocks")
+        self.trade_pairs = [f"A.{pair}" for pair in stocks_pairs]
+
+
 websocket_manager = WebSocketManager("forex")
 
 forex_websocket_manager = ForexWebSocketManager()
 crypto_websocket_manager = CryptoWebSocketManager()
+stocks_websocket_manager = StocksWebSocketManager()
 # indices_websocket_manager = IndicesWebSocketManager()

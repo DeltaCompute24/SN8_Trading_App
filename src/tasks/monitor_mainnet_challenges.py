@@ -11,6 +11,7 @@ from src.database_tasks import TaskSessionLocal_
 from src.models.challenge import Challenge
 from src.services.api_service import call_main_net
 from src.services.email_service import send_mail
+from src.services.s3_services import send_certificate_email
 from src.utils.constants import ERROR_QUEUE_NAME
 from src.utils.redis_manager import push_to_redis_queue
 
@@ -65,6 +66,8 @@ def monitor_mainnet_challenges():
             for challenge in get_monitored_challenges(db, challenge="main"):
                 hot_key = challenge.hot_key
                 elimination = eliminations.get(hot_key)
+                name = challenge.user.name
+                email = challenge.user.email
                 changed = False
 
                 if success.get(hot_key):
@@ -80,6 +83,7 @@ def monitor_mainnet_challenges():
                     else:
                         template_name = "ChallengePassedPhase2.html"
                         subject = "Congratulations on Completing Phase 2!"
+                    attachment = send_certificate_email(email, name, challenge, True)
                 elif elimination:
                     changed = True
                     c_response = challenge.response or {}
@@ -96,14 +100,16 @@ def monitor_mainnet_challenges():
                     else:
                         template_name = "ChallengeFailedPhase2.html"
                         subject = "Phase 2 Challenge Failed"
+                    attachment = None
 
                 if changed:
                     update_challenge(db, challenge, c_data)
                     send_mail(
-                        challenge.user.email,
+                        email,
                         subject=subject,
                         template_name=template_name,
-                        context={'name': challenge.user.name, 'date': datetime.utcnow()}
+                        context={'name': name},
+                        attachment=attachment,
                     )
 
     except Exception as e:
