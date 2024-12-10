@@ -32,6 +32,9 @@ jobs:
       - name: Build celery image
         run: docker build -f docker/celery/DockerFile -t celery_worker .
 
+      - name: Build celery-beat image
+        run: docker build -f docker/celery-beat/DockerFile -t celery_beat .
+
       - name: Login ECR Repository
         run: |
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 288792505174.dkr.ecr.us-east-1.amazonaws.com
@@ -45,6 +48,11 @@ jobs:
         run: |
           docker tag celery_worker:latest 288792505174.dkr.ecr.us-east-1.amazonaws.com/defi-backend-celery_worker:latest    
           docker push 288792505174.dkr.ecr.us-east-1.amazonaws.com/defi-backend-celery_worker:latest
+
+      - name: Tag and push celery-beat-workers image
+        run: |
+          docker tag celery_beat:latest 288792505174.dkr.ecr.us-east-1.amazonaws.com/defi-backend-celery_beat:latest    
+          docker push 288792505174.dkr.ecr.us-east-1.amazonaws.com/defi-backend-celery_beat:latest
 
       - name: Deploy ECS task
         run: |
