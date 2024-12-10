@@ -59,7 +59,7 @@ def validate_leverage(asset_type, leverage):
     elif asset_type == "indices" and (leverage < INDICES_MIN_LEVERAGE or leverage > INDICES_MAX_LEVERAGE):
         raise HTTPException(status_code=400,
                             detail=f"Invalid leverage for asset type {asset_type}! Valid Range: {INDICES_MIN_LEVERAGE} - {INDICES_MAX_LEVERAGE}")
-    elif asset_type == "stocks" and leverage < STOCKS_MIN_LEVERAGE or leverage > STOCKS_MAX_LEVERAGE:
+    elif asset_type == "stocks" and (leverage < STOCKS_MIN_LEVERAGE or leverage > STOCKS_MAX_LEVERAGE):
         raise HTTPException(status_code=400,
                             detail=f"Invalid leverage for asset type {asset_type}! Valid Range: {STOCKS_MIN_LEVERAGE} - {STOCKS_MAX_LEVERAGE}")
 

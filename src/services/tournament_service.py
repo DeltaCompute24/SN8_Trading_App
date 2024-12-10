@@ -79,10 +79,9 @@ def register_payment(db, tournament_id, firebase_id, amount, referral_code):
         db,
         payment_data=payment_data,
         network="test",
+        phase=1,
         user=firebase_user,
         challenge_status="Tournament",
-        step=2,
-        phase=1,
     )
 
     # Associate Challenge with Tournament
@@ -98,7 +97,7 @@ def register_payment(db, tournament_id, firebase_id, amount, referral_code):
     thread.start()
 
     # Create Payment Entry
-    create_payment_entry(db, payment_data, new_challenge)
+    create_payment_entry(db, payment_data, 1, new_challenge)
 
     # Send Confirmation Email
     send_mail(
