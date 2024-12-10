@@ -10,7 +10,7 @@ celery_app = Celery(
 
 celery_app.conf.update(
     task_routes={
-        'src.tasks.send_notification.send_notifications': {'queue': 'send_notifications'},
+        # 'src.tasks.send_notification.send_notifications': {'queue': 'send_notifications'},
         'src.tasks.position_monitor_sync.monitor_positions': {'queue': 'position_monitoring'},
         'src.tasks.redis_listener.event_listener': {'queue': 'event_listener'},
         'src.tasks.monitor_mainnet_challenges.monitor_mainnet_challenges': {'queue': 'monitor_mainnet_challenges'},
@@ -18,10 +18,10 @@ celery_app.conf.update(
         'src.tasks.testnet_validator.testnet_validator': {'queue': 'testnet_validator'}
     },
     beat_schedule={
-        'send_notifications-every-1-second': {
-            'task': 'src.tasks.send_notification.send_notifications',
-            'schedule': 1.0,  # every 1 seconds
-        },
+        # 'send_notifications-every-1-second': {
+        #     'task': 'src.tasks.send_notification.send_notifications',
+        #     'schedule': 1.0,  # every 1 seconds
+        # },
         'monitor_positions-every-5-seconds': {
             'task': 'src.tasks.position_monitor_sync.monitor_positions',
             'schedule': 5.0,  # every 1 second
