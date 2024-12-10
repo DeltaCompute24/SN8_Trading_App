@@ -7,7 +7,7 @@ from src.config import SWITCH_TO_MAINNET_URL
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.services.api_service import testnet_websocket
-from src.services.email_service import send_mail
+from src.services.email_service import send_mail, send_support_email
 from src.tasks.monitor_mainnet_challenges import get_monitored_challenges, update_challenge
 from src.tasks.monitor_miner_positions import populate_redis_positions
 from src.utils.constants import ERROR_QUEUE_NAME
@@ -66,9 +66,8 @@ def monitor_testnet_challenges(positions, perf_ledgers):
 
                     if email != "dev@delta-mining.com":
                         _response = requests.post(SWITCH_TO_MAINNET_URL, json=payload)
-
+                        data = _response.json()
                         if _response.status_code == 200:
-                            data = _response.json()
                             c_response = challenge.response or {}
                             c_response["main_net_response"] = data
                             c_data = {
@@ -81,6 +80,12 @@ def monitor_testnet_challenges(positions, perf_ledgers):
                                 "register_on_main_net": datetime.utcnow(),
                             }
                             context["trader_id"] = data.get("trader_id")
+                        else:
+                            send_support_email(
+                                subject=f"Switch from testnet to mainnet API call failed with status code: {_response.status_code}",
+                                content=f"User {email} passed step {challenge.step} and phase {challenge.phase} "
+                                        f"but switch_to_mainnet Failed. Response from switch_to_mainnet api => {data}",
+                            )
                     else:
                         c_data = {
                             **c_data,
