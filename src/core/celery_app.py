@@ -42,8 +42,8 @@ celery_app.conf.update(
             'task': 'src.tasks.testnet_validator.testnet_validator',
             'schedule': 2.0,  # every 1 second
         },
-        'send_registration_reminder-daily': {
-            'task': 'src.tasks.tournament_notifications.send_registration_reminder',
+        'send_discord_reminder-daily': {
+            'task': 'src.tasks.tournament_notifications.send_discord_reminder',
             'schedule': 21600.0,  # Runs every 6 hour
         },
         'send_tournament_start_email-minute': {
