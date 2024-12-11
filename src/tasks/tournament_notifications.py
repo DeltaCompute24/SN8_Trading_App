@@ -1,16 +1,22 @@
+import asyncio
 import logging
-from datetime import timedelta, datetime
-import requests
-from src.config import SWITCH_TO_MAINNET_URL
+from datetime import datetime
+from datetime import timedelta
+
+import pytz
+from sqlalchemy.sql import and_
+
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.models import Tournament, Challenge
+from src.models.transaction import Transaction
 from src.services.api_service import testnet_websocket
-from src.services.email_service import send_mail, send_support_email
-from src.tasks.monitor_mainnet_challenges import get_monitored_challenges, update_challenge
+from src.services.email_service import send_mail
+from src.services.tournament_service import update_tournament_object
+from src.services.user_service import bulk_update_challenges
 from src.utils.constants import ERROR_QUEUE_NAME
 from src.utils.redis_manager import push_to_redis_queue
-import pytz
+from src.utils.websocket_manager import websocket_manager
 
 logger = logging.getLogger(__name__)
 
@@ -96,27 +102,65 @@ def send_tournament_start_email():
         db.close()
 
 
-@celery_app.task(name="src.tasks.tournament_notifications.send_tournament_results")
-def send_tournament_results():
-    test_net_data = testnet_websocket(monitor=True)
-
-    if not test_net_data:
-        push_to_redis_queue(
-            data=f"**Testnet Listener** => Testnet Validator Checkpoint returns with status code other than 200",
-            queue_name=ERROR_QUEUE_NAME
-        )
-        return
-
-    positions = test_net_data["positions"]
-    perf_ledgers = test_net_data["perf_ledgers"]
+@celery_app.task(name="src.tasks.tournament_notifications.monitor_tournaments")
+def monitor_tournaments():
     db = TaskSessionLocal_()
     try:
-        for challenge in get_monitored_challenges(db, status="Tournament"):
-            logger.info(f"Monitor first testnet Challenge!")
-            hot_key = challenge.hot_key
-            name = challenge.user.name
-            email = challenge.user.email
+        now = datetime.now(pytz.utc).replace(second=0, microsecond=0)
+        tournaments = db.query(Tournament).filter(
+            Tournament.end_time == (now - timedelta(hours=1))  # Ensures the tournament is still ongoing
+        ).all()
 
+        if not tournaments:
+            return
+
+        for tournament in tournaments:
+            challenges = tournament.challenges
+            for challenge in challenges:
+                transactions = db.query(Transaction).filter(
+                    and_(
+                        Transaction.trader_id == challenge.trader_id,
+                        Transaction.status != "CLOSED",
+                    )
+                ).all()  # PENDING, OPEN
+
+                for position in transactions:
+                    if position.status == "OPEN":  # taoshi
+                        asyncio.run(websocket_manager.submit_trade(position.trader_id, position.trade_pair, "FLAT", 1))
+                    position.status = "CLOSED"
+                    position.close_time = datetime.now(pytz.utc)
+                    position.old_status = position.status
+                    position.operation_type = "tournament_closed"
+                    position.modified_by = "system"
+            calculate_tournament_results(tournament, challenges)
+        db.commit()
+
+    except Exception as e:
+        logger.error(f"Error in tournament reminder email task: {e}")
+        push_to_redis_queue(data=f"Tournament Reminder Email Error - {e}", queue_name="error_queue")
+    finally:
+        db.close()
+
+
+def calculate_tournament_results(tournament, challenges):
+    db = TaskSessionLocal_()
+    try:
+        test_net_data = testnet_websocket(monitor=True)
+        if not test_net_data:
+            push_to_redis_queue(
+                data=f"**Testnet Listener** => Testnet Validator Checkpoint returns with status code other than 200",
+                queue_name=ERROR_QUEUE_NAME
+            )
+            return
+
+        positions = test_net_data["positions"]
+        perf_ledgers = test_net_data["perf_ledgers"]
+        logger.info(f"")
+        attendees_score = {}
+        max_score = float('-inf')
+        challenges_data = []
+        for challenge in challenges:
+            hot_key = challenge.hot_key
             p_content = positions.get(hot_key)
             l_content = perf_ledgers.get(hot_key)
             if not p_content or not l_content:
@@ -128,77 +172,51 @@ def send_tournament_results():
                 if position["is_closed_position"] is True:
                     profit_sum += profit_loss
 
-            draw_down = (l_content["cps"][-1]["mdd"] * 100) - 100
-            c_data = {
-                "draw_down": draw_down,
+            max_draw_down = (l_content["cps"][-1]["mdd"] * 100) - 100
+            score = profit_sum / (max_draw_down if max_draw_down != 0 else 1)
+            challenges_data.append({
+                "draw_down": max_draw_down,
                 "profit_sum": profit_sum,
-            }
-            changed = False
-            context = {
-                "name": name,
-                "trader_id": challenge.trader_id,
-            }
+                "active": "0",
+                "score": score,
+            })
+            # calculate max score
+            if score > max_score:
+                max_score = score
+            # store attendees score
+            if score not in attendees_score:
+                attendees_score[score] = []
+            attendees_score[score].append(challenge.trader_id)
 
-            if profit_sum >= 2:  # 2%
-                changed = True
-                network = "main"
-                payload = {
-                    "name": challenge.challenge_name,
-                    "trader_id": challenge.trader_id,
-                }
-                subject = "Congratulations on Completing Phase 1!"
-                template_name = "ChallengePassedPhase1Step2.html"
+        # bulk update challenge
+        bulk_update_challenges(db, challenges_data)
 
-                c_data = {
-                    **c_data,
-                    "status": "Passed",
-                    "pass_the_challenge": datetime.utcnow(),
-                    "phase": 2,
-                }
+        # tournament update
+        update_tournament_object(
+            db,
+            tournament,
+            data={
+                "winners": attendees_score[max_score],
+                "winning_score": max_score,
+            },
+        )
 
-                if email != "dev@delta-mining.com":
-                    _response = requests.post(SWITCH_TO_MAINNET_URL, json=payload)
-                    data = _response.json()
-                    if _response.status_code == 200:
-                        c_response = challenge.response or {}
-                        c_response["main_net_response"] = data
-                        c_data = {
-                            **c_data,
-                            "challenge": network,
-                            "status": "In Challenge",
-                            "active": "1",
-                            "trader_id": data.get("trader_id"),
-                            "response": c_response,
-                            "register_on_main_net": datetime.utcnow(),
-                        }
-                        context["trader_id"] = data.get("trader_id")
-                    else:
-                        send_support_email(
-                            subject=f"Switch from testnet to mainnet API call failed with status code: {_response.status_code}",
-                            content=f"User {email} passed step {challenge.step} and phase {challenge.phase} "
-                                    f"but switch_to_mainnet Failed. Response from switch_to_mainnet api => {data}",
-                        )
-                else:
-                    c_data = {
-                        **c_data,
-                        "challenge": network,
-                        "status": "In Challenge",
-                        "active": "1",
-                        "register_on_main_net": datetime.utcnow(),
-                    }
-            elif draw_down <= -5:  # 5%
-                changed = True
-                c_data = {
-                    **c_data,
-                    "status": "Failed",
-                    "active": "0",
-                }
-                subject = "Phase 1 Challenge Failed"
-                template_name = "ChallengeFailedPhase1.html"
-
-            if changed:
-                update_challenge(db, challenge, c_data)
-                send_mail(email, subject=subject, template_name=template_name, context=context)
+        # send emails to attendees
+        for challenge in challenges:
+            if challenge.score == max_score:  # winner
+                subject = ""
+                context = {}
+                template_name = ""
+            else: # not winner
+                subject = ""
+                context = {}
+                template_name = ""
+            send_mail(
+                challenge.user.email,
+                subject=subject,
+                context=context,
+                template_name=template_name
+            )
 
         logger.info("Finished monitor_challenges task")
     except Exception as e:

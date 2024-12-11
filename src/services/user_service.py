@@ -1,5 +1,7 @@
 import re
+
 from fastapi import HTTPException
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import Session
@@ -171,6 +173,14 @@ def get_hot_key(trader_id: int):
         populate_ambassadors()
         hot_key = ambassadors.get(trader_id)
     return hot_key
+
+
+def bulk_update_challenges(db: Session, data):
+    db.execute(
+        update(Challenge),
+        data,
+    )
+    db.commit()
 
 
 # ---------------------- USER BALANCE ------------------------------

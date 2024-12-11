@@ -1,11 +1,13 @@
 import threading
-import pytz
 from datetime import datetime
+
+import pytz
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import and_
+
 from src.models.tournament import Tournament
 from src.schemas.tournament import TournamentCreate, TournamentUpdate
 from src.schemas.user import PaymentCreate
@@ -131,3 +133,10 @@ async def get_tournament(db: AsyncSession, tournament_id: int):
     """
     result = await db.execute(select(Tournament).where(Tournament.id == tournament_id))
     return result.scalars().first()
+
+
+def update_tournament_object(db: Session, tournament, data):
+    for key, value in data.items():
+        setattr(tournament, key, value)
+
+    db.commit()
