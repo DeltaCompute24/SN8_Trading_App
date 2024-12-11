@@ -5,8 +5,10 @@ from src.config import SWITCH_TO_MAINNET_URL
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.models import Tournament, Challenge
+from src.services.api_service import testnet_websocket
 from src.services.email_service import send_mail, send_support_email
 from src.tasks.monitor_mainnet_challenges import get_monitored_challenges, update_challenge
+from src.utils.constants import ERROR_QUEUE_NAME
 from src.utils.redis_manager import push_to_redis_queue
 import pytz
 
@@ -84,7 +86,8 @@ def send_tournament_start_email():
                         template_name=template_name,
                         context=context
                     )
-                    logger.info(f"Sent tournament email '{subject}' to {challenge.user.email} for tournament {tournament.name}")
+                    logger.info(
+                        f"Sent tournament email '{subject}' to {challenge.user.email} for tournament {tournament.name}")
 
     except Exception as e:
         logger.error(f"Error in tournament reminder email task: {e}")
@@ -93,7 +96,19 @@ def send_tournament_start_email():
         db.close()
 
 
-def send_tournament_results(positions, perf_ledgers):
+@celery_app.task(name="src.tasks.tournament_notifications.send_tournament_results")
+def send_tournament_results():
+    test_net_data = testnet_websocket(monitor=True)
+
+    if not test_net_data:
+        push_to_redis_queue(
+            data=f"**Testnet Listener** => Testnet Validator Checkpoint returns with status code other than 200",
+            queue_name=ERROR_QUEUE_NAME
+        )
+        return
+
+    positions = test_net_data["positions"]
+    perf_ledgers = test_net_data["perf_ledgers"]
     db = TaskSessionLocal_()
     try:
         for challenge in get_monitored_challenges(db, status="Tournament"):
