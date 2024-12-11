@@ -1,7 +1,4 @@
 import re
-from datetime import timezone, datetime
-
-import pytz
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -207,13 +204,3 @@ def create_user_balance(db: Session, user_data):
     except Exception as e:
         logger.error(f"Error creating user balance: {e}")
         raise HTTPException(status_code=400, detail=str(e))
-
-
-def convert_time_to_est(now_utc=datetime.now(pytz.utc)):
-    # Get the current UTC time
-    now_utc = now_utc.replace(second=0, microsecond=0)
-    # Define Eastern Time Zone
-    eastern = pytz.timezone('US/Eastern')
-    # Convert UTC time to Eastern Time
-    now_utc = now_utc.astimezone(eastern)
-    return now_utc.replace(tzinfo=None)
