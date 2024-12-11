@@ -44,24 +44,23 @@ def get_tournament_by_id(db: Session, tournament_id: int):
 
 def update_tournament(db: Session, tournament_id: int, tournament_data: TournamentUpdate):
     tournament = get_tournament_by_id(db, tournament_id)
-    if tournament:
-        tournament.name = tournament_data.name or tournament.name
-        tournament.start_time = tournament_data.start_time.replace(second=0, microsecond=0) or tournament.start_time
-        tournament.end_time = tournament_data.end_time.replace(second=0, microsecond=0) or tournament.end_time
-        db.commit()
-        db.refresh(tournament)
+    if not tournament:
+        raise HTTPException(status_code=404, detail="Tournament Not Found!")
+    tournament = update_tournament_object(db, tournament, tournament_data.dict())
     return tournament
 
 
 def delete_tournament(db: Session, tournament_id: int):
     tournament = get_tournament_by_id(db, tournament_id)
-    if tournament:
-        db.delete(tournament)
-        db.commit()
+    if not tournament:
+        raise HTTPException(status_code=404, detail="Tournament Not Found!")
+
+    db.delete(tournament)
+    db.commit()
     return tournament
 
 
-def register_payment(db, tournament_id, firebase_id, amount, referral_code):
+def register_tournament_payment(db, tournament_id, firebase_id, amount, referral_code):
     # Validate Firebase User
     firebase_user = get_firebase_user(db, firebase_id)
     if not firebase_user or not firebase_user.username:
@@ -140,3 +139,5 @@ def update_tournament_object(db: Session, tournament, data):
         setattr(tournament, key, value)
 
     db.commit()
+    db.refresh(tournament)
+    return tournament

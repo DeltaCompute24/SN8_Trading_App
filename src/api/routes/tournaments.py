@@ -11,7 +11,7 @@ from src.services.tournament_service import (
     create_tournament,
     get_tournament_by_id,
     update_tournament,
-    delete_tournament, register_payment,
+    delete_tournament, register_tournament_payment,
 )
 from src.utils.logging import setup_logging
 
@@ -82,7 +82,7 @@ def register_tournament_endpoint(
     logger.info(f"Registering for tournament {tournament_id} with firebase_id={firebase_id}")
     try:
         # Create Challenge and Associate with Tournament
-        message = register_payment(db, tournament_id, firebase_id, amount, referral_code)
+        message = register_tournament_payment(db, tournament_id, firebase_id, amount, referral_code)
         return message
     except Exception as e:
         logger.info(f"Error during registration: {e}")
