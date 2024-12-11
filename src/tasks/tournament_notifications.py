@@ -1,13 +1,14 @@
 import logging
-from datetime import timedelta
-
+from datetime import timedelta, datetime
+import requests
+from src.config import SWITCH_TO_MAINNET_URL
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.models import Tournament, Challenge
-from src.services.email_service import send_mail
-from src.services.user_service import convert_time_to_est
-from src.tasks.monitor_mainnet_challenges import get_monitored_challenges
+from src.services.email_service import send_mail, send_support_email
+from src.tasks.monitor_mainnet_challenges import get_monitored_challenges, update_challenge
 from src.utils.redis_manager import push_to_redis_queue
+import pytz
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +18,7 @@ def send_discord_reminder():
     """Send an email on registration to join discord"""
     db = TaskSessionLocal_()
     try:
-        now = convert_time_to_est()  # 6
+        now = datetime.now(pytz.utc).replace(second=0, microsecond=0)
         six_hours_ago_start = now - timedelta(hours=6)  # 12
 
         # Fetch challenges created exactly 6 hours ago and status is "Tournament"
@@ -29,19 +30,16 @@ def send_discord_reminder():
         ).all()
 
         for challenge in challenges:
-            user = challenge.user
-
-            subject = "Reminder: Join Our Discord!"
-            context = {
-                "name": user.name,
-            }
-            send_mail(
-                receiver=user.email,
-                subject=subject,
-                template_name='RegistrationReminder.html',
-                context=context,
-            )
-            logger.info(f"Sent registration reminder to {user.name} ({user.email})")
+            if challenge.user:
+                subject = "Reminder: Join Our Discord!"
+                context = {"name": challenge.user.name}
+                send_mail(
+                    receiver=challenge.user.email,
+                    subject=subject,
+                    template_name='RegistrationReminder.html',
+                    context=context,
+                )
+                logger.info(f"Sent registration reminder to {challenge.user.name} ({challenge.user.email})")
 
     except Exception as e:
         logger.error(f"Error in send_discord_reminder task: {e}")
@@ -55,7 +53,7 @@ def send_tournament_start_email():
     """Send an email when the tournament officially starts."""
     db = TaskSessionLocal_()
     try:
-        now = convert_time_to_est()
+        now = datetime.now(pytz.utc).replace(second=0, microsecond=0)
         one_minute_later = now + timedelta(minutes=1)
         one_day_later = now + timedelta(days=1)
         logger.info(f"Checking for tournaments that start between {now} and {one_minute_later}")
@@ -67,34 +65,26 @@ def send_tournament_start_email():
 
         for tournament in tournaments:
             for challenge in tournament.challenges:
-                user = challenge.user
-                start = ""
+                if challenge.user:
+                    if tournament.start_time == one_minute_later:
+                        # Start notification
+                        subject = "The Tournament Has Started!"
+                        template_name = 'TournamentStartEmail.html'
+                    elif tournament.start_time == one_day_later:
+                        # 24-hour reminder
+                        subject = "Tournament Starts in 24 Hours!"
+                        template_name = 'TournamentStartReminder.html'
+                    else:
+                        continue
 
-                if tournament.start_time == one_minute_later:
-                    # Send email using the tournament start email template
-                    start = "Before 1 minute"
-                    subject = "The Tournament Has Started!"
-                    template_name = 'TournamentStartEmail.html'
-                    context = {
-                        "name": user.name,
-                        "tournament_name": tournament.name
-                    }
-                elif tournament.start_time == one_day_later:
-                    start = "Before 1 day"
-                    subject = "Tournament Starts in 24 Hours!"
-                    context = {
-                        "name": user.name,
-                        "tournament_name": tournament.name
-                    }
-                    template_name = 'TournamentStartReminder.html'
-                if start:
+                    context = {"name": challenge.user.name, "tournament_name": tournament.name}
                     send_mail(
-                        receiver=user.email,
+                        receiver=challenge.user.email,
                         subject=subject,
                         template_name=template_name,
                         context=context
                     )
-                    logger.info(f"Sent tournament start email to {user.email} for tournament {tournament.name} {start}")
+                    logger.info(f"Sent tournament email '{subject}' to {challenge.user.email} for tournament {tournament.name}")
 
     except Exception as e:
         logger.error(f"Error in tournament reminder email task: {e}")
