@@ -19,13 +19,14 @@ logger = setup_logging()
 
 
 class WebSocketManager:
-    def __init__(self, asset_type):
+    def __init__(self, asset_type, pair_key):
         self.websocket = None
         self.asset_type = asset_type
         self.trade_pair = None
         self.reconnect_interval = 5  # seconds
         self._recv_lock = asyncio.Lock()  # Lock to ensure single access to recv
         self.trade_pairs = []
+        self.pair_key = pair_key
 
     async def connect(self):
         self.websocket_url = f"wss://socket.polygon.io/{self.asset_type}"
@@ -39,6 +40,7 @@ class WebSocketManager:
 
     async def listen_for_prices_multiple(self):
         print(self.trade_pairs, self.asset_type, self.websocket)
+        print("Listening for prices multiple inside fubnc   ")
         if not self.trade_pairs or not self.asset_type:
             logger.error(
                 "WebSocket, trade pairs, or asset type is not set. Please set them before calling this method.")
@@ -55,6 +57,7 @@ class WebSocketManager:
     async def authenticate(self):
         logger.info("Authenticating WebSocket connection...")
         async with throttler:
+            print("Authenticating WebSocket connection {}")
             await self.websocket.send(json.dumps({"action": "auth", "params": POLYGON_API_KEY}))
         response = await self.websocket.recv()
         logger.info(f"Authentication response: {response}")
@@ -87,11 +90,12 @@ class WebSocketManager:
                     if item.get("ev") not in ["CAS", "XAS", "A"]:
                         print(f"Skipping non-CAS event: {item}")
                         continue
-                    trade_pair = item.pop("pair", None)
+                    print(item)
+                    trade_pair = item.pop(self.pair_key, None)
                     item.pop("ev", None)
 
                     try:
-                        trade_pair = trade_pair.replace("-", "").replace("/", "")
+                        trade_pair = trade_pair.replace("-", "").replace("/", "") if "-" in trade_pair or "/" in trade_pair else trade_pair
                         set_live_price(trade_pair, item)
                     except Exception as e:
                         print(f"Failed to add to Redis: {e}")
@@ -128,7 +132,7 @@ class WebSocketManager:
 
     async def close(self):
         if self.websocket:
-            self.websocket.close()
+            await self.websocket.close()
             self.websocket = None
 
     def format_pair_updated(self, pair):
@@ -144,7 +148,7 @@ class WebSocketManager:
 
 class ForexWebSocketManager(WebSocketManager):
     def __init__(self):
-        super().__init__("forex")
+        super().__init__("forex", 'pair')
         self.trade_pairs = [self.format_pair_updated(pair) for pair in forex_pairs]
 
     def format_pair_updated(self, pair):
@@ -153,7 +157,7 @@ class ForexWebSocketManager(WebSocketManager):
 
 class CryptoWebSocketManager(WebSocketManager):
     def __init__(self):
-        super().__init__("crypto")
+        super().__init__("crypto", 'pair')
         self.trade_pairs = [self.format_pair_updated(pair) for pair in crypto_pairs]
 
     def format_pair_updated(self, pair):
@@ -162,7 +166,7 @@ class CryptoWebSocketManager(WebSocketManager):
 
 class IndicesWebSocketManager(WebSocketManager):
     def __init__(self):
-        super().__init__("indices")
+        super().__init__("indices", 'pair')
         self.trade_pairs = [self.format_pair_updated(pair) for pair in indices_pairs]
 
     def format_pair_updated(self, pair):
@@ -176,11 +180,11 @@ class IndicesWebSocketManager(WebSocketManager):
 
 class StocksWebSocketManager(WebSocketManager):
     def __init__(self):
-        super().__init__("stocks")
+        super().__init__("stocks", 'sym')
         self.trade_pairs = [f"A.{pair}" for pair in stocks_pairs]
 
 
-websocket_manager = WebSocketManager("forex")
+websocket_manager = WebSocketManager("forex", 'pair')
 
 forex_websocket_manager = ForexWebSocketManager()
 crypto_websocket_manager = CryptoWebSocketManager()

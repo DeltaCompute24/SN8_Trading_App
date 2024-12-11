@@ -11,7 +11,14 @@ COPY . /app
 RUN apt-get update && apt-get install -y \
     gcc \
     libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
+    libgirepository1.0-dev \
+    libcairo2-dev \
+    pkg-config \
+    python3-dev \
+    gir1.2-gtk-3.0 \
+    libglib2.0-dev \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
