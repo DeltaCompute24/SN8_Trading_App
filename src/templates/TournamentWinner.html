@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Congratulations, You're a Winner!</title>
+    <style>
+        .main-container {
+            background-color: black;
+            width: 600px;
+            margin: 0% auto;
+        }
+
+        .main-table-section {
+            padding: 0px 32px;
+            background-image: url(https://trading-email-assets.s3.us-east-1.amazonaws.com/popcorn.png);
+            background-repeat: no-repeat;
+            background-position: right;
+
+        }
+
+        .company-name {
+            font-family: "Neuton", serif;
+            font-size: 36.59px;
+            font-weight: 500;
+            line-height: 49.4px;
+            color: rgba(247, 246, 243, 1);
+            margin: 0px;
+            margin-left: 15px;
+        }
+
+        table {
+            margin: 0% auto;
+        }
+
+        .header {
+            height: 80px;
+        }
+
+        .header .header-data {
+            text-align: center;
+            margin: 0% auto;
+        }
+
+
+
+        .welcome-row .heading {
+            padding-top: 40px;
+            font-family: "Neuton", serif;
+
+            font-size: 48px;
+            font-weight: 500;
+            line-height: 52.8px;
+            text-align: center;
+            text-underline-position: from-font;
+            text-decoration-skip-ink: none;
+            color: rgba(234, 73, 39, 1);
+
+        }
+
+        .name-section {
+            padding-top: 32px;
+            text-align: center;
+        }
+
+        .name-row .name-section .user-name {
+            margin-left: 15px;
+            font-family: "Neuton", serif;
+            font-size: 31.7px;
+            font-weight: 700;
+            line-height: 42.79px;
+            letter-spacing: -0.03em;
+            text-align: left;
+            text-underline-position: from-font;
+            text-decoration-skip-ink: none;
+            color: rgba(255, 255, 255, 1);
+
+        }
+
+        .info-row .info-row-text {
+            padding-top: 24px;
+            font-family: "Neuton", serif;
+            font-size: 20px;
+            font-weight: 500;
+            line-height: 27px;
+            text-align: left;
+            text-underline-position: from-font;
+            text-decoration-skip-ink: none;
+            color: rgba(247, 246, 243, 1);
+
+        }
+
+        .challenges-table {
+            width: 404px;
+            padding: 30px 20px;
+            border-radius: 10.19px;
+            border: 0.64px solid rgba(62, 62, 62, 1);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 99.99%, rgba(153, 153, 153, 0.04) 100%);
+            margin-left: 0px;
+            margin-top: 32px;
+
+
+        }
+
+        .challenges-text {
+            font-family: "Satoshi" , sans-serif;
+            font-size: 16px;
+            font-weight: 700;
+            line-height: 21.6px;
+            letter-spacing: -0.03em;
+            text-align: left;
+            text-underline-position: from-font;
+            text-decoration-skip-ink: none;
+            color: rgba(234, 73, 39, 1);
+            margin-left: 15px;
+
+        }
+
+        .info-row-text {
+            font-family: "Roboto Mono" , sans-serif;
+            font-size: 16px;
+            font-weight: 300;
+            line-height: 21.1px;
+            text-align: left;
+            text-underline-position: from-font;
+            text-decoration-skip-ink: none;
+            color: rgba(247, 246, 243, 1);
+
+        }
+
+        .payouts-section.challenges-table {
+            margin-right: 0;
+            margin-left: auto;
+        }
+
+        .discord-section.challenges-table {
+            width: 100%;
+            padding: 24px 20px;
+        }
+
+        .discord-section .discordImage {
+            margin: -4px;
+        }
+
+        .discord-section .challenges-text {
+            margin-left: 8px;
+        }
+
+        .sign-section {
+            margin-top: 32px;
+            width: 100%;
+        }
+
+        .sign-section .sign-div {
+            text-align: end;
+            position: relative;
+            top: 5px;
+        }
+
+        .sign-section .sign-div .sign-image {
+            border-bottom: 0.81px solid rgba(247, 246, 243, 1)
+        }
+
+        .sign-section .sender-info {
+            font-family: "Satoshi" , sans-serif;
+            font-size: 20px;
+            font-weight: 500;
+            line-height: 22px;
+            text-align: left;
+            text-underline-position: from-font;
+            text-decoration-skip-ink: none;
+            color: rgba(247, 246, 243, 1);
+
+        }
+
+        .footer-section {
+            margin-top: 32px;
+            border-top: 1px solid rgba(152, 151, 157, 1);
+            background-image: url(https://trading-email-assets.s3.us-east-1.amazonaws.com/footer-background.png);
+            background-repeat: no-repeat;
+            background-position: left bottom;
+
+
+        }
+
+        .footer {
+            text-align: center;
+            height: 153px;
+        }
+
+        .footer .footer-text {
+            font-family: "Roboto Mono" , sans-serif;
+            font-size: 16px;
+            font-weight: 300;
+            line-height: 21.1px;
+            text-align: center;
+            text-underline-position: from-font;
+            text-decoration-skip-ink: none;
+            color: rgba(247, 246, 243, 1);
+            display: block;
+            margin-top: 24px;
+
+        }
+
+        .logo-image {
+            margin: -10px;
+        }
+
+        @media (max-width: 600px) {
+            .main-table-section {
+                padding: 0px 16px !important;
+            }
+
+            .company-name {
+                font-size: 29px !important;
+            }
+
+            .welcome-row .heading {
+                font-size: 36px !important;
+                line-height: 39.6px !important;
+            }
+
+            .name-row .name-section .user-name {
+                font-size: 20px !important;
+                line-height: 29px !important;
+            }
+
+            .challenges-table {
+                width: 100% !important;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="main-container">
+    <table class="main-table-section">
+        <tr class="header">
+            <td class="header-data">
+                <img class="logo-image" src="https://trading-email-assets.s3.us-east-1.amazonaws.com/logo.png"
+                     alt="logo"/>
+                <span class="company-name">Tournament Portal</span>
+            </td>
+        </tr>
+        <tr class="welcome-row">
+            <td class="heading">Congratulations, {{ name }}!</td>
+        </tr>
+        <tr class="info-row">
+            <td class="info-row-text">You have emerged victorious in the {{ tournament_name }} tournament! Your
+                exceptional performance has earned you the winning title.
+            </td>
+        </tr>
+        <tr class="footer">
+            <td class="footer-text">Celebrate your success and keep aiming higher!</td>
+        </tr>
+    </table>
+</div>
+</body>
+</html>
