@@ -1,24 +1,27 @@
 import threading
-
+import pytz
+from datetime import datetime
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import and_
-
 from src.models.tournament import Tournament
 from src.schemas.tournament import TournamentCreate, TournamentUpdate
 from src.schemas.user import PaymentCreate
 from src.services.email_service import send_mail
 from src.services.payment_service import create_challenge, create_payment_entry, register_and_update_challenge
-from src.services.user_service import get_firebase_user, convert_time_to_est
+from src.services.user_service import get_firebase_user
 
 
 def create_tournament(db: Session, tournament_data: TournamentCreate):
+    start_time = tournament_data.start_time.replace(second=0, microsecond=0)
+    end_time = tournament_data.end_time.replace(second=0, microsecond=0)
+
     tournament = Tournament(
         name=tournament_data.name,
-        start_time=tournament_data.start_time,
-        end_time=tournament_data.end_time,
+        start_time=start_time,
+        end_time=end_time,
     )
     db.add(tournament)
     db.commit()
@@ -41,8 +44,8 @@ def update_tournament(db: Session, tournament_id: int, tournament_data: Tourname
     tournament = get_tournament_by_id(db, tournament_id)
     if tournament:
         tournament.name = tournament_data.name or tournament.name
-        tournament.start_time = tournament_data.start_time or tournament.start_time
-        tournament.end_time = tournament_data.end_time or tournament.end_time
+        tournament.start_time = tournament_data.start_time.replace(second=0, microsecond=0) or tournament.start_time
+        tournament.end_time = tournament_data.end_time.replace(second=0, microsecond=0) or tournament.end_time
         db.commit()
         db.refresh(tournament)
     return tournament
@@ -67,7 +70,8 @@ def register_payment(db, tournament_id, firebase_id, amount, referral_code):
     if not tournament:
         raise HTTPException(status_code=404, detail="Tournament Not Found")
 
-    if tournament.end_time >= convert_time_to_est():
+    now = datetime.now(pytz.utc).replace(second=0, microsecond=0)
+    if tournament.end_time >= now:
         raise HTTPException(status_code=404, detail="Tournament has ended!")
 
     # Prepare Payment Data
