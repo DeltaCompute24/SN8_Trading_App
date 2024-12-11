@@ -66,9 +66,9 @@ async def startup_event():
         asyncio.create_task(forex_websocket_manager.listen_for_prices_multiple())
         asyncio.create_task(crypto_websocket_manager.listen_for_prices_multiple())
         asyncio.create_task(testnet_websocket_manager.run_testnet())
-    # Uncomment the following line if you want to use indices_websocket_manager
-    # asyncio.create_task(indices_websocket_manager.listen_for_prices_multiple())
 
+
+    # asyncio.create_task(indices_websocket_manager.listen_for_prices_multiple()
     default_db_url = DATABASE_URL.rsplit("/", 1)[0] + "/postgres"
     default_engine = create_async_engine(default_db_url, echo=True)
 

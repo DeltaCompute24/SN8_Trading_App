@@ -4,8 +4,9 @@ import json
 from typing import List
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from src.utils.constants import POSITIONS_TABLE
-from src.utils.redis_manager import get_hash_values
+
+from src.utils.constants import POSITIONS_TABLE, TESTNET_TABLE
+from src.utils.redis_manager import get_hash_values, get_hash_value
 
 router = APIRouter()
 
@@ -22,6 +23,7 @@ class ConnectionManager:
             # Start broadcasting when the first client connects
             self.broadcast_tasks.append(asyncio.create_task(self.broadcast_prices()))
             self.broadcast_tasks.append(asyncio.create_task(self.broadcast_positions()))
+            self.broadcast_tasks.append(asyncio.create_task(self.broadcast_testnet()))
 
     def disconnect(self, websocket: WebSocket):
         self.active_connections.remove(websocket)
@@ -42,6 +44,18 @@ class ConnectionManager:
         # Remove disconnected clients
         for conn in disconnected:
             self.active_connections.remove(conn)
+
+    async def broadcast_testnet(self):
+        while True:
+            if not self.active_connections:
+                # No active connections, stop broadcasting
+                break
+            try:
+                testnet_data = json.loads(get_hash_value(key="0", hash_name=TESTNET_TABLE))
+                await self.broadcast(json.dumps({"type": "testnet", "data": testnet_data}))
+            except Exception as e:
+                print(f"Error fetching testnet data: {e}")
+            await asyncio.sleep(1)
 
     async def broadcast_prices(self):
         while True:
@@ -81,8 +95,6 @@ class ConnectionManager:
             except Exception as e:
                 print(f"Error fetching positions: {e}")
             await asyncio.sleep(1)
-
-  
 
 
 manager = ConnectionManager()
