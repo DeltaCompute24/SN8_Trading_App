@@ -18,13 +18,13 @@ from src.utils.redis_manager import push_to_redis_queue
 logger = logging.getLogger(__name__)
 
 
-def get_monitored_challenges(db: Session, challenge="test"):
+def get_monitored_challenges(db: Session, challenge="test", status="In Challenge"):
     try:
         logger.info("Fetching monitored challenges from database")
         result = db.execute(
             select(Challenge).where(
                 and_(
-                    Challenge.status == "In Challenge",
+                    Challenge.status == status,
                     Challenge.active == "1",
                     Challenge.challenge == challenge,
                 )
