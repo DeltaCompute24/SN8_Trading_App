@@ -205,16 +205,15 @@ def calculate_tournament_results(tournament, challenges):
         for challenge in challenges:
             if challenge.score == max_score:  # Winner
                 subject = "Congratulations, You're a Winner!"
-                template_name = "WinnerEmailTemplate.html"
-                context = {"name": challenge.user.name, "tournament_name": tournament.name}
+                template_name = "TournamentWinner.html"
             else:  # Not Winner
                 subject = "Thank You for Participating"
-                template_name = "LoserEmailTemplate.html"
-                context = {"name": challenge.user.name, "tournament_name": tournament.name}
+                template_name = "TournamentLosser.html"
+
             send_mail(
                 receiver=challenge.user.email,
                 subject=subject,
-                context=context,
+                context={"name": challenge.user.name, "tournament_name": tournament.name},
                 template_name=template_name
             )
 
