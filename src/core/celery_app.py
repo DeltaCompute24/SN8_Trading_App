@@ -50,8 +50,8 @@ celery_app.conf.update(
             'task': 'src.tasks.tournament_notifications.send_tournament_start_email',
             'schedule': 60.0,  # Runs every 1 minute
         },
-        'send_tournament_start_reminder-minute': {
-            'task': 'src.tasks.tournament_notifications.send_tournament_start_reminder',
+        'send_tournament_results-minute': {
+            'task': 'src.tasks.tournament_notifications.send_tournament_results',
             'schedule': 60.0,  # Runs every 1 minute
         },
     },
