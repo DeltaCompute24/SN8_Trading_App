@@ -8,6 +8,7 @@ from sqlalchemy.sql import and_
 
 from src.models.tournament import Tournament
 from src.schemas.tournament import TournamentCreate, TournamentUpdate
+from src.schemas.user import PaymentCreate
 from src.services.email_service import send_mail
 from src.services.payment_service import create_challenge, create_payment_entry, register_and_update_challenge
 from src.services.user_service import get_firebase_user, convert_time_to_est
@@ -70,13 +71,12 @@ def register_payment(db, tournament_id, firebase_id, amount, referral_code):
         raise HTTPException(status_code=404, detail="Tournament has ended!")
 
     # Prepare Payment Data
-    payment_data = {
-        "amount": amount,
-        "referral_code": referral_code,
-        "step": 2,
-        "phase": 1,
-        "firebase_id": firebase_id,
-    }
+    payment_data = PaymentCreate(
+        amount=amount,
+        referral_code=referral_code,
+        step=2,
+        firebase_id=firebase_id,
+    )
 
     # Create Challenge
     new_challenge = create_challenge(
