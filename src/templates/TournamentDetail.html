@@ -9,7 +9,7 @@
             rel="stylesheet">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tournament Registration Details</title>
+    <title>Tournament Detail</title>
 
     <style>
         /* common Styles Starts Here */
@@ -20,7 +20,7 @@
         }
 
         .main-table-section {
-            padding: 20px 32px 0;
+            padding: 0px 32px;
             background-image: url(https://trading-email-assets.s3.us-east-1.amazonaws.com/popcorn.png);
             background-repeat: no-repeat;
             background-position: right;
@@ -29,7 +29,7 @@
         }
 
         .company-name {
-            font-family: "Neuton", sans-serif;
+            font-family: "Neuton", serif;
             font-size: 36.59px;
             font-weight: 500;
             line-height: 49.4px;
@@ -101,25 +101,21 @@
 
         .custom-background-box {
             width: 100%;
-            padding: 25px 20px;
+            padding: 30px 20px;
             border-radius: 10.19px;
             border: 0.64px solid rgba(62, 62, 62, 1);
             background: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 99.99%, rgba(153, 153, 153, 0.04) 100%);
             margin-top: 32px;
         }
 
-        .custom-background-box tbody tr.tournament-details-td td {
-            width: 33%;
-        }
-
         .name-section {
-            padding-top: 20px;
+            padding-top: 32px;
             text-align: center;
         }
 
         .name-row .name-section .user-name {
             margin-left: 15px;
-            font-family: "Neuton", sans-serif;
+            font-family: "Neuton", serif;
             font-size: 31.7px;
             font-weight: 700;
             line-height: 42.79px;
@@ -158,6 +154,9 @@
             text-underline-position: from-font;
             text-decoration-skip-ink: none;
             margin-left: 8px;
+            position: relative;
+            top: -5px;
+
         }
 
 
@@ -213,12 +212,10 @@
         }
 
 
-        .welcome-row .heading {
-            padding: 40px 20px;
-            border-radius: 10.19px;
-            border: 0.64px solid rgba(62, 62, 62, 1)
-        }
 
+        .welcome-row .heading {
+            padding-top: 40px;
+        }
 
 
 
@@ -230,9 +227,26 @@
             padding-top: 20px;
         }
 
+        .button-row .delta-button {
+            width: 232px;
+            height: 58px;
+            background: rgba(234, 73, 39, 1);
+            font-family: "Roboto Mono" , sans-serif;
+            font-size: 20px;
+            font-weight: 300;
+            line-height: 26.38px;
+            text-underline-position: from-font;
+            text-decoration-skip-ink: none;
+            color: rgba(255, 255, 255, 1);
+            outline: none;
+            border: none;
+
+        }
+
+
         .info-row .info-row-text {
             padding-top: 24px;
-            font-family: "Neuton", sans-serif;
+            font-family: "Neuton", serif;
             font-size: 20px;
             font-weight: 500;
             line-height: 27px;
@@ -274,13 +288,7 @@
 
 
         .custom-unorder-list {
-            list-style-image: url('https://trading-email-assets.s3.us-east-1.amazonaws.com/star-icon.png');
-            margin: 0;
-            padding-left: 20px;
-        }
-
-        .custom-unorder-list li {
-            font-size: 12px;
+            list-style-image: url(https://trading-email-assets.s3.us-east-1.amazonaws.com/star-icon.png);
         }
 
         .goodluck-text {
@@ -296,30 +304,23 @@
         }
 
         .order-list-items li {
-            font-family: "Satoshi", sans-serif;
-            font-size: 18px;
+            font-family: "Satoshi" , sans-serif;
+            font-size: 20px;
             font-weight: 400;
-            line-height: 22px;
+            line-height: 27px;
             text-align: left;
             text-underline-position: from-font;
             text-decoration-skip-ink: none;
-            margin-bottom: 12px;
+
         }
 
         .logo-image {
             margin: -10px;
         }
-
-        .main-heading {
-            margin: 0;
-            color: rgba(234, 73, 39, 1);
-            font-size: 28px;
-            font-family: "Roboto", sans-serif;
+        .mb-10 {
+            margin-bottom: 10px;
         }
 
-        .discord-section.custom-background-box a {
-            text-decoration: none;
-        }
 
         @media only screen and (max-width: 600px) {
             .main-table-section {
@@ -331,7 +332,7 @@
             }
 
             .welcome-row .heading {
-                font-size: 32px !important;
+                font-size: 30px !important;
                 line-height: 39.6px !important;
             }
 
@@ -350,14 +351,6 @@
                 font-size: 20px !important;
                 line-height: 27px !important;
             }
-
-            .main-container {
-                width: 100%;
-            }
-
-            .how-to-begin {
-                padding-left: 20px;
-            }
         }
     </style>
 
@@ -373,56 +366,93 @@
                 <span class="company-name">Delta Prop Shop</span>
             </td>
         </tr>
+        <tr class="welcome-row">
 
+            <td colspan="1" class="heading">
+                <h1 class="text-primary"> Get set, Go!</br>
+                    Here are your Tournament
+                    Details</h1>
+
+            </td>
+        </tr>
+        <tr class="button-row">
+            <td>
+                <button class="delta-button" type="button"> Delta Prop Shop</button>
+            </td>
+        </tr>
         <tr class="name-row">
             <td class="name-section">
                 <img src="https://trading-email-assets.s3.us-east-1.amazonaws.com/starIcon.png" alt="logo"/>
                 <span class="user-name">Hi, {{ name }}</span>
             </td>
         </tr>
-        <tr class="name-row">
-            <td class="name-section">
-                <h3 class="main-heading">Tournament Registration Details</h3>
-            </td>
-        </tr>
 
-        <tr>
+
+        <tr class="">
             <td>
                 <table class="custom-background-box">
                     <tr>
-                        <td colspan="3" class="text-center">
-                            <h5 class="text-secondary text-center">December Tournament</h5>
-                        </td>
-                    </tr>
-                    <tr class="tournament-details-td">
-                        <td class="">
-                            <ul class="custom-unorder-list">
-                                <li>
-                                    <span class="text-secondary ">Dec 15 5pm ET - Dec 20 5pm ET</span>
-                                </li>
-                            </ul>
-                        </td>
-                        <td>
-                            <ul class="custom-unorder-list">
-                                <li>
-                                    <span class="text-secondary ">$1,000 Cash Prize Winner Take All</span>
-                                </li>
-                            </ul>
-                        </td>
-                        <td>
-                            <ul class="custom-unorder-list">
-                                <li>
-                                    <span class="text-secondary ">Scoring Criteria: Return Ratio = Returns / Drawdown</span>
-                                </li>
-                            </ul>
+                        <td colspan="2" class="text-center pb-24px ">
+                            <h5 class="text-secondary text-center">Tournament Challenge Details</h5>
                         </td>
                     </tr>
                     <tr>
+                        <td class="text-center">
+                            <h6 class="text-secondary ">Account ID</h6>
+                        </td>
+                        <td class="text-center">
+                            <h6 class="text-primary">{{ trader_id }}</h6>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" class="divider-td">
+                            <div class="divider"></div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-center">
+                            <h6 class="text-secondary">Platform</h6>
+                        </td>
+                        <td class="text-center">
+                            <h6 class="text-primary">DeltaTradePro</h6>
+                        </td>
+                    </tr>
 
+                </table>
+            </td>
+        </tr>
+
+        <tr class="">
+            <td>
+                <table class="custom-background-box" style="width: 100%;">
+                    <tr>
+                        <td colspan="2" class="text-center pb-24px">
+                            <h5 class="text-secondary text-center">December Tournament</h5>
+                        </td>
+                    </tr>
+                    <tr style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <td style="width: 45%; text-align: left;">
+                            <ul class="custom-unorder-list">
+                                <li class="mb-10">
+                                    <span class="text-secondary">Dec 15 5pm ET - Dec 20 5pm ET</span>
+                                </li>
+                                <li class="mb-10">
+                                    <span class="text-secondary">Scoring Criteria: Return Ratio = Returns / Drawdown</span>
+                                </li>
+                            </ul>
+                        </td>
+                        <td style="width: 45%; text-align: left;">
+                            <ul class="custom-unorder-list">
+                                <li class="mb-10">
+                                    <span class="text-secondary">$1,000 Cash Prize Winner Take All</span>
+                                </li>
+                            </ul>
+                        </td>
                     </tr>
                 </table>
             </td>
         </tr>
+
 
         <tr>
             <td class="pt-24px">
@@ -445,16 +475,18 @@
             </td>
         </tr>
 
+
         <tr>
             <td>
                 <table class="discord-section custom-background-box">
                     <tr>
                         <td>
-                            <a href="https://discord.gg/W2MznzZn8m">
+                            <a href="https://discord.gg/VMrAwnwD" target="_blank" rel="noopener noreferrer"
+                               style="text-decoration: none;">
                                 <img class="discordImage"
                                      src="https://trading-email-assets.s3.us-east-1.amazonaws.com/discordIcon.png"
                                      alt="popcorn"/>
-                                <span class="discord-text text-secondary">Join Discord Server to Chat with other Challengers</span>
+                                <span class="discord-text text-secondary">Discord Server</span>
                             </a>
                         </td>
                     </tr>
@@ -462,6 +494,14 @@
                 </table>
             </td>
         </tr>
+
+        <tr>
+            <td>
+                <h4 class="goodluck-text">Good Luck and happy trading!</h4>
+            </td>
+        </tr>
+
+
         <tr>
             <td>
                 <table class="sign-section">
@@ -479,6 +519,8 @@
                 </table>
             </td>
         </tr>
+
+
     </table>
 
     <div class="footer-section">

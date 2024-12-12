@@ -48,9 +48,9 @@ def update_tournament(db: Session, tournament_id: int, tournament_data: Tourname
         raise HTTPException(status_code=404, detail="Tournament Not Found!")
     tournament_data.name = tournament_data.name if tournament_data.name else tournament.name
     tournament_data.start_time = tournament_data.start_time.replace(second=0,
-                                                               microsecond=0) if tournament_data.start_time else tournament.start_time
+                                                                    microsecond=0) if tournament_data.start_time else tournament.start_time
     tournament_data.end_time = tournament_data.end_time.replace(second=0,
-                                                           microsecond=0) if tournament_data.end_time else tournament.end_time
+                                                                microsecond=0) if tournament_data.end_time else tournament.end_time
     tournament = update_tournament_object(db, tournament, tournament_data.dict())
     return tournament
 
@@ -76,7 +76,7 @@ def register_tournament_payment(db, tournament_id, firebase_id, amount, referral
     if not tournament:
         raise HTTPException(status_code=404, detail="Tournament Not Found")
 
-    now = datetime.now(pytz.utc).replace(second=0, microsecond=0)
+    now = datetime.now(pytz.utc).replace(second=0, microsecond=0).replace(tzinfo=None)
     if tournament.end_time >= now:
         raise HTTPException(status_code=404, detail="Tournament has ended!")
 
@@ -106,8 +106,10 @@ def register_tournament_payment(db, tournament_id, firebase_id, amount, referral
     db.refresh(new_challenge)
 
     # Thread to handle challenge updates
-    thread = threading.Thread(target=register_and_update_challenge,
-                              args=(new_challenge.id, "Tournament"))
+    thread = threading.Thread(
+        target=register_and_update_challenge,
+        args=(new_challenge.id, "Tournament", "December Tournament Details", "TournamentDetail.html"),
+    )
     thread.start()
 
     # Create Payment Entry
@@ -116,9 +118,9 @@ def register_tournament_payment(db, tournament_id, firebase_id, amount, referral
     # Send Confirmation Email
     send_mail(
         receiver=firebase_user.email,
-        template_name="EmailTemplate.html",
+        template_name="TournamentRegistrationDetails.html",
         subject="Tournament Registration Confirmed",
-        content=f"Congratulations, You have successfully registered in the tournament {tournament.name}",
+        context={"name": firebase_user.name or "User"}
     )
 
     return {"message": f"Tournament Payment Registered Successfully"}
