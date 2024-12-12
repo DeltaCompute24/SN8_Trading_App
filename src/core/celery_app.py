@@ -1,4 +1,5 @@
 from celery import Celery
+
 from src.config import CELERY_BROKER_URL, CELERY_RESULT_BACKEND
 
 celery_app = Celery(
@@ -52,6 +53,10 @@ celery_app.conf.update(
         },
         'monitor_tournaments-minute': {
             'task': 'src.tasks.tournament_notifications.monitor_tournaments',
+            'schedule': 60.0,  # Runs every 1 minute
+        },
+        'calculate_participants_score-minute': {
+            'task': 'src.tasks.tournament_notifications.calculate_participants_score',
             'schedule': 60.0,  # Runs every 1 minute
         },
     },
