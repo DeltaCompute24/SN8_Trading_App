@@ -26,7 +26,7 @@ def send_discord_reminder():
     """Send an email on registration to join discord"""
     db = TaskSessionLocal_()
     try:
-        now = datetime.now(pytz.utc).replace(second=0, microsecond=0)
+        now = datetime.now(pytz.utc).replace(second=0, microsecond=0).replace(tzinfo=None)
         six_hours_ago_start = now - timedelta(hours=6)  # 12
 
         # Fetch challenges created exactly 6 hours ago and status is "Tournament"
@@ -61,7 +61,7 @@ def send_tournament_start_email():
     """Send an email when the tournament officially starts."""
     db = TaskSessionLocal_()
     try:
-        now = datetime.now(pytz.utc).replace(second=0, microsecond=0)
+        now = datetime.now(pytz.utc).replace(second=0, microsecond=0).replace(tzinfo=None)
         one_minute_later = now + timedelta(minutes=1)
         one_day_later = now + timedelta(days=1)
         logger.info(f"Checking for tournaments that start between {now} and {one_minute_later}")
@@ -106,9 +106,9 @@ def send_tournament_start_email():
 def monitor_tournaments():
     db = TaskSessionLocal_()
     try:
-        now = datetime.now(pytz.utc).replace(second=0, microsecond=0)
+        now = datetime.now(pytz.utc).replace(second=0, microsecond=0).replace(tzinfo=None)
         tournaments = db.query(Tournament).filter(
-            Tournament.end_time == (now - timedelta(hours=1))  # Ensures the tournament is still ongoing
+            Tournament.end_time == (now - timedelta(hours=1))  # get tournaments that ended one hour ago
         ).all()
 
         if not tournaments:
