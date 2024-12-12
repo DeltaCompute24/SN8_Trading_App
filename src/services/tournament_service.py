@@ -1,5 +1,7 @@
 import threading
+from datetime import datetime
 
+import pytz
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,10 +17,13 @@ from src.services.user_service import get_firebase_user
 
 
 def create_tournament(db: Session, tournament_data: TournamentCreate):
+    start_time = tournament_data.start_time.replace(second=0, microsecond=0)
+    end_time = tournament_data.end_time.replace(second=0, microsecond=0)
+
     tournament = Tournament(
         name=tournament_data.name,
-        start_time=tournament_data.start_time,
-        end_time=tournament_data.end_time,
+        start_time=start_time,
+        end_time=end_time,
     )
     db.add(tournament)
     db.commit()
@@ -39,24 +44,29 @@ def get_tournament_by_id(db: Session, tournament_id: int):
 
 def update_tournament(db: Session, tournament_id: int, tournament_data: TournamentUpdate):
     tournament = get_tournament_by_id(db, tournament_id)
-    if tournament:
-        tournament.name = tournament_data.name or tournament.name
-        tournament.start_time = tournament_data.start_time or tournament.start_time
-        tournament.end_time = tournament_data.end_time or tournament.end_time
-        db.commit()
-        db.refresh(tournament)
+    if not tournament:
+        raise HTTPException(status_code=404, detail="Tournament Not Found!")
+
+    tournament_data.name = tournament_data.name if tournament_data.name else tournament.name
+    tournament_data.start_time = tournament_data.start_time.replace(second=0,
+                                                                    microsecond=0) if tournament_data.start_time else tournament.start_time
+    tournament_data.end_time = tournament_data.end_time.replace(second=0,
+                                                                microsecond=0) if tournament_data.end_time else tournament.end_time
+    tournament = update_tournament_object(db, tournament, tournament_data.dict())
     return tournament
 
 
 def delete_tournament(db: Session, tournament_id: int):
     tournament = get_tournament_by_id(db, tournament_id)
-    if tournament:
-        db.delete(tournament)
-        db.commit()
+    if not tournament:
+        raise HTTPException(status_code=404, detail="Tournament Not Found!")
+
+    db.delete(tournament)
+    db.commit()
     return tournament
 
 
-def register_payment(db, tournament_id, firebase_id, amount, referral_code):
+def register_tournament_payment(db, tournament_id, firebase_id, amount, referral_code):
     # Validate Firebase User
     firebase_user = get_firebase_user(db, firebase_id)
     if not firebase_user or not firebase_user.username:
@@ -66,6 +76,10 @@ def register_payment(db, tournament_id, firebase_id, amount, referral_code):
     tournament = get_tournament_by_id(db, tournament_id)
     if not tournament:
         raise HTTPException(status_code=404, detail="Tournament Not Found")
+
+    now = datetime.now(pytz.utc).replace(second=0, microsecond=0).replace(tzinfo=None)
+    if tournament.end_time >= now:
+        raise HTTPException(status_code=404, detail="Tournament has ended!")
 
     # Prepare Payment Data
     payment_data = PaymentCreate(
@@ -124,3 +138,12 @@ async def get_tournament(db: AsyncSession, tournament_id: int):
     """
     result = await db.execute(select(Tournament).where(Tournament.id == tournament_id))
     return result.scalars().first()
+
+
+def update_tournament_object(db: Session, tournament, data):
+    for key, value in data.items():
+        setattr(tournament, key, value)
+
+    db.commit()
+    db.refresh(tournament)
+    return tournament
