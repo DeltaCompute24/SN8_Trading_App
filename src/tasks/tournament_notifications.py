@@ -273,7 +273,7 @@ def calculate_participants_score():
                 "tournament": tournament.name,
                 "data": tournament_list,
             })
-        set_hash_value(key=TOURNAMENT, value=scores_list)
+        set_hash_value(key="0", value=scores_list, hash_name=TOURNAMENT)
 
     except Exception as e:
         logger.error(f"Error in Calculate Participants Score task: {e}")
