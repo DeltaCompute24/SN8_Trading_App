@@ -11,7 +11,8 @@ from src.services.tournament_service import (
     create_tournament,
     get_tournament_by_id,
     update_tournament,
-    delete_tournament, register_tournament_payment,
+    delete_tournament,
+    register_tournament_payment,
 )
 from src.utils.logging import setup_logging
 

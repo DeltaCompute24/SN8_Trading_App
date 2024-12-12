@@ -114,7 +114,12 @@ def create_payment(db: Session, payment_data: PaymentCreate):
     return new_payment
 
 
-def register_and_update_challenge(challenge_id: int, challenge_status="In Challenge"):
+def register_and_update_challenge(
+        challenge_id: int,
+        challenge_status="In Challenge",
+        subject="Step 2 Challenge Details",
+        test_template="ChallengeDetailStep2.html",
+):
     with TaskSessionLocal_() as db:
         try:
             print("In THREAD!................")
@@ -152,8 +157,8 @@ def register_and_update_challenge(challenge_id: int, challenge_status="In Challe
                     challenge.register_on_test_net = datetime.utcnow()
                     send_mail(
                         email,
-                        subject="Step 2 Challenge Details",
-                        template_name="ChallengeDetailStep2.html",
+                        subject=subject,
+                        template_name=test_template,
                         context=context,
                     )
             else:

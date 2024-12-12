@@ -44,7 +44,7 @@ def send_discord_reminder():
                 send_mail(
                     receiver=challenge.user.email,
                     subject=subject,
-                    template_name='TournamentRegistrationDetails.html',
+                    template_name='RegistrationReminder.html',
                     context=context,
                 )
                 logger.info(f"Sent registration reminder to {challenge.user.name} ({challenge.user.email})")
@@ -223,3 +223,38 @@ def calculate_tournament_results(tournament, challenges):
         push_to_redis_queue(data=f"Tournament Reminder Email Error - {e}", queue_name="error_queue")
     finally:
         db.close()
+
+
+# @celery_app.task(name="src.tasks.tournament_notifications.calculate_participants_score")
+# def calculate_participants_score():
+#     db = TaskSessionLocal_()
+#     try:
+#         now = datetime.now(pytz.utc).replace(second=0, microsecond=0)
+#         tournaments = db.query(Tournament).filter(
+#             and_(
+#                 Tournament.start_time >= now,
+#                 Tournament.end_time <= now,
+#             )
+#         ).all()
+#
+#         if not tournaments:
+#             return
+#
+#         for tournament in tournaments:
+#             challenges = tournament.challenges
+#             for challenge in challenges:
+#                 transactions = db.query(Transaction).filter(
+#                     and_(
+#                         Transaction.trader_id == challenge.trader_id,
+#                         Transaction.status != "PENDING",
+#                     )
+#                 ).count()
+#                 test_net_data = testnet_websocket(monitor=True)
+#                 if not test_net_data:
+#                     return
+#
+#     except Exception as e:
+#         logger.error(f"Error in Calculate Participants Score task: {e}")
+#         push_to_redis_queue(data=f" Calculate Participants Score Error - {e}", queue_name="error_queue")
+#     finally:
+#         db.close()
