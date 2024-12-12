@@ -14,8 +14,9 @@ from src.services.api_service import testnet_websocket
 from src.services.email_service import send_mail
 from src.services.tournament_service import update_tournament_object
 from src.services.user_service import bulk_update_challenges
-from src.utils.constants import ERROR_QUEUE_NAME
-from src.utils.redis_manager import push_to_redis_queue
+from src.tasks.testnet_validator import get_profit_sum_and_draw_down
+from src.utils.constants import ERROR_QUEUE_NAME, TOURNAMENT
+from src.utils.redis_manager import push_to_redis_queue, set_hash_value
 from src.utils.websocket_manager import websocket_manager
 
 logger = logging.getLogger(__name__)
@@ -136,10 +137,31 @@ def monitor_tournaments():
         db.commit()
 
     except Exception as e:
-        logger.error(f"Error in tournament reminder email task: {e}")
-        push_to_redis_queue(data=f"Tournament Reminder Email Error - {e}", queue_name="error_queue")
+        logger.error(f"Error in Monitor Tournaments task: {e}")
+        push_to_redis_queue(data=f"Monitor Tournaments Email Error - {e}", queue_name="error_queue")
     finally:
         db.close()
+
+
+def calculate_score(challenge, positions, perf_ledgers):
+    data = get_profit_sum_and_draw_down(challenge, positions, perf_ledgers)
+    if not data:
+        return {
+            "draw_down": 0,
+            "profit_sum": 0,
+            "score": 0,
+        }
+    profit_sum = data["profit_sum"]
+    max_draw_down = data["draw_down"]
+    if max_draw_down != 0:
+        score = profit_sum / max_draw_down
+    else:
+        score = 0
+    return {
+        "draw_down": max_draw_down,
+        "profit_sum": profit_sum,
+        "score": score,
+    }
 
 
 def calculate_tournament_results(tournament, challenges):
@@ -160,27 +182,13 @@ def calculate_tournament_results(tournament, challenges):
         max_score = float('-inf')
         challenges_data = []
         for challenge in challenges:
-            hot_key = challenge.hot_key
-            p_content = positions.get(hot_key)
-            l_content = perf_ledgers.get(hot_key)
-            if not p_content or not l_content:
+            data = calculate_score(challenge, positions, perf_ledgers)
+            if not data:
                 continue
-
-            profit_sum = 0
-            for position in p_content["positions"]:
-                profit_loss = (position["return_at_close"] * 100) - 100
-                if position["is_closed_position"] is True:
-                    profit_sum += profit_loss
-
-            max_draw_down = (l_content["cps"][-1]["mdd"] * 100) - 100
-            score = profit_sum / (max_draw_down if max_draw_down != 0 else 1)
-            challenges_data.append({
-                "draw_down": max_draw_down,
-                "profit_sum": profit_sum,
-                "active": "0",
-                "score": score,
-            })
+            data["active"] = "0"
+            challenges_data.append(data)
             # calculate max score
+            score = data["score"]
             if score > max_score:
                 max_score = score
             # store attendees score
@@ -219,42 +227,56 @@ def calculate_tournament_results(tournament, challenges):
 
         logger.info("Finished monitor_challenges task")
     except Exception as e:
-        logger.error(f"Error in tournament reminder email task: {e}")
-        push_to_redis_queue(data=f"Tournament Reminder Email Error - {e}", queue_name="error_queue")
+        logger.error(f"Error in Calculate Tournament Results Task: {e}")
+        push_to_redis_queue(data=f"Calculate Tournament Results Error - {e}", queue_name="error_queue")
     finally:
         db.close()
 
 
-# @celery_app.task(name="src.tasks.tournament_notifications.calculate_participants_score")
-# def calculate_participants_score():
-#     db = TaskSessionLocal_()
-#     try:
-#         now = datetime.now(pytz.utc).replace(second=0, microsecond=0)
-#         tournaments = db.query(Tournament).filter(
-#             and_(
-#                 Tournament.start_time >= now,
-#                 Tournament.end_time <= now,
-#             )
-#         ).all()
-#
-#         if not tournaments:
-#             return
-#
-#         for tournament in tournaments:
-#             challenges = tournament.challenges
-#             for challenge in challenges:
-#                 transactions = db.query(Transaction).filter(
-#                     and_(
-#                         Transaction.trader_id == challenge.trader_id,
-#                         Transaction.status != "PENDING",
-#                     )
-#                 ).count()
-#                 test_net_data = testnet_websocket(monitor=True)
-#                 if not test_net_data:
-#                     return
-#
-#     except Exception as e:
-#         logger.error(f"Error in Calculate Participants Score task: {e}")
-#         push_to_redis_queue(data=f" Calculate Participants Score Error - {e}", queue_name="error_queue")
-#     finally:
-#         db.close()
+@celery_app.task(name="src.tasks.tournament_notifications.calculate_participants_score")
+def calculate_participants_score():
+    db = TaskSessionLocal_()
+    try:
+        now = datetime.now(pytz.utc).replace(second=0, microsecond=0)
+        tournaments = db.query(Tournament).filter(
+            and_(
+                Tournament.start_time >= now,
+                Tournament.end_time <= now,
+            )
+        ).all()
+
+        if not tournaments:
+            return
+        test_net_data = testnet_websocket(monitor=True)
+        if not test_net_data:
+            return
+        positions = test_net_data["positions"]
+        perf_ledgers = test_net_data["perf_ledgers"]
+        scores_list = []
+
+        for tournament in tournaments:
+            challenges = tournament.challenges
+            tournament_list = []
+            for challenge in challenges:
+                transactions = db.query(Transaction).filter(
+                    and_(
+                        Transaction.trader_id == challenge.trader_id,
+                        Transaction.status != "PENDING",
+                    )
+                ).count()
+
+                data = calculate_score(challenge, positions, perf_ledgers)
+                data["position_count"] = transactions
+                data["trader_id"] = challenge.trader_id
+                tournament_list.append(data)
+            scores_list.append({
+                "tournament": tournament.name,
+                "data": tournament_list,
+            })
+        set_hash_value(key=TOURNAMENT, value=scores_list)
+
+    except Exception as e:
+        logger.error(f"Error in Calculate Participants Score task: {e}")
+        push_to_redis_queue(data=f" Calculate Participants Score Error - {e}", queue_name="error_queue")
+    finally:
+        db.close()
