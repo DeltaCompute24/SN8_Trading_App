@@ -44,7 +44,7 @@ def send_discord_reminder():
                 send_mail(
                     receiver=challenge.user.email,
                     subject=subject,
-                    template_name='RegistrationReminder.html',
+                    template_name='TournamentRegistrationDetails.html',
                     context=context,
                 )
                 logger.info(f"Sent registration reminder to {challenge.user.name} ({challenge.user.email})")
