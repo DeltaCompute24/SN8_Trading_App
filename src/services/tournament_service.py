@@ -2,9 +2,10 @@ import threading
 
 from fastapi import HTTPException
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import and_
-from sqlalchemy.ext.asyncio import AsyncSession
+
 from src.models.tournament import Tournament
 from src.schemas.tournament import TournamentCreate, TournamentUpdate
 from src.schemas.user import PaymentCreate
@@ -102,9 +103,9 @@ def register_payment(db, tournament_id, firebase_id, amount, referral_code):
     # Send Confirmation Email
     send_mail(
         receiver=firebase_user.email,
-        template_name="EmailTemplate.html",
+        template_name="TournamentRegistrationDetails.html",
         subject="Tournament Registration Confirmed",
-        content=f"Congratulations, You have successfully registered in the tournament {tournament.name}",
+        context={"name": firebase_user.name or "User"}
     )
 
     return {"message": f"Tournament Payment Registered Successfully"}
