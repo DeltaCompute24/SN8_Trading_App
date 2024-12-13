@@ -21,6 +21,7 @@ from src.api.routes.users import router as user_routers
 from src.api.routes.users_balance import router as balance_routers
 from src.api.routes.websocket import router as prices_websocket
 from src.database import engine, Base, DATABASE_URL
+from src.api.routes.referral_code import router as referral_code_router
 from src.services.user_service import populate_ambassadors
 from src.utils.testnet_websocket import testnet_websocket_manager
 from src.utils.websocket_manager import forex_websocket_manager, crypto_websocket_manager, stocks_websocket_manager
@@ -42,7 +43,7 @@ app.include_router(payout, prefix="/payout")
 app.include_router(generate_certificate, prefix="/generate-certificate")
 app.include_router(balance_routers, prefix="/users-balance")
 app.include_router(prices_websocket, prefix="/ws")
-
+app.include_router(referral_code_router, prefix="/referral-code")
 # Enable CORS
 app.add_middleware(
     CORSMiddleware,
@@ -62,7 +63,6 @@ async def startup_event():
         asyncio.create_task(stocks_websocket_manager.listen_for_prices_multiple())
         asyncio.create_task(forex_websocket_manager.listen_for_prices_multiple())
         asyncio.create_task(crypto_websocket_manager.listen_for_prices_multiple())
-        asyncio.create_task(testnet_websocket_manager.run_testnet())
 
 
     # asyncio.create_task(indices_websocket_manager.listen_for_prices_multiple()
