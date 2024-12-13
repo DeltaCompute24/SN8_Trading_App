@@ -133,8 +133,8 @@ def monitor_tournaments():
                     position.old_status = position.status
                     position.operation_type = "tournament_closed"
                     position.modified_by = "system"
-            calculate_tournament_results(tournament, challenges)
-        db.commit()
+            db.commit()
+            calculate_tournament_results(db, tournament, challenges)
 
     except Exception as e:
         logger.error(f"Error in Monitor Tournaments task: {e}")
@@ -164,8 +164,7 @@ def calculate_score(challenge, positions, perf_ledgers):
     }
 
 
-def calculate_tournament_results(tournament, challenges):
-    db = TaskSessionLocal_()
+def calculate_tournament_results(db, tournament, challenges):
     try:
         test_net_data = testnet_websocket(monitor=True)
         if not test_net_data:
@@ -186,6 +185,7 @@ def calculate_tournament_results(tournament, challenges):
             if not data:
                 continue
             data["active"] = "0"
+            data["id"] = challenge.id
             challenges_data.append(data)
             # calculate max score
             score = data["score"]
@@ -229,8 +229,6 @@ def calculate_tournament_results(tournament, challenges):
     except Exception as e:
         logger.error(f"Error in Calculate Tournament Results Task: {e}")
         push_to_redis_queue(data=f"Calculate Tournament Results Error - {e}", queue_name="error_queue")
-    finally:
-        db.close()
 
 
 @celery_app.task(name="src.tasks.tournament_notifications.calculate_participants_score")
