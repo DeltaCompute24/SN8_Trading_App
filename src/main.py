@@ -1,5 +1,6 @@
 import asyncio
 import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.exc import ProgrammingError
@@ -22,7 +23,6 @@ from src.api.routes.users_balance import router as balance_routers
 from src.api.routes.websocket import router as prices_websocket
 from src.database import engine, Base, DATABASE_URL
 from src.services.user_service import populate_ambassadors
-from src.utils.testnet_websocket import testnet_websocket_manager
 from src.utils.websocket_manager import forex_websocket_manager, crypto_websocket_manager, stocks_websocket_manager
 
 app = FastAPI()
@@ -62,8 +62,6 @@ async def startup_event():
         asyncio.create_task(stocks_websocket_manager.listen_for_prices_multiple())
         asyncio.create_task(forex_websocket_manager.listen_for_prices_multiple())
         asyncio.create_task(crypto_websocket_manager.listen_for_prices_multiple())
-        asyncio.create_task(testnet_websocket_manager.run_testnet())
-
 
     # asyncio.create_task(indices_websocket_manager.listen_for_prices_multiple()
     default_db_url = DATABASE_URL.rsplit("/", 1)[0] + "/postgres"
