@@ -1,10 +1,8 @@
-import asyncio
 import json
 
 import requests
-import websockets
 
-from src.config import POSITIONS_URL, POSITIONS_TOKEN, TESTNET_CHECKPOINT_URL
+from src.config import POSITIONS_URL, POSITIONS_TOKEN
 from src.services.user_service import get_hot_key
 from src.utils.constants import TESTNET_TABLE
 from src.utils.redis_manager import get_hash_value

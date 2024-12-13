@@ -146,17 +146,10 @@ def monitor_tournaments():
 def calculate_score(challenge, positions, perf_ledgers):
     data = get_profit_sum_and_draw_down(challenge, positions, perf_ledgers)
     if not data:
-        return {
-            "draw_down": 0,
-            "profit_sum": 0,
-            "score": 0,
-        }
+        return {}
     profit_sum = data["profit_sum"]
     max_draw_down = data["draw_down"]
-    if max_draw_down != 0:
-        score = profit_sum / max_draw_down
-    else:
-        score = 0
+    score = profit_sum / max_draw_down
     return {
         "draw_down": max_draw_down,
         "profit_sum": profit_sum,
@@ -264,6 +257,8 @@ def calculate_participants_score():
                 ).count()
 
                 data = calculate_score(challenge, positions, perf_ledgers)
+                if not data:
+                    continue
                 data["position_count"] = transactions
                 data["trader_id"] = challenge.trader_id
                 tournament_list.append(data)
