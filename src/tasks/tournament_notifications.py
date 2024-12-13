@@ -129,7 +129,7 @@ def monitor_tournaments():
                     if position.status == "OPEN":  # taoshi
                         asyncio.run(websocket_manager.submit_trade(position.trader_id, position.trade_pair, "FLAT", 1))
                     position.status = "CLOSED"
-                    position.close_time = datetime.now(pytz.utc)
+                    position.close_time = datetime.now(pytz.utc).replace(tzinfo=None)
                     position.old_status = position.status
                     position.operation_type = "tournament_closed"
                     position.modified_by = "system"
@@ -228,7 +228,7 @@ def calculate_tournament_results(db, tournament, challenges):
 def calculate_participants_score():
     db = TaskSessionLocal_()
     try:
-        now = datetime.now(pytz.utc).replace(second=0, microsecond=0)
+        now = datetime.now(pytz.utc).replace(second=0, microsecond=0).replace(tzinfo=None)
         tournaments = db.query(Tournament).filter(
             and_(
                 Tournament.start_time >= now,
