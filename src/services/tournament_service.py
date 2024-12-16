@@ -78,7 +78,7 @@ def register_tournament_payment(db, tournament_id, firebase_id, amount, referral
         raise HTTPException(status_code=404, detail="Tournament Not Found")
 
     now = datetime.now(pytz.utc).replace(second=0, microsecond=0).replace(tzinfo=None)
-    if tournament.end_time >= now:
+    if tournament.end_time <= now:
         raise HTTPException(status_code=404, detail="Tournament has ended!")
 
     # Prepare Payment Data
