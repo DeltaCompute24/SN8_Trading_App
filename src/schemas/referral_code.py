@@ -40,18 +40,20 @@ class ReferralCodeCreate(ReferralCodeBase):
     generated_by_id: Optional[str]
     
 class ReferralCodeResponse(ReferralCodeBase):
-    id: Optional[int]
-    users : List[FirebaseUserBase]
-    generated_by_id: Optional[str]
+    id: Optional[int] = None
+    users: Optional[List[FirebaseUserBase]] = Field(default_factory=list)
+    generated_by_id: Optional[str] = None
+    is_valid: Optional[bool] = True
+
     model_config = ConfigDict(
         from_attributes=True,
         populate_by_name=True,
         orm_model=ReferralCode,
         json_encoders = {
             date: lambda v: v.isoformat()
-          }
-      )
+        }
+    )
 
 class ReferralCodeListResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    codes: List[ReferralCodeResponse]
+    codes: List[ReferralCodeResponse] = Field(default_factory=list)
