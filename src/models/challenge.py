@@ -38,3 +38,9 @@ class Challenge(Base):
 
     # One-to-one relationship with Payment
     payment = relationship("Payment", back_populates="challenge", uselist=False)
+
+    # Foreign key to reference the Tournament
+    tournament_id = Column(Integer, ForeignKey("tournament.id"))
+
+    # Many-to-one relationship with Tournament
+    tournament = relationship("Tournament", back_populates="challenges")
