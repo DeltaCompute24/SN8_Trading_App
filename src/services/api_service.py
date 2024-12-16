@@ -1,13 +1,7 @@
-import asyncio
-import json
-
 import requests
-import websockets
 
 from src.config import POSITIONS_URL, POSITIONS_TOKEN, TESTNET_CHECKPOINT_URL
 from src.services.user_service import get_hot_key
-from src.utils.constants import TESTNET_TABLE
-from src.utils.redis_manager import get_hash_value
 
 
 def call_main_net(url=POSITIONS_URL, token=POSITIONS_TOKEN):
@@ -24,7 +18,10 @@ def call_main_net(url=POSITIONS_URL, token=POSITIONS_TOKEN):
 
 def testnet_websocket(monitor=False):
     try:
-        testnet_data = json.loads(get_hash_value(key="0", hash_name=TESTNET_TABLE))
+        response = requests.request(method="GET", url=TESTNET_CHECKPOINT_URL)
+        if response.status_code != 200:
+            return {}
+        testnet_data = response.json()
         if monitor:
             return testnet_data
         return testnet_data["positions"]
