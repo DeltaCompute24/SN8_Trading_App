@@ -1,8 +1,9 @@
 from datetime import datetime
+from src.models.referral_code import ReferralCode, user_referral_codes
 
-from sqlalchemy import Column, Integer, String, DateTime
-from sqlalchemy.orm import relationship
-
+from sqlalchemy import Column, Integer, String, DateTime, ARRAY
+from sqlalchemy.orm import relationship, Mapped
+from typing import List
 from src.database import Base
 
 
@@ -20,3 +21,17 @@ class FirebaseUser(Base):
     # One-to-many relationship: A user can have multiple challenges
     challenges = relationship("Challenge", back_populates="user")
     payout = relationship("Payout", back_populates="user")
+    used_codes: Mapped[List["ReferralCode"]] = relationship(
+        "ReferralCode",
+        secondary=user_referral_codes,
+        back_populates="users",
+        cascade="all, delete"
+    )
+    generated_codes: Mapped[List["ReferralCode"]] = relationship(
+        "ReferralCode",
+        back_populates="generated_by",
+        cascade="all, delete"
+    )
+    
+    favorite_trade_pairs: Mapped[List[str]] = Column(ARRAY(String), default=list)
+    

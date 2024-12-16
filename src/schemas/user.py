@@ -1,8 +1,8 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import Optional, Literal
+from typing import Optional, Literal, List
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict, Field
 
 
 class UsersBase(BaseModel):
@@ -19,6 +19,46 @@ class UsersSchema(UsersBase):
 # --------------- FirebaseUser Schemas ----------------------
 class FirebaseUserBase(BaseModel):
     firebase_id: str
+    email: Optional[str] = None
+    name: Optional[str] = None
+    username: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+    favorite_trade_pairs: List[str]
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True,
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
+    )
+    
+    
+    # --------------- FirebaseUser Schemas ----------------------
+class FirebaseUserBase(BaseModel):
+    firebase_id: str
+    email: Optional[str] = None
+    name: Optional[str] = None
+    username: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+    favorite_trade_pairs: List[str] = Field(default_factory=list)
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True,
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
+    )
+
+# --------------- FirebaseUser Schemas ----------------------
+class FavoriteTradePairs(BaseModel):
+    email: str
+    trade_pair :str
+   
+
 
 
 class ChallengeBase(BaseModel):
@@ -97,7 +137,6 @@ class PaymentCreate(BaseModel):
     firebase_id: str
     amount: float
     step: Literal[1, 2]
-    phase: Literal[1, 2]
     referral_code: Optional[str] = None
 
 

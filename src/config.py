@@ -2,8 +2,6 @@ import os
 
 from dotenv import load_dotenv
 
-from src.utils.constants import NEW_MAIN_POSITIONS_URL
-
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -12,6 +10,7 @@ POLYGON_API_KEY = os.getenv("POLYGON_API_KEY")
 SIGNAL_API_BASE_URL = os.getenv("SIGNAL_API_BASE_URL")
 SIGNAL_API_KEY = os.getenv("TRADE_API_KEY")
 CHECKPOINT_URL = os.getenv("CHECKPOINT_URL")
+TESTNET_CHECKPOINT_URL = os.getenv("TESTNET_CHECKPOINT_URL")
 MAIN_NET = os.getenv("MAIN_NET", "false") == "true"
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
@@ -22,6 +21,7 @@ CELERY_RESULT_BACKEND = REDIS_URL
 EMAIL_HOST = os.getenv("EMAIL_HOST")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
 EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "false") == "true"
+SUPPORT_EMAIL = os.getenv("SUPPORT_EMAIL")
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 
@@ -29,7 +29,7 @@ EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 REGISTRATION_API_URL = os.getenv("REGISTRATION_API_URL")
 SWITCH_TO_MAINNET_URL = os.getenv("SWITCH_TO_MAINNET_URL")
 POSITIONS_URL = os.getenv("MAIN_POSITIONS_URL")
-NEW_POSITIONS_URL = os.getenv("NEW_MAIN_POSITIONS_URL", NEW_MAIN_POSITIONS_URL)
+NEW_POSITIONS_URL = os.getenv("NEW_MAIN_POSITIONS_URL")
 POSITIONS_TOKEN = os.getenv("MAIN_POSITIONS_TOKEN")
 
 STATISTICS_URL = os.getenv("MAIN_STATISTICS_URL")
