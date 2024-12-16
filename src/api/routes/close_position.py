@@ -10,7 +10,7 @@ from src.services.fee_service import get_taoshi_values
 from src.services.trade_service import close_transaction, get_latest_position
 from src.utils.logging import setup_logging
 from src.utils.websocket_manager import websocket_manager
-from src.validations.position import validate_trade_pair
+from src.validations.position import validate_trade_pair, check_get_challenge
 
 logger = setup_logging()
 router = APIRouter()
@@ -19,6 +19,7 @@ router = APIRouter()
 @router.post("/close-position/", response_model=TradeResponse)
 async def close_position(position_data: ProfitLossRequest, db: AsyncSession = Depends(get_db)):
     logger.info(f"Closing position for trader_id={position_data.trader_id} and trade_pair={position_data.trade_pair}")
+
     position_data.asset_type, position_data.trade_pair = validate_trade_pair(position_data.asset_type,
                                                                              position_data.trade_pair)
 
@@ -26,7 +27,7 @@ async def close_position(position_data: ProfitLossRequest, db: AsyncSession = De
     if not position:
         logger.error("No open position found for this trade pair and trader")
         raise HTTPException(status_code=404, detail="No open or pending position found for this trade pair and trader")
-
+    await check_get_challenge(db, position_data)
     try:
         # Submit the FLAT signal to close the position
         close_price = position.entry_price or 0.0
@@ -45,7 +46,7 @@ async def close_position(position_data: ProfitLossRequest, db: AsyncSession = De
                 raise HTTPException(status_code=500, detail="Failed to submit close signal")
 
             # loop to get the current price
-            for i in range(12):
+            for i in range(20):
                 time.sleep(1)
                 close_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, *taoshi_profit_loss_without_fee = get_taoshi_values(
                     position_data.trader_id,

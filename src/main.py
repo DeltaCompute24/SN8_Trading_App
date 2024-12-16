@@ -18,6 +18,7 @@ from src.api.routes.payments import router as payment_routers
 from src.api.routes.payout import router as payout
 from src.api.routes.profit_loss import router as profit_loss_router
 from src.api.routes.send_email import router as send_email
+from src.api.routes.tournaments import router as tournament_routers
 from src.api.routes.users import router as user_routers
 from src.api.routes.users_balance import router as balance_routers
 from src.api.routes.websocket import router as prices_websocket
@@ -40,6 +41,7 @@ app.include_router(create_user_router, prefix="/trades")
 app.include_router(get_users_router, prefix="/trades")
 app.include_router(user_routers, prefix="/users")
 app.include_router(payment_routers, prefix="/payments")
+app.include_router(tournament_routers, prefix="/tournaments")
 app.include_router(send_email, prefix="/send-email")
 app.include_router(payout, prefix="/payout")
 app.include_router(generate_certificate, prefix="/generate-certificate")

@@ -30,14 +30,14 @@ def get_payment(db: Session, payment_id: int):
     return payment
 
 
-def create_challenge(db, payment_data, network, phase, user, status="In Progress",
+def create_challenge(db, payment_data, network, phase, user, challenge_status="In Challenge", status="In Progress",
                      message="Trader_id and hot_key will be created"):
     _challenge = Challenge(
         trader_id=0,
         hot_key="",
         user_id=user.id,
         active="0",
-        status="In Challenge",
+        status=challenge_status,
         challenge=network,
         hotkey_status=status,
         message=message,
@@ -114,7 +114,12 @@ def create_payment(db: Session, payment_data: PaymentCreate):
     return new_payment
 
 
-def register_and_update_challenge(challenge_id: int):
+def register_and_update_challenge(
+        challenge_id: int,
+        challenge_status="In Challenge",
+        subject="Step 2 Challenge Details",
+        test_template="ChallengeDetailStep2.html",
+):
     with TaskSessionLocal_() as db:
         try:
             print("In THREAD!................")
@@ -133,7 +138,7 @@ def register_and_update_challenge(challenge_id: int):
                 challenge.trader_id = data.get("trader_id")
                 challenge.hot_key = data.get("hot_key")
                 challenge.active = "1"
-                challenge.status = "In Challenge"
+                challenge.status = challenge_status
                 challenge.message = "Challenge Updated Successfully!"
                 challenge.hotkey_status = "Success"
                 context = {
@@ -152,8 +157,8 @@ def register_and_update_challenge(challenge_id: int):
                     challenge.register_on_test_net = datetime.utcnow()
                     send_mail(
                         email,
-                        subject="Step 2 Challenge Details",
-                        template_name="ChallengeDetailStep2.html",
+                        subject=subject,
+                        template_name=test_template,
                         context=context,
                     )
             else:

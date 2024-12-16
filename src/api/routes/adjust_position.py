@@ -12,7 +12,7 @@ from src.services.trade_service import create_transaction, get_open_position, up
     close_transaction
 from src.utils.logging import setup_logging
 from src.utils.websocket_manager import websocket_manager
-from src.validations.position import validate_position, validate_leverage
+from src.validations.position import validate_position, validate_leverage, check_get_challenge
 
 logger = setup_logging()
 router = APIRouter()
@@ -29,7 +29,7 @@ async def adjust_position_endpoint(position_data: TransactionUpdate, db: AsyncSe
     if not position:
         logger.error("No open position found for this trade pair and trader")
         raise HTTPException(status_code=404, detail="No open position found for this trade pair and trader")
-
+    await check_get_challenge(db, position_data)
     try:
         prev_leverage = position.leverage
         new_leverage = position_data.leverage
@@ -70,7 +70,7 @@ async def adjust_position_endpoint(position_data: TransactionUpdate, db: AsyncSe
             logger.info("Adjustment submitted successfully")
 
             # loop to get the current price
-            for i in range(12):
+            for i in range(20):
                 time.sleep(1)
                 realtime_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, *taoshi_profit_loss_without_fee = get_taoshi_values(
                     position_data.trader_id,

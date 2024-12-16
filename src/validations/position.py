@@ -1,5 +1,11 @@
-from fastapi import HTTPException
+from datetime import datetime
 
+import pytz
+from fastapi import HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.services.tournament_service import get_tournament
+from src.services.user_service import get_challenge
 from src.utils.constants import *
 from src.utils.logging import setup_logging
 
@@ -64,3 +70,29 @@ def validate_leverage(asset_type, leverage):
                             detail=f"Invalid leverage for asset type {asset_type}! Valid Range: {STOCKS_MIN_LEVERAGE} - {STOCKS_MAX_LEVERAGE}")
 
     return leverage
+
+
+async def check_get_challenge(db: AsyncSession, position_data):
+    challenge = get_challenge(position_data.trader_id)
+
+    if not challenge.tournament_id:
+        return challenge
+
+    tournament = await get_tournament(db, challenge.tournament_id)  # Await the async function
+    if not tournament:
+        raise HTTPException(
+            status_code=404,
+            detail="Tournament not found."
+        )
+    now = datetime.now(pytz.utc).replace(second=0, microsecond=0).replace(tzinfo=None)
+    if tournament.start_time > now:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Tournament has not started yet. It will start at {tournament.start_time} utc."
+        )
+    if tournament.end_time <= now:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Tournament has already ended. It ended at {tournament.end_time} utc."
+        )
+    return challenge
