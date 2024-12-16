@@ -123,10 +123,13 @@ class WebSocketManager:
             "order_type": order_type,
             "leverage": leverage
         }
+        print("SIGNAL API REQUEST", params)
         async with aiohttp.ClientSession() as session:
             async with throttler:
                 async with session.post(signal_api_url, json=params) as response:
+                    print("SIGNAL API RESPONSE", response)
                     response_text = await response.text()
+                    print("SIGNAL API RESPONSE TEXT", response_text)
                     logger.info(f"Submit trade signal sent. Response: {response_text}")
                     return response.status == 200
 

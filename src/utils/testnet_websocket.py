@@ -37,7 +37,7 @@ class TestnetWebSocketManager:
 
     async def close(self):
         if self.websocket:
-            self.websocket.close()
+            await self.websocket.close()
             self.websocket = None
 
 

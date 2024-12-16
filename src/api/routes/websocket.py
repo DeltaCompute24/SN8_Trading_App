@@ -4,6 +4,7 @@ import json
 from typing import List
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+
 from src.utils.constants import POSITIONS_TABLE
 from src.utils.redis_manager import get_hash_values
 
@@ -81,8 +82,6 @@ class ConnectionManager:
             except Exception as e:
                 print(f"Error fetching positions: {e}")
             await asyncio.sleep(1)
-
-  
 
 
 manager = ConnectionManager()
