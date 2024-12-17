@@ -17,13 +17,11 @@ from src.services.user_service import get_firebase_user
 
 
 def create_tournament(db: Session, tournament_data: TournamentCreate):
-    start_time = tournament_data.start_time.replace(second=0, microsecond=0)
-    end_time = tournament_data.end_time.replace(second=0, microsecond=0)
+    tournament_data.start_time = tournament_data.start_time.replace(second=0, microsecond=0)
+    tournament_data.end_time = tournament_data.end_time.replace(second=0, microsecond=0)
 
     tournament = Tournament(
-        name=tournament_data.name,
-        start_time=start_time,
-        end_time=end_time,
+        **tournament_data.model_dump()
     )
     db.add(tournament)
     db.commit()
@@ -47,12 +45,21 @@ def update_tournament(db: Session, tournament_id: int, tournament_data: Tourname
     if not tournament:
         raise HTTPException(status_code=404, detail="Tournament Not Found!")
 
-    tournament_data.name = tournament_data.name if tournament_data.name else tournament.name
-    tournament_data.start_time = tournament_data.start_time.replace(second=0,
-                                                                    microsecond=0) if tournament_data.start_time else tournament.start_time
-    tournament_data.end_time = tournament_data.end_time.replace(second=0,
-                                                                microsecond=0) if tournament_data.end_time else tournament.end_time
-    tournament = update_tournament_object(db, tournament, tournament_data.dict())
+    if tournament_data.name:
+        tournament.name = tournament_data.name
+    if tournament_data.start_time:
+        tournament.start_time = tournament_data.start_time.replace(second=0, microsecond=0)
+    if tournament_data.end_time:
+        tournament.end_time = tournament_data.end_time.replace(second=0, microsecond=0)
+    if tournament_data.active is not None:
+        tournament.active = tournament_data.active
+    if tournament_data.prize:
+        tournament.prize = tournament_data.prize
+    if tournament_data.cost:
+        tournament.cost = tournament_data.cost
+
+    db.commit()
+    db.refresh(tournament)
     return tournament
 
 
