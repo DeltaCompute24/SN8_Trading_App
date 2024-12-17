@@ -70,7 +70,7 @@ async def adjust_position_endpoint(position_data: TransactionUpdate, db: AsyncSe
             logger.info("Adjustment submitted successfully")
 
             # loop to get the current price
-            for i in range(12):
+            for i in range(20):
                 time.sleep(1)
                 realtime_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, *taoshi_profit_loss_without_fee = get_taoshi_values(
                     position_data.trader_id,

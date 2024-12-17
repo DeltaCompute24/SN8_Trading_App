@@ -1,6 +1,6 @@
 import re
 
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -12,7 +12,7 @@ from src.models import UsersBalance
 from src.models.challenge import Challenge
 from src.models.firebase_user import FirebaseUser
 from src.models.users import Users
-from src.schemas.user import UsersBase
+from src.schemas.user import UsersBase, FavoriteTradePairs
 from src.services.email_service import send_mail
 from src.utils.logging import setup_logging
 
@@ -28,6 +28,22 @@ async def get_user(db: AsyncSession, trader_id: int):
             )
         )
     )
+    return user
+
+
+async def get_user_by_email(db: AsyncSession, email: str):
+    user = await db.scalar(
+        select(FirebaseUser).where(
+            and_(
+                FirebaseUser.email == email,
+            )
+        )
+    )
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"User not found for id: {email}"
+        )
     return user
 
 
@@ -214,3 +230,41 @@ def create_user_balance(db: Session, user_data):
     except Exception as e:
         logger.error(f"Error creating user balance: {e}")
         raise HTTPException(status_code=400, detail=str(e))
+
+
+async def add_to_favorites(db: Session, trade_pair_data: FavoriteTradePairs) -> FirebaseUser:
+    user: FirebaseUser = await get_user_by_email(db, trade_pair_data.email)
+    favorite_trade_pairs = list(user.favorite_trade_pairs or [])
+
+    if trade_pair_data.trade_pair in favorite_trade_pairs:
+        return user
+
+    user.favorite_trade_pairs = favorite_trade_pairs + [trade_pair_data.trade_pair]
+    await db.flush()
+
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+
+    print(f"Done")
+
+    return user
+
+
+async def remove_from_favorites(db: Session, trade_pair_data: FavoriteTradePairs) -> FirebaseUser:
+    user: FirebaseUser = await get_user_by_email(db, trade_pair_data.email)
+
+    if trade_pair_data.trade_pair not in user.favorite_trade_pairs:
+        return user
+
+    updated_pairs = list(user.favorite_trade_pairs)
+    try:
+        updated_pairs.remove(trade_pair_data.trade_pair)
+    except Exception as ex:
+        pass
+
+    user.favorite_trade_pairs = updated_pairs
+
+    await db.commit()
+    await db.refresh(user)
+    return user

@@ -43,7 +43,7 @@ services:
   celery_beat:
     build:
       context: .
-      dockerfile: docker/celery/Dockerfile
+      dockerfile: docker/celery-beat/DockerFile
     volumes:
       - .:/app
     env_file:
