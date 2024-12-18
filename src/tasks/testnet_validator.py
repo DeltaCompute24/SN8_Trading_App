@@ -16,31 +16,38 @@ from src.utils.redis_manager import push_to_redis_queue
 logger = logging.getLogger(__name__)
 
 
+def get_profit_sum_and_draw_down(challenge, positions, perf_ledgers):
+    hot_key = challenge.hot_key
+    p_content = positions.get(hot_key)
+    l_content = perf_ledgers.get(hot_key)
+    if not p_content or not l_content:
+        return {}
+
+    profit_sum = 0
+    for position in p_content["positions"]:
+        profit_loss = (position["return_at_close"] * 100) - 100
+        if position["is_closed_position"] is True:
+            profit_sum += profit_loss
+
+    return {
+        "draw_down": (l_content["cps"][-1]["mdd"] * 100) - 100,
+        "profit_sum": profit_sum,
+    }
+
+
 def monitor_testnet_challenges(positions, perf_ledgers):
     try:
         with TaskSessionLocal_() as db:
             for challenge in get_monitored_challenges(db):
                 logger.info(f"Monitor first testnet Challenge!")
-                hot_key = challenge.hot_key
                 name = challenge.user.name
                 email = challenge.user.email
 
-                p_content = positions.get(hot_key)
-                l_content = perf_ledgers.get(hot_key)
-                if not p_content or not l_content:
+                c_data = get_profit_sum_and_draw_down(challenge, positions, perf_ledgers)
+                if not c_data:
                     continue
-
-                profit_sum = 0
-                for position in p_content["positions"]:
-                    profit_loss = (position["return_at_close"] * 100) - 100
-                    if position["is_closed_position"] is True:
-                        profit_sum += profit_loss
-
-                draw_down = (l_content["cps"][-1]["mdd"] * 100) - 100
-                c_data = {
-                    "draw_down": draw_down,
-                    "profit_sum": profit_sum,
-                }
+                profit_sum = c_data["profit_sum"]
+                draw_down = c_data["draw_down"]
                 changed = False
                 context = {
                     "name": name,

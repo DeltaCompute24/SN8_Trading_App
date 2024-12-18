@@ -26,6 +26,7 @@ class Challenge(Base):
     pass_the_main_net_challenge = Column(DateTime, nullable=True)
     draw_down = Column(Float, nullable=True)
     profit_sum = Column(Float, nullable=True)
+    score = Column(Float, nullable=True)
     response = Column(JSON, nullable=True)
     message = Column(String, nullable=False)
     hotkey_status = Column(String, nullable=False)

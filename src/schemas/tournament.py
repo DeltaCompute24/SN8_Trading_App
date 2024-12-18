@@ -17,6 +17,11 @@ class TournamentCreate(TournamentBase):
     start_time: datetime
     end_time: datetime
 
+class TournamentRegister(BaseModel):
+    tournament_id: int
+    firebase_id: str
+    amount: float
+    referral_code: str = None,
 
 class TournamentUpdate(BaseModel):
     name: Optional[str] = None

@@ -46,7 +46,6 @@ def update_tournament(db: Session, tournament_id: int, tournament_data: Tourname
     tournament = get_tournament_by_id(db, tournament_id)
     if not tournament:
         raise HTTPException(status_code=404, detail="Tournament Not Found!")
-
     tournament_data.name = tournament_data.name if tournament_data.name else tournament.name
     tournament_data.start_time = tournament_data.start_time.replace(second=0,
                                                                     microsecond=0) if tournament_data.start_time else tournament.start_time

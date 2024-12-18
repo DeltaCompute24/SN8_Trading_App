@@ -15,7 +15,8 @@ celery_app.conf.update(
         'src.tasks.redis_listener.event_listener': {'queue': 'event_listener'},
         'src.tasks.monitor_mainnet_challenges.monitor_mainnet_challenges': {'queue': 'monitor_mainnet_challenges'},
         'src.tasks.monitor_miner_positions.monitor_miner': {'queue': 'monitor_miner'},
-        'src.tasks.testnet_validator.testnet_validator': {'queue': 'testnet_validator'}
+        'src.tasks.testnet_validator.testnet_validator': {'queue': 'testnet_validator'},
+        'src.tasks.tournament_notifications.*': {'queue': 'tournament_notifications'},
     },
     beat_schedule={
         # 'send_notifications-every-1-second': {
@@ -32,7 +33,7 @@ celery_app.conf.update(
         },
         'monitor_mainnet_challenges_every_1_second': {
             'task': 'src.tasks.monitor_mainnet_challenges.monitor_mainnet_challenges',
-            'schedule': 2.0,  # every 1 second
+            'schedule': 5.0,  # every 1 second
         },
         'monitor_miner_every_1_second': {
             'task': 'src.tasks.monitor_miner_positions.monitor_miner',
@@ -41,6 +42,22 @@ celery_app.conf.update(
         'testnet_validator_every_1_second': {
             'task': 'src.tasks.testnet_validator.testnet_validator',
             'schedule': 2.0,  # every 1 second
+        },
+        'send_discord_reminder-daily': {
+            'task': 'src.tasks.tournament_notifications.send_discord_reminder',
+            'schedule': 21600.0,  # Runs every 6 hour
+        },
+        'send_tournament_start_email-minute': {
+            'task': 'src.tasks.tournament_notifications.send_tournament_start_email',
+            'schedule': 60.0,  # Runs every 1 minute
+        },
+        'monitor_tournaments-minute': {
+            'task': 'src.tasks.tournament_notifications.monitor_tournaments',
+            'schedule': 60.0,  # Runs every 1 minute
+        },
+        'calculate_participants_score-minute': {
+            'task': 'src.tasks.tournament_notifications.calculate_participants_score',
+            'schedule': 60.0,  # Runs every 1 minute
         },
     },
     timezone='UTC',
@@ -55,3 +72,4 @@ import src.tasks.monitor_miner_positions
 import src.tasks.monitor_mainnet_challenges
 import src.tasks.send_notification
 import src.tasks.testnet_validator
+import src.tasks.tournament_notifications

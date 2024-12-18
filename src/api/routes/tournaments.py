@@ -1,3 +1,4 @@
+import json
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -6,7 +7,7 @@ from sqlalchemy.orm import joinedload
 
 from src.database_tasks import TaskSessionLocal_
 from src.models import Tournament
-from src.schemas.tournament import TournamentCreate, TournamentUpdate, TournamentRead
+from src.schemas.tournament import TournamentCreate,TournamentRegister, TournamentUpdate, TournamentRead
 from src.services.tournament_service import (
     create_tournament,
     get_tournament_by_id,
@@ -14,7 +15,9 @@ from src.services.tournament_service import (
     delete_tournament,
     register_tournament_payment,
 )
+from src.utils.constants import TOURNAMENT
 from src.utils.logging import setup_logging
+from src.utils.redis_manager import get_hash_value
 
 router = APIRouter()
 logger = setup_logging()
@@ -43,6 +46,16 @@ def create_tournament_endpoint(tournament_data: TournamentCreate, db: Session = 
 def get_all_tournaments_endpoint(db: Session = Depends(get_db)):
     logger.info("Fetching all tournaments")
     return db.query(Tournament).options(joinedload(Tournament.challenges)).all()
+
+@router.get("/score")
+def participants_score():
+    logger.info(f"Return Tournaments Participants Score")
+    try:
+        scores = get_hash_value(key="0", hash_name=TOURNAMENT)
+        return json.loads(scores) if scores else [] 
+    except Exception as e:
+        logger.info(f"Error during fetching score: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal Server Error as {e}")
 
 
 @router.get("/{tournament_id}", response_model=TournamentRead)
@@ -74,17 +87,14 @@ def delete_tournament_endpoint(tournament_id: int, db: Session = Depends(get_db)
 
 @router.post("/register-payment")
 def register_tournament_endpoint(
-        tournament_id: int,
-        firebase_id: str,
-        amount: float,
-        referral_code: str = None,
-        db: Session = Depends(get_db)
-):
-    logger.info(f"Registering for tournament {tournament_id} with firebase_id={firebase_id}")
+       tournament_register : TournamentRegister,
+        db: Session = Depends(get_db)):
+    logger.info(f"Registering for tournament {tournament_register.tournament_id} with firebase_id={tournament_register.firebase_id}")
     try:
         # Create Challenge and Associate with Tournament
-        message = register_tournament_payment(db, tournament_id, firebase_id, amount, referral_code)
+        message = register_tournament_payment(db, tournament_register.tournament_id, tournament_register.firebase_id, tournament_register.amount, tournament_register.referral_code)
         return message
     except Exception as e:
         logger.info(f"Error during registration: {e}")
         raise HTTPException(status_code=500, detail=f"Internal Server Error as {e}")
+
