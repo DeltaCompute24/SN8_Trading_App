@@ -33,7 +33,7 @@ celery_app.conf.update(
         },
         'monitor_mainnet_challenges_every_1_second': {
             'task': 'src.tasks.monitor_mainnet_challenges.monitor_mainnet_challenges',
-            'schedule': 2.0,  # every 1 second
+            'schedule': 5.0,  # every 1 second
         },
         'monitor_miner_every_1_second': {
             'task': 'src.tasks.monitor_miner_positions.monitor_miner',
