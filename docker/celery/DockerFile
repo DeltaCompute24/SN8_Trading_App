@@ -25,5 +25,3 @@ CMD bash -c "\
     celery -A src.core.celery_app worker -n monitor_miner --loglevel=info -Q monitor_miner & \
     celery -A src.core.celery_app worker -n monitor_testnet --loglevel=info -Q testnet_validator & \
     wait -n"
-
-    

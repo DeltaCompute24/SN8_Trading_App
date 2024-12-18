@@ -1,3 +1,4 @@
+import json
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -14,7 +15,9 @@ from src.services.tournament_service import (
     delete_tournament,
     register_tournament_payment,
 )
+from src.utils.constants import TOURNAMENT
 from src.utils.logging import setup_logging
+from src.utils.redis_manager import get_hash_value
 
 router = APIRouter()
 logger = setup_logging()
@@ -83,4 +86,14 @@ def register_tournament_endpoint(
         return message
     except Exception as e:
         logger.info(f"Error during registration: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal Server Error as {e}")
+
+
+@router.get("/score")
+def participants_score():
+    logger.info(f"Return Tournaments Participants Score")
+    try:
+        return json.loads(get_hash_value(key="0", hash_name=TOURNAMENT))
+    except Exception as e:
+        logger.info(f"Error during fetching score: {e}")
         raise HTTPException(status_code=500, detail=f"Internal Server Error as {e}")

@@ -37,6 +37,7 @@ services:
       celery -A src.core.celery_app worker -n mainnet_challenges_worker --loglevel=info -Q monitor_mainnet_challenges &
       celery -A src.core.celery_app worker -n monitor_mainnet_worker --loglevel=info -Q monitor_miner &
       celery -A src.core.celery_app worker -n monitor_testnet_worker --loglevel=info -Q testnet_validator &
+      celery -A src.core.celery_app worker -n tournament_notifications_worker --loglevel=info -Q tournament_notifications
       wait -n"
 
   celery_beat:
