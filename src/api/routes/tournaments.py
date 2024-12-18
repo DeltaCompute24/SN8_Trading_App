@@ -47,6 +47,16 @@ def get_all_tournaments_endpoint(db: Session = Depends(get_db)):
     logger.info("Fetching all tournaments")
     return db.query(Tournament).options(joinedload(Tournament.challenges)).all()
 
+@router.get("/score")
+def participants_score():
+    logger.info(f"Return Tournaments Participants Score")
+    try:
+        scores = get_hash_value(key="0", hash_name=TOURNAMENT)
+        return json.loads(scores) if scores else [] 
+    except Exception as e:
+        logger.info(f"Error during fetching score: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal Server Error as {e}")
+
 
 @router.get("/{tournament_id}", response_model=TournamentRead)
 def get_tournament_by_id_endpoint(tournament_id: int, db: Session = Depends(get_db)):
@@ -88,12 +98,3 @@ def register_tournament_endpoint(
         logger.info(f"Error during registration: {e}")
         raise HTTPException(status_code=500, detail=f"Internal Server Error as {e}")
 
-
-@router.get("/score")
-def participants_score():
-    logger.info(f"Return Tournaments Participants Score")
-    try:
-        return json.loads(get_hash_value(key="0", hash_name=TOURNAMENT))
-    except Exception as e:
-        logger.info(f"Error during fetching score: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal Server Error as {e}")
