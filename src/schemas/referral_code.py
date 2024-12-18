@@ -17,6 +17,12 @@ class ReferralCodeBase(BaseModel):
     valid_to: date
     multiple_use: bool = Field(default=False)
    
+
+
+class ReferralCodeCreate(ReferralCodeBase):
+    auto_generate: bool = Field(default=False)
+    generated_by_id: Optional[str]
+    
     @field_validator('valid_from')  
     def validate_valid_from(cls, v):  
         if v < date.today():
@@ -34,15 +40,12 @@ class ReferralCodeBase(BaseModel):
         if v.valid_from > v.valid_to:
             raise ValueError('Valid-to date cannot be before valid-from date')
         return v
-
-class ReferralCodeCreate(ReferralCodeBase):
-    auto_generate: bool = Field(default=False)
-    generated_by_id: Optional[str]
     
 class ReferralCodeResponse(ReferralCodeBase):
-    id: Optional[int]
-    users : List[FirebaseUserBase]
-    generated_by_id: Optional[str]
+    id: Optional[int] = None
+    generated_by_id: Optional[str] = None
+    is_valid: Optional[bool] = True
+
     model_config = ConfigDict(
         from_attributes=True,
         populate_by_name=True,
@@ -54,4 +57,5 @@ class ReferralCodeResponse(ReferralCodeBase):
 
 class ReferralCodeListResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    codes: List[ReferralCodeResponse]
+    codes: List[ReferralCodeResponse] = Field(default_factory=list)
+    users: Optional[List[FirebaseUserBase]] = Field(default_factory=list)

@@ -6,7 +6,7 @@ from sqlalchemy.orm import joinedload
 
 from src.database_tasks import TaskSessionLocal_
 from src.models import Tournament
-from src.schemas.tournament import TournamentCreate, TournamentUpdate, TournamentRead
+from src.schemas.tournament import TournamentCreate,TournamentRegister, TournamentUpdate, TournamentRead
 from src.services.tournament_service import (
     create_tournament,
     get_tournament_by_id,
@@ -74,16 +74,12 @@ def delete_tournament_endpoint(tournament_id: int, db: Session = Depends(get_db)
 
 @router.post("/register-payment")
 def register_tournament_endpoint(
-        tournament_id: int,
-        firebase_id: str,
-        amount: float,
-        referral_code: str = None,
-        db: Session = Depends(get_db)
-):
-    logger.info(f"Registering for tournament {tournament_id} with firebase_id={firebase_id}")
+       tournament_register : TournamentRegister,
+        db: Session = Depends(get_db)):
+    logger.info(f"Registering for tournament {tournament_register.tournament_id} with firebase_id={tournament_register.firebase_id}")
     try:
         # Create Challenge and Associate with Tournament
-        message = register_tournament_payment(db, tournament_id, firebase_id, amount, referral_code)
+        message = register_tournament_payment(db, tournament_register.tournament_id, tournament_register.firebase_id, tournament_register.amount, tournament_register.referral_code)
         return message
     except Exception as e:
         logger.info(f"Error during registration: {e}")
