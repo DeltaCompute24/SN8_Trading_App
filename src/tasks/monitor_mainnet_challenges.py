@@ -113,5 +113,5 @@ def monitor_mainnet_challenges():
                     )
 
     except Exception as e:
-        push_to_redis_queue(data=f"**Monitor Mainnet Challenges** - {e}", queue_name=ERROR_QUEUE_NAME)
+        # push_to_redis_queue(data=f"**Monitor Mainnet Challenges** - {e}", queue_name=ERROR_QUEUE_NAME)
         logger.error(f"Error in monitor_mainnet_challenges task mainnet - {e}")
