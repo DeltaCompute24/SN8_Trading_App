@@ -26,12 +26,12 @@ class TournamentRegister(BaseModel):
     referral_code: str = None,
 
 class TournamentUpdate(BaseModel):
-    name: str | None
-    cost: float | None
-    prize: float | None
-    active: bool | None
-    start_time: datetime | None
-    end_time: datetime | None
+    name: str = None
+    cost: float = None
+    prize: float = None
+    active: bool = None
+    start_time: datetime = None
+    end_time: datetime = None
 
 
 class TournamentRead(TournamentBase):
