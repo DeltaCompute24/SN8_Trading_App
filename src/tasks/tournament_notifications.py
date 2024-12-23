@@ -69,7 +69,8 @@ def send_tournament_start_email():
 
         # Fetch tournaments that are starting within the next 1 minute
         tournaments = db.query(Tournament).filter(
-            Tournament.end_time > now  # Ensures the tournament is still ongoing
+            Tournament.end_time > now,  # Ensures the tournament is still ongoing
+            Tournament.active == True,
         ).all()
 
         for tournament in tournaments:
@@ -109,7 +110,8 @@ def monitor_tournaments():
     try:
         now = datetime.now(pytz.utc).replace(second=0, microsecond=0).replace(tzinfo=None)
         tournaments = db.query(Tournament).filter(
-            Tournament.end_time == (now - timedelta(hours=1))  # get tournaments that ended one hour ago
+            Tournament.end_time == (now - timedelta(hours=1)),  # get tournaments that ended one hour ago
+            Tournament.active == True,
         ).all()
 
         if not tournaments:
@@ -231,8 +233,9 @@ def calculate_participants_score():
         now = datetime.now(pytz.utc).replace(second=0, microsecond=0).replace(tzinfo=None)
         tournaments = db.query(Tournament).filter(
             and_(
-                Tournament.start_time >= now,
-                Tournament.end_time <= now,
+                Tournament.start_time <= now,
+                Tournament.end_time >= now,
+                Tournament.active == True,
             )
         ).all()
 

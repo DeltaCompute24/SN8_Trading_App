@@ -37,7 +37,7 @@ def set_hash_value(key, value, hash_name=POSITIONS_TABLE):
     """
     set the key, value against a hash set
     """
-    redis_client.hset(hash_name, key, str(value))
+    redis_client.hset(hash_name, key, json.dumps(value))
 
 
 def set_live_price(key: str, value: dict):

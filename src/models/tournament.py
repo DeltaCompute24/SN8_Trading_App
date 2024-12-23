@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Column, Integer, DateTime, String, Float, JSON
+from sqlalchemy import Column, Integer, DateTime, String, Float, Boolean, JSON
 from sqlalchemy.orm import relationship
 
 from src.database import Base
@@ -15,6 +15,9 @@ class Tournament(Base):
     end_time = Column(DateTime, nullable=False)
     winners = Column(JSON, nullable=True)
     winning_score = Column(Float, nullable=True)
+    cost = Column(Float, nullable=True)
+    prize = Column(Float, nullable=True)
+    active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
