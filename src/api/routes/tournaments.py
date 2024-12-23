@@ -89,7 +89,7 @@ def update_tournament_endpoint(tournament_id: int, tournament_data: TournamentUp
     return tournament
 
 
-@router.delete("/{tournament_id}")
+# @router.delete("/{tournament_id}")
 def delete_tournament_endpoint(tournament_id: int, db: Session = Depends(get_db)):
     tournament = delete_tournament(db, tournament_id)
     if not tournament:
