@@ -231,8 +231,8 @@ def calculate_participants_score():
         now = datetime.now(pytz.utc).replace(second=0, microsecond=0).replace(tzinfo=None)
         tournaments = db.query(Tournament).filter(
             and_(
-                Tournament.start_time >= now,
-                Tournament.end_time <= now,
+                Tournament.start_time <= now,
+                Tournament.end_time >= now,
             )
         ).all()
 
