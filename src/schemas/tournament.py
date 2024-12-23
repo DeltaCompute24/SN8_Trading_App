@@ -1,13 +1,15 @@
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel
 
-from src.schemas.user import ChallengeIdRead, ChallengeRead
+from src.schemas.user import ChallengeRead
 
 
 class TournamentBase(BaseModel):
     name: str
+    cost: float
+    prize: float
+    active: bool = True
     start_time: datetime
     end_time: datetime
 
@@ -24,16 +26,16 @@ class TournamentRegister(BaseModel):
     referral_code: str = None,
 
 class TournamentUpdate(BaseModel):
-    name: Optional[str] = None
-    start_time: Optional[datetime] = None
-    end_time: Optional[datetime] = None
+    name: str | None
+    cost: float | None
+    prize: float | None
+    active: bool | None
+    start_time: datetime | None
+    end_time: datetime | None
 
 
-class TournamentRead(BaseModel):
+class TournamentRead(TournamentBase):
     id: int
-    name: str
-    start_time: datetime
-    end_time: datetime
     created_at: datetime
     updated_at: datetime
 
