@@ -108,7 +108,7 @@ def register_tournament_payment(db, tournament_id, firebase_id, amount, referral
     # Thread to handle challenge updates
     thread = threading.Thread(
         target=register_and_update_challenge,
-        args=(new_challenge.id, "Tournament", "December Tournament Details", "TournamentDetail.html"),
+        args=(new_challenge.id, "Tournament", tournament.name, "TournamentDetail.html"),
     )
     thread.start()
 
