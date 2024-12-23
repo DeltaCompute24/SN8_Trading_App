@@ -53,19 +53,19 @@ def participants_score(db: Session = Depends(get_db), tournament_id: int = None)
     logger.info("Return Tournaments Participants Score")
     try:
         scores = get_hash_value(key="0", hash_name=TOURNAMENT)
-        scores_list = json.loads(scores) if scores else []
-        if tournament_id:
-            try:
-                tournament = db.query(Tournament).filter(Tournament.id == tournament_id).first()
-                if not tournament:
-                    raise HTTPException(status_code=404, detail="Tournament not found")
-                for tournament_data in scores_list:
-                    if tournament_data["tournament"] == tournament.name:
-                        return tournament_data
-                return []
-            finally:
-                db.close()
-        return scores_list
+        scores_list = json.dumps(scores) if scores else []
+        if not tournament_id:
+            return scores_list
+        try:
+            tournament = db.query(Tournament).filter(Tournament.id == tournament_id).first()
+            if not tournament:
+                raise HTTPException(status_code=404, detail="Tournament not found")
+            for tournament_data in scores_list:
+                if tournament_data["tournament"] == tournament.name:
+                    return tournament_data
+            return []
+        finally:
+            db.close()
     except Exception as e:
         logger.info(f"Error during fetching score: {e}")
         raise HTTPException(status_code=500, detail=f"Internal Server Error as {e}")
