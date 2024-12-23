@@ -53,7 +53,7 @@ def participants_score(db: Session = Depends(get_db), tournament_id: int = None)
     logger.info("Return Tournaments Participants Score")
     try:
         scores = get_hash_value(key="0", hash_name=TOURNAMENT)
-        scores_list = json.dumps(scores) if scores else []
+        scores_list = json.loads(scores) if scores else []
         if not tournament_id:
             return scores_list
         try:
