@@ -2,7 +2,6 @@ from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy.orm import Session
 from sqlalchemy.sql import and_, text
 from sqlalchemy.sql import func
 
@@ -182,23 +181,12 @@ async def get_latest_position(db: AsyncSession, trader_id: int, trade_pair: str)
             and_(
                 Transaction.trader_id == trader_id,
                 Transaction.trade_pair == trade_pair,
-                Transaction.status != "CLOSED"
+                Transaction.status == "OPEN",
+                Transaction.status == "PENDING",
             )
         ).order_by(Transaction.trade_order.desc())
     )
     return latest_transaction
-
-
-def get_user_position(db: Session, trader_id: int):
-    open_transaction = db.scalar(
-        select(Transaction).where(
-            and_(
-                Transaction.trader_id == trader_id,
-                Transaction.status != "CLOSED"
-            )
-        ).order_by(Transaction.trade_order.desc())
-    )
-    return open_transaction
 
 
 def calculate_fee(leverage: float, asset_type: str) -> float:

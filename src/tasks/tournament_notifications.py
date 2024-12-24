@@ -121,7 +121,8 @@ def monitor_tournaments():
                 transactions = db.query(Transaction).filter(
                     and_(
                         Transaction.trader_id == challenge.trader_id,
-                        Transaction.status != "CLOSED",
+                        Transaction.status == "OPEN",
+                        Transaction.status == "PENDING",
                     )
                 ).all()  # PENDING, OPEN
 

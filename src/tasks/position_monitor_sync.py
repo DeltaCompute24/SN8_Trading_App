@@ -382,7 +382,8 @@ def get_monitored_positions(db):
         result = db.execute(
             select(Transaction).where(
                 and_(
-                    Transaction.status != "CLOSED",
+                    Transaction.status == "OPEN",
+                    Transaction.status == "PENDING",
                 )
             )
         )
