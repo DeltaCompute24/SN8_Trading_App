@@ -1,14 +1,10 @@
-import time
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database import get_db
 from src.schemas.monitored_position import MonitoredPositionCreate
 from src.schemas.transaction import TransactionCreate, TradeResponse
-from src.services.fee_service import get_taoshi_values
 from src.services.trade_service import create_transaction, update_monitored_positions, get_latest_position
-from src.services.user_service import get_challenge
 from src.utils.logging import setup_logging
 from src.utils.redis_manager import get_live_price
 from src.utils.websocket_manager import websocket_manager
@@ -35,7 +31,7 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
 
     try:
         upward = -1
-        status = "OPEN"
+        status = "PROCESSING"
         entry_price = position_data.entry_price
         limit_order = position_data.limit_order
 
@@ -61,25 +57,14 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
                 logger.error("Failed to submit trade")
                 raise HTTPException(status_code=500, detail="Failed to submit trade")
             logger.info("Trade submitted successfully")
-
-            # loop to get the current price
-            for i in range(20):
-                time.sleep(1)
-                first_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee, uuid, hot_key, len_order, average_entry_price = get_taoshi_values(
-                    position_data.trader_id,
-                    position_data.trade_pair,
-                    challenge=challenge,
-                )
-                # 6 times
-                if first_price != 0:
-                    break
+            first_price = 0
         else:
             status = "PENDING"
             first_price = get_live_price(position_data.trade_pair)
 
-        if first_price == 0:
-            logger.error("Failed to fetch current price for the trade pair")
-            raise HTTPException(status_code=500, detail="Failed to fetch current price for the trade pair")
+            if first_price == 0:
+                logger.error("Failed to fetch current price for the trade pair")
+                raise HTTPException(status_code=500, detail="Failed to fetch current price for the trade pair")
 
         initial_price = first_price
         if entry_price and entry_price != 0 and entry_price != first_price:
