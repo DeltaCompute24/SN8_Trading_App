@@ -1,8 +1,16 @@
 from datetime import datetime
+from enum import Enum
 
 from sqlalchemy import Column, Integer, String, Float, DateTime, JSON, Boolean
 
 from src.database import Base
+
+
+class Status(str, Enum):
+    open = "OPEN"
+    close = "CLOSED"
+    pending = "PENDING"
+    processing = "PROCESSING"
 
 
 class Transaction(Base):
