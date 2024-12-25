@@ -264,10 +264,17 @@ def calculate_participants_score():
                     continue
                 data["position_count"] = transactions
                 data["trader_id"] = challenge.trader_id
+                data["user_name"] = challenge.user.name
                 tournament_list.append(data)
+            # Sort the list by 'score' in descending order
+            sorted_data = sorted(tournament_list, key=lambda x: x["score"], reverse=True)
+
+            # Add the rank attribute
+            for idx, item in enumerate(sorted_data, start=1):
+                item["rank"] = idx
             scores_list.append({
                 "tournament": tournament.name,
-                "data": tournament_list,
+                "data": sorted_data,
             })
         set_hash_value(key="0", value=scores_list, hash_name=TOURNAMENT)
 
