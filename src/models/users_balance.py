@@ -1,8 +1,9 @@
-from sqlalchemy import Column, Integer, String, Numeric, DateTime
-from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
 
-Base = declarative_base()
+from sqlalchemy import Column, Integer, String, Numeric, DateTime
+
+from src.database import Base
+
 
 class UsersBalance(Base):
     __tablename__ = "users_balance"

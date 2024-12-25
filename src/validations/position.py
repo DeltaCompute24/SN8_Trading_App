@@ -84,6 +84,11 @@ async def check_get_challenge(db: AsyncSession, position_data):
             status_code=404,
             detail="Tournament not found."
         )
+    if not tournament.active:
+        raise HTTPException(
+            status_code=404,
+            detail="Tournament is not active."
+        )
     now = datetime.now(pytz.utc).replace(second=0, microsecond=0).replace(tzinfo=None)
     if tournament.start_time > now:
         raise HTTPException(
