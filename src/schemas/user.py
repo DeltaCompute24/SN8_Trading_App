@@ -1,7 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import Optional, Literal, List
-
+from typing import Optional, Literal, List , Dict
 from pydantic import BaseModel, EmailStr, ConfigDict, Field
 
 
@@ -76,6 +75,17 @@ class ChallengeUpdate(BaseModel):
     hot_key: str = ""
 
 
+class TournamentBase(BaseModel):
+    id: int
+    name: str
+    cost: float
+    prize: float
+    active: bool = True
+    start_time: datetime
+    end_time: datetime
+    
+    class Config:
+        orm_mode = True
 class ChallengeRead(ChallengeBase):
     id: int
     user_id: int
@@ -91,6 +101,7 @@ class ChallengeRead(ChallengeBase):
     challenge_name: Optional[str]
     created_at: datetime
     updated_at: datetime
+    tournament : Optional[TournamentBase] = None
 
     class Config:
         orm_mode = True
