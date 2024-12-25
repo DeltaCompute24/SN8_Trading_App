@@ -16,6 +16,8 @@ MAIN_NET = os.getenv("MAIN_NET", "false") == "true"
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 CELERY_BROKER_URL = REDIS_URL
 CELERY_RESULT_BACKEND = REDIS_URL
+REDIS_HOST = os.environ.get("REDIS_HOST", "redis")
+REDIS_PORT = int(os.environ.get("REDIS_PORT", "6379"))
 
 # EMAIL CONFIGURATIONS
 EMAIL_HOST = os.getenv("EMAIL_HOST")

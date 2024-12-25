@@ -31,7 +31,7 @@ email_validator==2.2.0
 exceptiongroup==1.2.2
 fastapi==0.110.3
 flower==2.0.1
-fonttools==4.54.1
+fonttools==4.43.0
 frozenlist==1.4.1
 greenlet==3.0.3
 h11==0.14.0

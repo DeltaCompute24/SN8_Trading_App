@@ -22,7 +22,7 @@ services:
   celery_worker:
     build:
       context: .
-      dockerfile: docker/celery/DockerFile
+      dockerfile: docker/celery/Dockerfile
     volumes:
       - .:/app
     env_file:
@@ -43,7 +43,7 @@ services:
   celery_beat:
     build:
       context: .
-      dockerfile: docker/celery-beat/DockerFile
+      dockerfile: docker/celery-beat/Dockerfile
     volumes:
       - .:/app
     env_file:
