@@ -2,13 +2,12 @@ from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy.sql import and_, text
+from sqlalchemy.sql import and_, or_, text
 from sqlalchemy.sql import func
 
 from src.models.transaction import Transaction
 from src.schemas.monitored_position import MonitoredPositionCreate
 from src.schemas.transaction import TransactionCreate
-from src.services.fee_service import get_assets_fee
 
 
 async def create_transaction(db: AsyncSession, transaction_data: TransactionCreate, entry_price: float,
@@ -22,7 +21,9 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
                              leverage_list: list = None, order_type_list: list = None, max_profit_loss: float = 0.0,
                              profit_loss_without_fee: float = 0.0, taoshi_profit_loss: float = 0.0,
                              taoshi_profit_loss_without_fee: float = 0.0, uuid: str = None, hot_key: str = None,
-                             source: str = "", limit_order: float = 0.0):
+                             source: str = "", limit_order: float = 0.0, open_time: datetime = datetime.utcnow(),
+                             adjust_time: datetime = None,
+                             ):
     if operation_type == "initiate":
         max_position_id = await db.scalar(
             select(func.max(Transaction.position_id)).filter(Transaction.trader_id == transaction_data.trader_id))
@@ -40,7 +41,8 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
     new_transaction = Transaction(
         trader_id=transaction_data.trader_id,
         trade_pair=transaction_data.trade_pair,
-        open_time=datetime.utcnow(),
+        open_time=open_time,
+        adjust_time=adjust_time,
         entry_price=entry_price,
         initial_price=initial_price,
         min_price=initial_price,
@@ -85,11 +87,13 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
     return new_transaction
 
 
-async def close_transaction(db: AsyncSession, order_id, trader_id, close_price: float = None,
-                            profit_loss: float = None, old_status: str = "", order_level: int = 0,
-                            profit_loss_without_fee: float = 0.0, taoshi_profit_loss: float = 0.0,
-                            taoshi_profit_loss_without_fee: float = 0.0, average_entry_price: float = 0.0,
-                            operation_type="close"):
+async def close_transaction(
+        db: AsyncSession, order_id, trader_id, close_price: float = None,
+        profit_loss: float = None, old_status: str = "", order_level: int = 0,
+        profit_loss_without_fee: float = 0.0, taoshi_profit_loss: float = 0.0,
+        taoshi_profit_loss_without_fee: float = 0.0, average_entry_price: float = 0.0,
+        operation_type="close", status="CLOSED",
+):
     close_time = datetime.utcnow()
     statement = text("""
             UPDATE transactions
@@ -112,7 +116,7 @@ async def close_transaction(db: AsyncSession, order_id, trader_id, close_price: 
         statement,
         {
             "operation_type": operation_type,
-            "status": "CLOSED",
+            "status": status,
             "old_status": old_status,
             "close_time": close_time,
             "close_price": close_price,
@@ -181,65 +185,24 @@ async def get_latest_position(db: AsyncSession, trader_id: int, trade_pair: str)
             and_(
                 Transaction.trader_id == trader_id,
                 Transaction.trade_pair == trade_pair,
-                Transaction.status == "OPEN",
-                Transaction.status == "PENDING",
+                or_(
+                    Transaction.status == "OPEN",
+                    Transaction.status == "PENDING",
+                )
             )
         ).order_by(Transaction.trade_order.desc())
     )
     return latest_transaction
 
 
-def calculate_fee(leverage: float, asset_type: str) -> float:
-    return get_assets_fee(asset_type) * leverage
-
-
-def calculate_profit_loss(position, current_price: float) -> float:
-    prices = position.entry_price_list or []
-    leverages = position.leverage_list or []
-    order_types = position.order_type_list or []
-    asset_type = position.asset_type
-
-    # broker fee or commission
-    fee = calculate_fee(position, asset_type)
-    returns = 0.0
-
-    for entry_price, leverage, order_type in zip(prices, leverages, order_types):
-        # if long which means user bet that the price will increase i.e. current_price > entry_price => it's a profit
-        if order_type == "LONG":
-            price_difference = (current_price - entry_price)
-        # if long which means user bet that the price will increase i.e. current_price > entry_price => it's a profit
-        elif order_type == "SHORT":
-            price_difference = (entry_price - current_price)
-        else:
-            price_difference = 0.00
-
-        profit_loss_percent = ((price_difference / entry_price) * leverage) * 100
-        returns += profit_loss_percent
-
-    return returns - fee
-
-
-def calculate_unrealized_pnl(current_price, position):
-    if position.entry_price == 0 or position.average_entry_price is None:
-        return 1
-
-    gain = (
-            (current_price - position.average_entry_price)
-            * position.cumulative_leverage
-            / position.entry_price
+async def get_non_closed_position(db: AsyncSession, trader_id: int, trade_pair: str) -> Transaction:
+    transaction = await db.scalar(
+        select(Transaction).where(
+            and_(
+                Transaction.trader_id == trader_id,
+                Transaction.trade_pair == trade_pair,
+                Transaction.status != "CLOSED",
+            )
+        ).order_by(Transaction.trade_order.desc())
     )
-    # Check if liquidated
-    if gain <= -1.0:
-        return 0
-    net_return = 1 + gain
-    return net_return
-
-
-def calculate_return_with_fees(current_return_no_fees, position):
-    fee = calculate_fee(position, asset_type=position.asset_type)
-    return current_return_no_fees * fee
-
-
-def get_open_position_return_with_fees(realtime_price, position):
-    current_return = calculate_unrealized_pnl(realtime_price, position)
-    return calculate_return_with_fees(current_return, position)
+    return transaction

@@ -4,7 +4,7 @@ from datetime import datetime
 from datetime import timedelta
 
 import pytz
-from sqlalchemy.sql import and_
+from sqlalchemy.sql import or_
 
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
@@ -121,8 +121,10 @@ def monitor_tournaments():
                 transactions = db.query(Transaction).filter(
                     and_(
                         Transaction.trader_id == challenge.trader_id,
-                        Transaction.status == "OPEN",
-                        Transaction.status == "PENDING",
+                        or_(
+                            Transaction.status == "OPEN",
+                            Transaction.status == "PENDING",
+                        )
                     )
                 ).all()  # PENDING, OPEN
 

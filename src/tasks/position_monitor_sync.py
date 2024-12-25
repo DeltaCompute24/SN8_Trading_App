@@ -5,7 +5,7 @@ import time
 from datetime import datetime
 
 from sqlalchemy.future import select
-from sqlalchemy.sql import and_
+from sqlalchemy.sql import or_
 
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
@@ -381,7 +381,7 @@ def get_monitored_positions(db):
         logger.info("Fetching monitored positions from database")
         result = db.execute(
             select(Transaction).where(
-                and_(
+                or_(
                     Transaction.status == "OPEN",
                     Transaction.status == "PENDING",
                 )
