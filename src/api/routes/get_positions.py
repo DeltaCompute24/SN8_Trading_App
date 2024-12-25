@@ -1,4 +1,3 @@
-import asyncio
 from typing import Optional, List
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -8,7 +7,7 @@ from sqlalchemy.future import select
 from sqlalchemy.sql import and_
 
 from src.database import get_db
-from src.models.transaction import Transaction
+from src.models.transaction import Transaction, Status
 from src.schemas.transaction import Transaction as TransactionSchema
 from src.services.api_service import call_main_net, testnet_websocket
 from src.services.user_service import get_challenge, get_hot_key
@@ -30,7 +29,8 @@ async def get_positions(
     logger.info(f"Fetching positions for trader_id={trader_id}, trade_pair={trade_pair}, status={status}")
 
     status = status.strip().upper()
-    if status and status not in ["OPEN", "PENDING", "CLOSED", "PROCESSING"]:
+    if status and status not in [Status.open, Status.pending, Status.close, Status.processing, Status.adjust_processing,
+                                 Status.close_processing]:
         logger.error("A status can only be open, pending and closed")
         raise HTTPException(status_code=400, detail="A status can only be open, pending and closed!")
 

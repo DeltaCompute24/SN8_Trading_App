@@ -1,10 +1,12 @@
 import time
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import text
 
 from src.database import get_db
+from src.models.transaction import Status
 from src.schemas.monitored_position import MonitoredPositionCreate
 from src.schemas.transaction import TransactionUpdate
 from src.services.fee_service import get_taoshi_values
@@ -66,31 +68,7 @@ async def adjust_position_endpoint(position_data: TransactionUpdate, db: AsyncSe
             if not adjustment_submitted:
                 logger.error("Failed to submit adjustment")
                 raise HTTPException(status_code=500, detail="Failed to submit adjustment")
-
             logger.info("Adjustment submitted successfully")
-
-            # loop to get the current price
-            for i in range(20):
-                time.sleep(1)
-                realtime_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, *taoshi_profit_loss_without_fee = get_taoshi_values(
-                    position_data.trader_id,
-                    position_data.trade_pair,
-                    position_uuid=position.uuid,
-                    challenge=position.source,
-                )
-                len_order = taoshi_profit_loss_without_fee[-2]
-                if realtime_price != 0 and position.order_level < len_order:
-                    break
-
-            if realtime_price == 0:
-                logger.error("Failed to fetch current price for the trade pair")
-                raise HTTPException(status_code=500, detail="Failed to fetch current price for the trade pair")
-
-            average_entry_price = taoshi_profit_loss_without_fee[-1]
-            taoshi_profit_loss_without_fee = taoshi_profit_loss_without_fee[0]
-
-        if profit_loss > max_profit_loss:
-            max_profit_loss = profit_loss
 
         # Create a new transaction record with updated values
         new_transaction = await create_transaction(
@@ -100,8 +78,8 @@ async def adjust_position_endpoint(position_data: TransactionUpdate, db: AsyncSe
             cumulative_stop_loss=cumulative_stop_loss,
             cumulative_take_profit=cumulative_take_profit,
             cumulative_order_type=position.cumulative_order_type,
-            status=position.status,
-            old_status=position.old_status,
+            status=Status.adjust_processing,
+            old_status=position.status,
             modified_by=str(position_data.trader_id),
             upward=position.upward,
             profit_loss=profit_loss,
@@ -115,6 +93,8 @@ async def adjust_position_endpoint(position_data: TransactionUpdate, db: AsyncSe
             order_level=len_order,
             max_profit_loss=max_profit_loss,
             limit_order=position.limit_order,
+            open_time=position.open_time,
+            adjust_time=datetime.utcnow(),
         )
 
         await close_transaction(db, position.order_id, position.trader_id, realtime_price, profit_loss,

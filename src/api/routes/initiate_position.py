@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.database import get_db
 from src.schemas.monitored_position import MonitoredPositionCreate
 from src.schemas.transaction import TransactionCreate, TradeResponse
-from src.services.trade_service import create_transaction, update_monitored_positions, get_latest_position
+from src.services.trade_service import create_transaction, update_monitored_positions, get_non_closed_position
 from src.utils.logging import setup_logging
 from src.utils.redis_manager import get_live_price
 from src.utils.websocket_manager import websocket_manager
@@ -23,9 +23,9 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
     position_data = validate_position(position_data)
     validate_leverage(position_data.asset_type, position_data.leverage)
 
-    existing_position = await get_latest_position(db, position_data.trader_id, position_data.trade_pair)
+    existing_position = await get_non_closed_position(db, position_data.trader_id, position_data.trade_pair)
     if existing_position:
-        logger.error("An open or pending position already exists for this trade pair and trader")
+        logger.error("A position already exists for this trade pair and trader")
         raise HTTPException(status_code=400,
                             detail="An open or pending position already exists for this trade pair and trader")
 
