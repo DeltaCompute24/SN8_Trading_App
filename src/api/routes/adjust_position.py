@@ -1,4 +1,3 @@
-import time
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -9,7 +8,6 @@ from src.database import get_db
 from src.models.transaction import Status
 from src.schemas.monitored_position import MonitoredPositionCreate
 from src.schemas.transaction import TransactionUpdate
-from src.services.fee_service import get_taoshi_values
 from src.services.trade_service import create_transaction, get_open_position, update_monitored_positions, \
     close_transaction
 from src.utils.logging import setup_logging

@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.services.user_service import get_user, create_user
 from src.database import get_db
 from src.schemas.user import UsersSchema, UsersBase
+from src.services.user_service import get_user, create_user
 from src.utils.logging import setup_logging
 
 logger = setup_logging()
