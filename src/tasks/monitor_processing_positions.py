@@ -66,6 +66,11 @@ def check_initiate_position(db, position, data):
 
     now = datetime.utcnow() - timedelta(minutes=5)
     if position.open_time < now:
+        push_to_redis_queue(
+            data=f"**Monitor Processing Positions** => An initiated processing position is not initiated but closed because we "
+                 f"are unable to get price from taoshi till 5 minutes => {position.trader_id}-{position.trade_pair}-{position.order_id}",
+            queue_name=ERROR_QUEUE_NAME
+        )
         asyncio.run(websocket_manager.submit_trade(position.trader_id, position.trade_pair, "FLAT", 1))
         data.update({
             "operation_type": "close",
@@ -99,6 +104,11 @@ def check_adjust_position(db, position, data):
     # close position if it's been 20 minutes and price is still zero
     now = datetime.utcnow() - timedelta(minutes=20)
     if position.adjust_time < now:
+        push_to_redis_queue(
+            data=f"**Monitor Processing Positions** => An adjusted processing position is not adjusted but closed because we "
+                 f"are unable to get price from taoshi till 20 minutes => {position.trader_id}-{position.trade_pair}-{position.order_id}",
+            queue_name=ERROR_QUEUE_NAME
+        )
         asyncio.run(websocket_manager.submit_trade(position.trader_id, position.trade_pair, "FLAT", 1))
         data.update({
             "operation_type": "close",
@@ -132,6 +142,11 @@ def check_close_position(db, position, data):
     # close at taoshi as well as in system
     now = datetime.utcnow() - timedelta(minutes=5)
     if position.close_time < now:
+        push_to_redis_queue(
+            data=f"**Monitor Processing Positions** => A close processing position is not closed with latest price because we "
+                 f"are unable to get price from taoshi till 5 minutes => {position.trader_id}-{position.trade_pair}-{position.order_id}",
+            queue_name=ERROR_QUEUE_NAME
+        )
         asyncio.run(websocket_manager.submit_trade(position.trader_id, position.trade_pair, "FLAT", 1))
         update_position(db, position, data)
 
