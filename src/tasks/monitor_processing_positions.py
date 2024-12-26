@@ -10,12 +10,30 @@ from sqlalchemy.sql import or_
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.models.transaction import Transaction, Status
+from src.services.email_service import send_mail
 from src.services.fee_service import get_taoshi_values
+from src.services.user_service import get_challenge
 from src.utils.constants import ERROR_QUEUE_NAME
 from src.utils.redis_manager import push_to_redis_queue
 from src.utils.websocket_manager import websocket_manager
 
 logger = logging.getLogger(__name__)
+
+
+def send_email_to_user(position, _type="OPEN"):
+    challenge = get_challenge(position.trader_id)
+    if not challenge:
+        return
+    email = challenge.user.email
+    if not email:
+        return
+
+    send_mail(
+        receiver=email,
+        subject=f"{_type} Position Failed for {position.trader_id}-{position.trade_pair}.",
+        content=f"Dear User, You {_type.lower()}ed a position but its not {_type.lower()}ed successfully due to some technicalities.",
+        template_name="EmailTemplate.html",
+    )
 
 
 def update_position(db: Session, position, data):
@@ -47,7 +65,7 @@ def get_processing_positions(db):
         logger.info(f"Retrieved {len(positions)} processing positions")
         return positions
     except Exception as e:
-        push_to_redis_queue(data=f"**Monitor Positions** Database Error - {e}", queue_name=ERROR_QUEUE_NAME)
+        push_to_redis_queue(data=f"**Monitor Processing Positions** Database Error - {e}", queue_name=ERROR_QUEUE_NAME)
         logger.error(f"An error occurred while fetching processing positions: {e}")
         return []
 
@@ -79,6 +97,7 @@ def check_initiate_position(db, position, data):
             "close_time": datetime.utcnow(),
         })
         update_position(db, position, data)
+        send_email_to_user(position)
 
 
 def check_adjust_position(db, position, data):
@@ -117,6 +136,7 @@ def check_adjust_position(db, position, data):
             "close_time": datetime.utcnow(),
         })
         update_position(db, position, data)
+        send_email_to_user(position, _type="ADJUST")
 
 
 def check_close_position(db, position, data):
@@ -149,6 +169,7 @@ def check_close_position(db, position, data):
         )
         asyncio.run(websocket_manager.submit_trade(position.trader_id, position.trade_pair, "FLAT", 1))
         update_position(db, position, data)
+        # send_email_to_user(position, _type="CLOSE")
 
 
 @celery_app.task(name='src.tasks.monitor_processing_positions.processing_positions')
