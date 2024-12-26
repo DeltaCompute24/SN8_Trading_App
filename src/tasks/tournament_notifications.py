@@ -4,7 +4,7 @@ from datetime import datetime
 from datetime import timedelta
 
 import pytz
-from sqlalchemy.sql import or_
+from sqlalchemy.sql import or_, and_
 
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_

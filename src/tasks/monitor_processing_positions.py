@@ -57,8 +57,15 @@ def check_initiate_position(db, position, data):
         return
 
     # check if its price empty then check its time
+    if data["entry_price"] != 0:
+        data.update({
+            "operation_type": "open",
+            "status": "OPEN",
+        })
+        update_position(db, position, data)
+
     now = datetime.utcnow() - timedelta(minutes=5)
-    if data["entry_price"] == 0 and position.open_time < now:
+    if position.open_time < now:
         asyncio.run(websocket_manager.submit_trade(position.trader_id, position.trade_pair, "FLAT", 1))
         data.update({
             "operation_type": "close",
@@ -67,12 +74,6 @@ def check_initiate_position(db, position, data):
             "close_time": datetime.utcnow(),
         })
         update_position(db, position, data)
-        return
-    data.update({
-        "operation_type": "open",
-        "status": "OPEN",
-    })
-    update_position(db, position, data)
 
 
 def check_adjust_position(db, position, data):

@@ -44,6 +44,7 @@ class Transaction(TransactionBase):
     cumulative_order_type: str
     status: str
     old_status: Optional[str]
+    adjust_time: Optional[datetime]
     close_time: Optional[datetime]
     close_price: Optional[float]
     profit_loss: Optional[float]
