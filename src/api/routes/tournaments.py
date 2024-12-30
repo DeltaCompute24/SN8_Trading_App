@@ -7,7 +7,7 @@ from sqlalchemy.orm import joinedload
 
 from src.database_tasks import TaskSessionLocal_
 from src.models import Tournament
-from src.schemas.tournament import TournamentCreate, TournamentRegister, TournamentUpdate, TournamentRead
+from src.schemas.tournament import TournamentCreate, TournamentRegister, TournamentUpdate, TournamentRead, TournamentScore
 from src.services.tournament_service import (
     create_tournament,
     get_tournament_by_id,
@@ -48,22 +48,22 @@ def get_all_tournaments_endpoint(db: Session = Depends(get_db)):
     return db.query(Tournament).options(joinedload(Tournament.challenges)).all()
 
 
-@router.get("/score")
+@router.get("/score", response_model= TournamentScore)
 def participants_score(db: Session = Depends(get_db), tournament_id: int = None):
     logger.info("Return Tournaments Participants Score")
     try:
         scores = get_hash_value(key="0", hash_name=TOURNAMENT)
         scores_list = json.loads(scores) if scores else []
         if not tournament_id:
-            return scores_list
+            return { "statistic" :  scores_list}
         try:
-            tournament = db.query(Tournament).filter(Tournament.id == tournament_id).first()
+            tournament = db.query(Tournament).options(joinedload(Tournament.challenges)).filter(Tournament.id == tournament_id).first()
             if not tournament:
                 raise HTTPException(status_code=404, detail="Tournament not found")
-            for tournament_data in scores_list:
-                if tournament_data["tournament"] == tournament.name:
-                    return tournament_data
-            return []
+            for tournament_scores in scores_list:
+                if tournament_scores["tournament"] == tournament.name:
+                    return { "statistic" :  tournament_scores  ,  "tournament" :  tournament}
+            return { "statistic" :  []  ,  "tournament" :  tournament}
         finally:
             db.close()
     except Exception as e:
