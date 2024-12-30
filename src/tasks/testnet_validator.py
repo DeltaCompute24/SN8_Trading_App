@@ -9,7 +9,6 @@ from src.database_tasks import TaskSessionLocal_
 from src.services.api_service import testnet_websocket
 from src.services.email_service import send_mail, send_support_email
 from src.tasks.monitor_mainnet_challenges import get_monitored_challenges, update_challenge
-from src.tasks.monitor_miner_positions import populate_redis_positions
 from src.utils.constants import ERROR_QUEUE_NAME
 from src.utils.redis_manager import push_to_redis_queue
 
@@ -124,6 +123,7 @@ def monitor_testnet_challenges(positions, perf_ledgers):
 
 @celery_app.task(name='src.tasks.testnet_validator.testnet_validator')
 def testnet_validator():
+    from src.tasks.monitor_miner_positions import populate_redis_positions
     logger.info("Starting monitor testnet validator task")
     test_net_data = testnet_websocket(monitor=True)
 
