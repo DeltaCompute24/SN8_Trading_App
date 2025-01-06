@@ -1,9 +1,15 @@
 from datetime import date , datetime , timezone
-from sqlalchemy import Column, ForeignKey, Integer, String,Boolean, Date, DateTime, Table
+from sqlalchemy import Enum as SQLAlchemyEnum, Column,JSON, ForeignKey, Integer, String,Boolean, Date, DateTime, Table
 from sqlalchemy.orm import relationship, Mapped
 from src.database import Base
-from typing import List
+from typing import List , Dict
+from enum import Enum
 
+
+class ReferralCodeType(str, Enum):
+    SUBUSER = "subuser"
+    PURCHASE = "purchase"
+    
 # Create association table
 user_referral_codes = Table(
     'user_referral_codes',
@@ -40,4 +46,8 @@ class ReferralCode(Base):
     valid_from: Mapped[date] = Column(Date, default=date.today())
     valid_to: Mapped[date] = Column(Date, default=None, nullable=True)
     multiple_use :Mapped[bool] = Column(Boolean, default=False)
-
+    type: Mapped[ReferralCodeType] = Column(
+        SQLAlchemyEnum(ReferralCodeType, name="referral_code_type_enum"),
+        nullable=False
+    )
+    permissions: Mapped[Dict] = Column(JSON, nullable=True, default={})

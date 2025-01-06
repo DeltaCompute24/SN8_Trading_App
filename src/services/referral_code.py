@@ -1,8 +1,8 @@
 from typing import Optional, Set, List
-from sqlalchemy import select
+from sqlalchemy import select, exists
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
-from src.models.referral_code import ReferralCode
+from src.models.referral_code import ReferralCode, user_referral_codes
 from src.schemas.referral_code import ReferralCodeCreate, ReferralCodeBase
 from datetime import date
 from sqlalchemy.orm import Session, joinedload
@@ -87,41 +87,17 @@ class ReferralCodeService:
         
         
         if validate:
-          today = date.today()
-          if today > referral_code.valid_to or today < referral_code.valid_from:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Referral code validity period has expired"
-            )
+            ReferralCodeService.check_date_validity(referral_code)
+            ReferralCodeService.check_if_code_used_already(referral_code)
+            ReferralCodeService.check_if_code_is_multi_use(referral_code)
+            user = await get_user_by_email(db, code_data.user_id)
+            ReferralCodeService.check_if_validating_user_is_in_system(user , code_data.user_id)
+            ReferralCodeService.check_if_validating_user_already_validated(db,  user = user , referral_code =referral_code)
+
+            referral_code.users.append(user)
           
-          if not referral_code.is_valid:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Referral code is not valid"
-            )
-            
-          is_referral_code_used_already = len(referral_code.users) > 0 and not referral_code.multiple_use
-          if is_referral_code_used_already:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Referral code is single use only!"
-            )
-          
-          user = await get_user_by_email(db, code_data.user_id)
-          if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"User not found for id: {code_data.user_id}"
-            )
-          if user in referral_code.users:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"User already used this referral code"
-            )
-          referral_code.users.append(user)
-          
-          if not referral_code.multiple_use:
-            referral_code.is_valid = False
+            if not referral_code.multiple_use:
+                referral_code.is_valid = False
         try:
             await db.commit()
             await db.refresh(referral_code)
@@ -153,7 +129,62 @@ class ReferralCodeService:
                 detail=f"Could not delete referral code: {str(e)}"
             )
 
-   
+    @staticmethod
+    def check_date_validity(referral_code : ReferralCode):
+        today = date.today()
+        if today > referral_code.valid_to or today < referral_code.valid_from:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Referral code validity period has expired"
+            )
+            
+    @staticmethod
+    def check_if_code_used_already(referral_code : ReferralCode):
+        if not referral_code.is_valid:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Referral code is not valid"
+            )
+            
+    @staticmethod
+    def check_if_code_is_multi_use(referral_code : ReferralCode):
+        is_referral_code_used_already = len(referral_code.users) > 0 and not referral_code.multiple_use
+        if is_referral_code_used_already:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Referral code is single use only!"
+            )
+            
+    @staticmethod
+    def check_if_validating_user_is_in_system(user : ReferralCode, user_id : str):
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"User not found for id: {user_id}"
+            )
+            
+    @staticmethod
+    def check_if_validating_user_already_validated(db: Session,referral_code : ReferralCode, user = None  , by_email = False , email = None):
+        
+        if not by_email:
+            
+            if user in referral_code.users:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"User already used this referral code"
+                )
+        else:
+            exists_query = db.query(exists().where(
+            user_referral_codes.c.referral_code_id == referral_code.id,
+            user_referral_codes.c.user_id == email
+            )).scalar()
+            if exists_query:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="User already used this referral code"
+                )
+            
+            
         
     async def generate_unique_code(db: AsyncSession, length: int = 7) -> str:
         """
