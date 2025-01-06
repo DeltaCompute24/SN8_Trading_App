@@ -49,7 +49,7 @@ class ConnectionManager:
             try:
                 current_prices = get_hash_values()
                 prices_dict = {k: json.loads(v) for k, v in current_prices.items()}
-                await self.broadcast(json.dumps({"type": "prices", "data": prices_dict}))
+                await self.broadcast(json.dumps(prices_dict))
             except Exception as e:
                 print(f"Error fetching prices: {e}")
             await asyncio.sleep(1)
