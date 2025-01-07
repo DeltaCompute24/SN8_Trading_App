@@ -14,6 +14,7 @@ from src.schemas.user import PaymentCreate
 from src.services.email_service import send_mail
 from src.services.payment_service import create_challenge, create_payment_entry, register_and_update_challenge
 from src.services.user_service import get_firebase_user
+from src.validations.time_validations import convert_to_etc
 
 
 def create_tournament(db: Session, tournament_data: TournamentCreate):
@@ -113,10 +114,23 @@ def register_tournament_payment(db, tournament_id, firebase_id, amount, referral
     db.commit()
     db.refresh(new_challenge)
 
+    context = {
+        "name": firebase_user.name or "User",
+        "tournament": tournament,
+        "start_time": convert_to_etc(tournament.start_time),
+        "end_time": convert_to_etc(tournament.end_time),
+    }
+
     # Thread to handle challenge updates
     thread = threading.Thread(
         target=register_and_update_challenge,
-        args=(new_challenge.id, "Tournament", tournament.name, "TournamentDetail.html"),
+        args=(
+            new_challenge.id,
+            "Tournament",
+            tournament.name,
+            "TournamentDetail.html",
+            context,
+        ),
     )
     thread.start()
 
@@ -128,7 +142,7 @@ def register_tournament_payment(db, tournament_id, firebase_id, amount, referral
         receiver=firebase_user.email,
         template_name="TournamentRegistrationDetails.html",
         subject="Tournament Registration Confirmed",
-        context={"name": firebase_user.name or "User"}
+        context=context,
     )
 
     return {"message": f"Tournament Payment Registered Successfully"}

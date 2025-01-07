@@ -427,14 +427,14 @@
                 <table class="custom-background-box" style="width: 100%;">
                     <tr>
                         <td colspan="2" class="text-center pb-24px">
-                            <h5 class="text-secondary text-center">Inaugural DPS Tournament</h5>
+                            <h5 class="text-secondary text-center">{{ tournament.name }}</h5>
                         </td>
                     </tr>
                     <tr style="display: flex; justify-content: space-between; align-items: flex-start;">
                         <td style="width: 45%; text-align: left;">
                             <ul class="custom-unorder-list">
                                 <li class="mb-10">
-                                    <span class="text-secondary">Jan 5 5pm ET - Jan 10 5pm ET</span>
+                                    <span class="text-secondary">{{ start_time }} - {{ end_time }}</span>
                                 </li>
                                 <li class="mb-10">
                                     <span class="text-secondary">Scoring Criteria: Return Ratio = Returns / Drawdown</span>
@@ -444,7 +444,7 @@
                         <td style="width: 45%; text-align: left;">
                             <ul class="custom-unorder-list">
                                 <li class="mb-10">
-                                    <span class="text-secondary">$1,000 Cash Prize Winner Take All</span>
+                                    <span class="text-secondary">${{ tournament.prize }} Cash Prize Winner Take All</span>
                                 </li>
                                 <li class="mb-10">
                                     <span class="text-secondary">Minimum 2 Trades</span>
@@ -467,13 +467,13 @@
         <tr>
             <td>
                 <ol class="text-secondary order-list-items how-to-begin">
-                    <li>On Jan 5th at 5pm ET, Tournament Begins.</li>
+                    <li>On {{ start_time }}, Tournament Begins.</li>
                     <li>Sign in to your account and navigate to your Trading Dashboard to start trading under Tournament
                         account.
                     </li>
                     <li>Check the Metrics page to track your postion relative to other Competitors.</li>
-                    <li>Trader with the highest Returns Ratio on Jan 10th 5pm ET will be the winner.</li>
-                    <li>Winer will recieve $1,000 Cash payout.</li>
+                    <li>Trader with the highest Returns Ratio on {{ end_time }} will be the winner.</li>
+                    <li>Winer will recieve ${{ tournament.prize }} Cash payout.</li>
                 </ol>
             </td>
         </tr>
@@ -531,7 +531,7 @@
             <tr class="footer">
                 <td>
                     <img src="https://storage.googleapis.com/trading-email-assets/logo.png"/>
-                    <span class="footer-text">@Delta Prop Shop 2024</span>
+                    <span class="footer-text">@Delta Prop Shop 2025</span>
                 </td>
 
             </tr>
