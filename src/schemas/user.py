@@ -15,33 +15,11 @@ class UsersSchema(UsersBase):
     updated_at: datetime
 
 
-# --------------- FirebaseUser Schemas ----------------------
 class FirebaseUserBase(BaseModel):
     firebase_id: str
     email: Optional[str] = None
     name: Optional[str] = None
     username: Optional[str] = None
-    created_at: datetime
-    updated_at: datetime
-    favorite_trade_pairs: List[str]
-
-    model_config = ConfigDict(
-        from_attributes=True,
-        populate_by_name=True,
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
-    )
-    
-    
-    # --------------- FirebaseUser Schemas ----------------------
-class FirebaseUserBase(BaseModel):
-    firebase_id: str
-    email: Optional[str] = None
-    name: Optional[str] = None
-    username: Optional[str] = None
-    created_at: datetime
-    updated_at: datetime
     favorite_trade_pairs: List[str] = Field(default_factory=list)
 
     model_config = ConfigDict(

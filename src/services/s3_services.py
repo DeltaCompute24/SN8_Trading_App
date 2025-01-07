@@ -71,9 +71,12 @@ def send_certificate_email(email, name, data, celery_task=False):
     Send the certificate email to the user
     """
     certificate_name = f"{data.hot_key}/{data.phase}/{data.step}/certificate.pdf"
-    # tmp_pdf_path = get_certificate(certificate_name, name, data.phase)
     tmp_pdf_path = get_certificate_gcp(certificate_name, name, data.phase)
-    attachment = {"path": tmp_pdf_path, "name": "certificate.pdf"},
+
+    attachment = {
+        "path": tmp_pdf_path,
+        "name": "certificate.pdf",
+    }
     if celery_task:
         return attachment
     # Define the email subject, body, and recipient details
