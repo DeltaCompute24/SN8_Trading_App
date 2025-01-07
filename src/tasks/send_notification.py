@@ -32,6 +32,7 @@ def notification_to_discord(content, username="Notification for Celery Task Erro
 def send_notifications():
     error_data = get_queue_data(queue_name=ERROR_QUEUE_NAME)
     length = len(error_data)
+    error_data = list(set(error_data))
 
     try:
         available_tasks = get_available_tasks()
