@@ -55,10 +55,10 @@ def open_position(position, current_price, entry_price=False):
                 break
 
         if first_price == 0:
-            # push_to_redis_queue(
-            #     data=f"**Monitor Positions** While Opening Position {position.trader_id}-{position.trade_pair}-{position.order_id} - Price is Zero -- Trade is not Submitted",
-            #     queue_name=ERROR_QUEUE_NAME,
-            # )
+            push_to_redis_queue(
+                data=f"**Monitor Positions** While Opening Position {position.trader_id}-{position.trade_pair}-{position.order_id} - Price is Zero -- Trade is not Submitted",
+                queue_name=ERROR_QUEUE_NAME,
+            )
             return
 
         new_object = {
@@ -322,10 +322,10 @@ def check_open_position(db, position):
         position_uuid=position.uuid,
     )
     if price == 0:
-        # push_to_redis_queue(
-        #     data=f"**Monitor Positions** While Checking Open Position {position.trader_id}-{position.trade_pair}-{position.order_id} - Price is Zero",
-        #     queue_name=ERROR_QUEUE_NAME
-        # )
+        push_to_redis_queue(
+            data=f"**Monitor Positions** While Checking Open Position {position.trader_id}-{position.trade_pair}-{position.order_id} - Price is Zero",
+            queue_name=ERROR_QUEUE_NAME
+        )
         return False
 
     position = update_position_profit(db, position, profit_loss, profit_loss_without_fee, taoshi_profit_loss,

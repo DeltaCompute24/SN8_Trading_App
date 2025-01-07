@@ -19,9 +19,9 @@ celery_app.conf.update(
         'src.tasks.tournament_notifications.*': {'queue': 'tournament_notifications'},
     },
     beat_schedule={
-        'send_notifications-every-1-second': {
+        'send_notifications-every-5-minutes': {
             'task': 'src.tasks.send_notification.send_notifications',
-            'schedule': 1.0,  # every 1 seconds
+            'schedule': 400.0,  # every 5 minutes
         },
         'monitor_positions-every-5-seconds': {
             'task': 'src.tasks.position_monitor_sync.monitor_positions',
