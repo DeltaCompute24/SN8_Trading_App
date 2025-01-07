@@ -1,8 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import Optional, Literal
-
-from pydantic import BaseModel, EmailStr
+from typing import Optional, Literal, List , Dict
+from pydantic import BaseModel, EmailStr, ConfigDict, Field
 
 
 class UsersBase(BaseModel):
@@ -16,9 +15,27 @@ class UsersSchema(UsersBase):
     updated_at: datetime
 
 
-# --------------- FirebaseUser Schemas ----------------------
 class FirebaseUserBase(BaseModel):
     firebase_id: str
+    email: Optional[str] = None
+    name: Optional[str] = None
+    username: Optional[str] = None
+    favorite_trade_pairs: List[str] = Field(default_factory=list)
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        populate_by_name=True,
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
+    )
+
+# --------------- FirebaseUser Schemas ----------------------
+class FavoriteTradePairs(BaseModel):
+    email: str
+    trade_pair :str
+   
+
 
 
 class ChallengeBase(BaseModel):
@@ -36,6 +53,17 @@ class ChallengeUpdate(BaseModel):
     hot_key: str = ""
 
 
+class TournamentBase(BaseModel):
+    id: int
+    name: str
+    cost: float
+    prize: float
+    active: bool = True
+    start_time: datetime
+    end_time: datetime
+    
+    class Config:
+        orm_mode = True
 class ChallengeRead(ChallengeBase):
     id: int
     user_id: int
@@ -51,6 +79,7 @@ class ChallengeRead(ChallengeBase):
     challenge_name: Optional[str]
     created_at: datetime
     updated_at: datetime
+    tournament : Optional[TournamentBase] = None
 
     class Config:
         orm_mode = True
@@ -97,7 +126,6 @@ class PaymentCreate(BaseModel):
     firebase_id: str
     amount: float
     step: Literal[1, 2]
-    phase: Literal[1, 2]
     referral_code: Optional[str] = None
 
 

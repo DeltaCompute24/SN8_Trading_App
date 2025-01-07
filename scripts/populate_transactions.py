@@ -180,7 +180,7 @@ def process_data(db: Session, data, source):
 
 def populate_transactions(db: Session):
     main_net_data = call_main_net()
-    test_net_data = asyncio.run(testnet_websocket())
+    test_net_data = testnet_websocket()
 
     process_data(db, main_net_data, source="main")
     process_data(db, test_net_data, source="test")

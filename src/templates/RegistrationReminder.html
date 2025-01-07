@@ -9,7 +9,7 @@
             rel="stylesheet">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Email</title>
+    <title>Registration Reminder Email</title>
 
     <style>
         /* common Styles Starts Here */
@@ -20,7 +20,7 @@
         }
 
         .main-table-section {
-            padding: 0px 32px;
+            padding: 20px 32px 0;
             background-image: url(https://trading-email-assets.s3.us-east-1.amazonaws.com/popcorn.png);
             background-repeat: no-repeat;
             background-position: right;
@@ -29,7 +29,7 @@
         }
 
         .company-name {
-            font-family: "Neuton", serif;
+            font-family: "Neuton", sans-serif;
             font-size: 36.59px;
             font-weight: 500;
             line-height: 49.4px;
@@ -101,21 +101,25 @@
 
         .custom-background-box {
             width: 100%;
-            padding: 30px 20px;
+            padding: 25px 20px;
             border-radius: 10.19px;
             border: 0.64px solid rgba(62, 62, 62, 1);
             background: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 99.99%, rgba(153, 153, 153, 0.04) 100%);
             margin-top: 32px;
         }
 
+        .custom-background-box tbody tr.tournament-details-td td {
+            width: 33%;
+        }
+
         .name-section {
-            padding-top: 32px;
+            padding-top: 20px;
             text-align: center;
         }
 
         .name-row .name-section .user-name {
             margin-left: 15px;
-            font-family: "Neuton", serif;
+            font-family: "Neuton", sans-serif;
             font-size: 31.7px;
             font-weight: 700;
             line-height: 42.79px;
@@ -154,9 +158,6 @@
             text-underline-position: from-font;
             text-decoration-skip-ink: none;
             margin-left: 8px;
-            position: relative;
-            top: -5px;
-
         }
 
 
@@ -212,10 +213,12 @@
         }
 
 
-
         .welcome-row .heading {
-            padding-top: 40px;
+            padding: 40px 20px;
+            border-radius: 10.19px;
+            border: 0.64px solid rgba(62, 62, 62, 1)
         }
+
 
 
 
@@ -227,26 +230,9 @@
             padding-top: 20px;
         }
 
-        .button-row .delta-button {
-            width: 232px;
-            height: 58px;
-            background: rgba(234, 73, 39, 1);
-            font-family: "Roboto Mono" , sans-serif;
-            font-size: 20px;
-            font-weight: 300;
-            line-height: 26.38px;
-            text-underline-position: from-font;
-            text-decoration-skip-ink: none;
-            color: rgba(255, 255, 255, 1);
-            outline: none;
-            border: none;
-
-        }
-
-
         .info-row .info-row-text {
             padding-top: 24px;
-            font-family: "Neuton", serif;
+            font-family: "Neuton", sans-serif;
             font-size: 20px;
             font-weight: 500;
             line-height: 27px;
@@ -288,7 +274,13 @@
 
 
         .custom-unorder-list {
-            list-style-image: url(https://trading-email-assets.s3.us-east-1.amazonaws.com/star-icon.png);
+            list-style-image: url('https://trading-email-assets.s3.us-east-1.amazonaws.com/star-icon.png');
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        .custom-unorder-list li {
+            font-size: 12px;
         }
 
         .goodluck-text {
@@ -304,23 +296,30 @@
         }
 
         .order-list-items li {
-            font-family: "Satoshi" , sans-serif;
-            font-size: 20px;
+            font-family: "Satoshi", sans-serif;
+            font-size: 18px;
             font-weight: 400;
-            line-height: 27px;
+            line-height: 22px;
             text-align: left;
             text-underline-position: from-font;
             text-decoration-skip-ink: none;
-
+            margin-bottom: 12px;
         }
 
         .logo-image {
             margin: -10px;
         }
-        .mb-10 {
-            margin-bottom: 10px;
+
+        .main-heading {
+            margin: 0;
+            color: rgba(234, 73, 39, 1);
+            font-size: 28px;
+            font-family: "Roboto", sans-serif;
         }
 
+        .discord-section.custom-background-box a {
+            text-decoration: none;
+        }
 
         @media only screen and (max-width: 600px) {
             .main-table-section {
@@ -332,7 +331,7 @@
             }
 
             .welcome-row .heading {
-                font-size: 30px !important;
+                font-size: 32px !important;
                 line-height: 39.6px !important;
             }
 
@@ -351,6 +350,14 @@
                 font-size: 20px !important;
                 line-height: 27px !important;
             }
+
+            .main-container {
+                width: 100%;
+            }
+
+            .how-to-begin {
+                padding-left: 20px;
+            }
         }
     </style>
 
@@ -366,153 +373,43 @@
                 <span class="company-name">Delta Prop Shop</span>
             </td>
         </tr>
-        <tr class="welcome-row">
 
-            <td colspan="1" class="heading">
-                <h1 class="text-primary"> Get set, Go!</br>
-                    Here are your 2 Step </br>
-                    Challenge details</h1>
-
-            </td>
-        </tr>
-        <tr class="button-row">
-            <td>
-                <button class="delta-button" type="button"> Delta Prop Shop</button>
-            </td>
-        </tr>
         <tr class="name-row">
             <td class="name-section">
                 <img src="https://trading-email-assets.s3.us-east-1.amazonaws.com/starIcon.png" alt="logo"/>
                 <span class="user-name">Hi, {{ name }}</span>
             </td>
         </tr>
-
-
-        <tr class="">
-            <td>
-                <table class="custom-background-box">
-                    <tr>
-                        <td colspan="2" class="text-center pb-24px ">
-                            <h5 class="text-secondary text-center">Challenge Phase 1 Details</h5>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="text-center">
-                            <h6 class="text-secondary ">Account ID</h6>
-                        </td>
-                        <td class="text-center">
-                            <h6 class="text-primary">{{ trader_id }}</h6>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td colspan="2" class="divider-td">
-                            <div class="divider"></div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="text-center">
-                            <h6 class="text-secondary">Platform</h6>
-                        </td>
-                        <td class="text-center">
-                            <h6 class="text-primary">DeltaTradePro</h6>
-                        </td>
-                    </tr>
-                </table>
+        <tr class="name-row">
+            <td class="name-section">
+                <h3 class="main-heading">Reminder: Join Our Discord for Inaugural DPS Tournament!</h3>
             </td>
         </tr>
-
-        <tr class="">
-            <td>
-                <table class="custom-background-box" style="width: 100%;">
-                    <tr>
-                        <td colspan="2" class="text-center pb-24px">
-                            <h5 class="text-secondary text-center">Phase 1 Challenge Criteria</h5>
-                        </td>
-                    </tr>
-                    <tr style="display: flex; justify-content: space-between; align-items: flex-start;">
-                        <td style="width: 45%; text-align: left;">
-                            <ul class="custom-unorder-list">
-                                <li class="mb-10">
-                                    <span class="text-secondary">2% Return.</span>
-                                </li>
-                                <li class="mb-10">
-                                    <span class="text-secondary">30 Days Max.</span>
-                                </li>
-                            </ul>
-                        </td>
-                        <td style="width: 45%; text-align: left;">
-                            <ul class="custom-unorder-list">
-                                <li class="mb-10">
-                                    <span class="text-secondary">5% Max Drawdown.</span>
-                                </li>
-                            </ul>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td colspan="2" class="text-center pb-24px">
-                            <h5 class="text-secondary text-center">Phase 2 Challenge Criteria</h5>
-                        </td>
-                    </tr>
-                    <tr style="display: flex; justify-content: space-between; align-items: flex-start;">
-                        <td style="width: 45%; text-align: left;">
-                            <ul class="custom-unorder-list">
-                                <li class="mb-10">
-                                    <span class="text-secondary">2% Return.</span>
-                                </li>
-                                <li class="mb-10">
-                                    <span class="text-secondary">No 24hr period unrealized gain can surpass 40% of the total.</span>
-                                </li>
-                            </ul>
-                        </td>
-                        <td style="width: 45%; text-align: left;">
-                            <ul class="custom-unorder-list">
-                                <li class="mb-10">
-                                    <span class="text-secondary">2% Max Drawdown.</span>
-                                </li>
-                                <li class="mb-10">
-                                    <span class="text-secondary">No single position's returns can account for more than 35% of overall returns.</span>
-                                </li>
-                            </ul>
-                        </td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
-
 
         <tr>
             <td class="pt-24px">
                 <h5 class="text-secondary text-center">
-                    How to begin?
+                    Inaugural DPS Tournament
                 </h5>
             </td>
         </tr>
-        <tr>
-            <td>
-                <ol class="text-secondary order-list-items">
-                    <li>Sign in to your Delta Prop Shop account.</li>
-                    <li>Navigate to the Accounts page and identify your Active Challenge with the challenge Account
-                        ID listed above.
-                    </li>
-                    <li> Click the Trading Dashboard link to begin trading.</li>
-                    <li>Check the Metrics link to see your progress towards passing the Challenge.</li>
-                    <li>Join the Discord server for more information and FAQ.</li>
-                </ol>
+
+        <tr class="info-row">
+            <td class="info-row-text">We noticed you registered for the tournament but haven’t joined our Discord
+                channel yet. Stay updated on announcements and discussions by clicking the link below:
             </td>
         </tr>
-
 
         <tr>
             <td>
                 <table class="discord-section custom-background-box">
                     <tr>
                         <td>
-                            <a href="https://discord.gg/pVxa3hc4fT" target="_blank" rel="noopener noreferrer"
-                               style="text-decoration: none;">
+                            <a href="https://discord.gg/W2MznzZn8m">
                                 <img class="discordImage"
                                      src="https://trading-email-assets.s3.us-east-1.amazonaws.com/discordIcon.png"
                                      alt="popcorn"/>
-                                <span class="discord-text text-secondary">Discord Server</span>
+                                <span class="discord-text text-secondary">Join Discord Server to Chat with other Challengers</span>
                             </a>
                         </td>
                     </tr>
@@ -520,14 +417,6 @@
                 </table>
             </td>
         </tr>
-
-        <tr>
-            <td>
-                <h4 class="goodluck-text">Good Luck and happy trading!</h4>
-            </td>
-        </tr>
-
-
         <tr>
             <td>
                 <table class="sign-section">
@@ -545,8 +434,6 @@
                 </table>
             </td>
         </tr>
-
-
     </table>
 
     <div class="footer-section">

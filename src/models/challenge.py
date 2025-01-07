@@ -26,6 +26,7 @@ class Challenge(Base):
     pass_the_main_net_challenge = Column(DateTime, nullable=True)
     draw_down = Column(Float, nullable=True)
     profit_sum = Column(Float, nullable=True)
+    score = Column(Float, nullable=True)
     response = Column(JSON, nullable=True)
     message = Column(String, nullable=False)
     hotkey_status = Column(String, nullable=False)
@@ -38,3 +39,9 @@ class Challenge(Base):
 
     # One-to-one relationship with Payment
     payment = relationship("Payment", back_populates="challenge", uselist=False)
+
+    # Foreign key to reference the Tournament
+    tournament_id = Column(Integer, ForeignKey("tournament.id"))
+
+    # Many-to-one relationship with Tournament
+    tournament = relationship("Tournament", back_populates="challenges")

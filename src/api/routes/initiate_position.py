@@ -12,7 +12,7 @@ from src.services.user_service import get_challenge
 from src.utils.logging import setup_logging
 from src.utils.redis_manager import get_live_price
 from src.utils.websocket_manager import websocket_manager
-from src.validations.position import validate_position, validate_leverage
+from src.validations.position import validate_position, validate_leverage, check_get_challenge
 
 logger = setup_logging()
 router = APIRouter()
@@ -23,6 +23,7 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
     logger.info(
         f"Initiating position for trader_id={position_data.trader_id} and trade_pair={position_data.trade_pair}")
 
+    challenge = await check_get_challenge(db, position_data)
     position_data = validate_position(position_data)
     validate_leverage(position_data.asset_type, position_data.leverage)
 
@@ -38,11 +39,10 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
         entry_price = position_data.entry_price
         limit_order = position_data.limit_order
 
-        challenge = get_challenge(position_data.trader_id, source=True)
         if not challenge:
             raise HTTPException(status_code=400,
                                 detail=f"Given Trader ID {position_data.trader_id} does not exist in the system!")
-
+        challenge = challenge.challenge
         profit_loss = 0.0
         profit_loss_without_fee = 0.0
         taoshi_profit_loss = 0.0
@@ -63,7 +63,7 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
             logger.info("Trade submitted successfully")
 
             # loop to get the current price
-            for i in range(12):
+            for i in range(20):
                 time.sleep(1)
                 first_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee, uuid, hot_key, len_order, average_entry_price = get_taoshi_values(
                     position_data.trader_id,

@@ -51,8 +51,8 @@ class ConnectionManager:
                 break
             try:
                 current_prices = get_hash_values()
-                prices_dict = {k : json.loads(v) for k, v in current_prices.items()}
-                await self.broadcast(json.dumps({ "type" : "prices", "data" : prices_dict }))
+                prices_dict = {k: json.loads(v) for k, v in current_prices.items()}
+                await self.broadcast(json.dumps({"type": "prices", "data": prices_dict}))
             except Exception as e:
                 print(f"Error fetching prices: {e}")
             await asyncio.sleep(1)
@@ -66,9 +66,9 @@ class ConnectionManager:
                 positions = get_hash_values(POSITIONS_TABLE)
                 positions_dict = {}
                 for key, value in positions.items():
-           
+
                     value = ast.literal_eval(value)
-     
+
                     trade_pair, trader_id = key.split("-")
                     if trader_id not in positions_dict:
                         positions_dict[trader_id] = {}
@@ -78,11 +78,10 @@ class ConnectionManager:
                         "profit_loss": value[2],
                         "profit_loss_without_fee": value[3],
                     }
-                await self.broadcast(json.dumps({ "type" : "positions", "data" : positions_dict }))
+                await self.broadcast(json.dumps({"type": "positions", "data": positions_dict}))
             except Exception as e:
                 print(f"Error fetching positions: {e}")
             await asyncio.sleep(1)
-    
 
 
 manager = ConnectionManager()
@@ -96,5 +95,3 @@ async def websocket_endpoint(websocket: WebSocket):
             await websocket.receive_text()
     except WebSocketDisconnect:
         manager.disconnect(websocket)
-
-
