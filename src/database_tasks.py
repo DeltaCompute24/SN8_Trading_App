@@ -1,5 +1,3 @@
-from contextlib import asynccontextmanager
-
 from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
@@ -22,13 +20,10 @@ TaskSessionLocal_ = sessionmaker(
 
 Base = declarative_base()
 
-@asynccontextmanager
-async def get_task_db():
-    async with TaskSessionLocal() as session:
-        try:
-            yield session
-        except Exception:
-            await session.rollback()
-            raise
-        finally:
-            await session.close()
+
+def get_sync_db():
+    db = TaskSessionLocal_()
+    try:
+        yield db
+    finally:
+        db.close()

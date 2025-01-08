@@ -23,10 +23,7 @@ RUN apt-get update && apt-get install -y \
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application code into the container
-# COPY . .
-
-# Expose the port the app runs on
+# Expose the port the app runs on (match Cloud Run default)
 EXPOSE 80
 
 # Command to run the application

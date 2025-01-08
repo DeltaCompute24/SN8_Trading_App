@@ -166,10 +166,6 @@ def calculate_tournament_results(db, tournament, challenges):
     try:
         test_net_data = testnet_websocket(monitor=True)
         if not test_net_data:
-            push_to_redis_queue(
-                data=f"**Testnet Listener** => Testnet Validator Checkpoint returns with status code other than 200",
-                queue_name=ERROR_QUEUE_NAME
-            )
             return
 
         positions = test_net_data["positions"]
