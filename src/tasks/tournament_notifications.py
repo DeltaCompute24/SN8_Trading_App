@@ -41,7 +41,10 @@ def send_discord_reminder():
         for challenge in challenges:
             if challenge.user:
                 subject = "Reminder: Join Our Discord!"
-                context = {"name": challenge.user.name}
+                context = {
+                    "name": challenge.user.name,
+                    "tournament_name": challenge.tournament.name,
+                }
                 send_mail(
                     receiver=challenge.user.email,
                     subject=subject,
