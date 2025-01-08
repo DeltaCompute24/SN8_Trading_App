@@ -14,16 +14,15 @@ from src.schemas.user import PaymentCreate
 from src.services.email_service import send_mail
 from src.services.payment_service import create_challenge, create_payment_entry, register_and_update_challenge
 from src.services.user_service import get_firebase_user
+from src.validations.time_validations import convert_to_etc
 
 
 def create_tournament(db: Session, tournament_data: TournamentCreate):
-    start_time = tournament_data.start_time.replace(second=0, microsecond=0)
-    end_time = tournament_data.end_time.replace(second=0, microsecond=0)
+    tournament_data.start_time = tournament_data.start_time.replace(second=0, microsecond=0)
+    tournament_data.end_time = tournament_data.end_time.replace(second=0, microsecond=0)
 
     tournament = Tournament(
-        name=tournament_data.name,
-        start_time=start_time,
-        end_time=end_time,
+        **tournament_data.model_dump()
     )
     db.add(tournament)
     db.commit()
@@ -46,12 +45,22 @@ def update_tournament(db: Session, tournament_id: int, tournament_data: Tourname
     tournament = get_tournament_by_id(db, tournament_id)
     if not tournament:
         raise HTTPException(status_code=404, detail="Tournament Not Found!")
-    tournament_data.name = tournament_data.name if tournament_data.name else tournament.name
-    tournament_data.start_time = tournament_data.start_time.replace(second=0,
-                                                                    microsecond=0) if tournament_data.start_time else tournament.start_time
-    tournament_data.end_time = tournament_data.end_time.replace(second=0,
-                                                                microsecond=0) if tournament_data.end_time else tournament.end_time
-    tournament = update_tournament_object(db, tournament, tournament_data.dict())
+
+    if tournament_data.name:
+        tournament.name = tournament_data.name
+    if tournament_data.start_time:
+        tournament.start_time = tournament_data.start_time.replace(second=0, microsecond=0)
+    if tournament_data.end_time:
+        tournament.end_time = tournament_data.end_time.replace(second=0, microsecond=0)
+    if tournament_data.active is not None:
+        tournament.active = tournament_data.active
+    if tournament_data.prize:
+        tournament.prize = tournament_data.prize
+    if tournament_data.cost:
+        tournament.cost = tournament_data.cost
+
+    db.commit()
+    db.refresh(tournament)
     return tournament
 
 
@@ -105,10 +114,23 @@ def register_tournament_payment(db, tournament_id, firebase_id, amount, referral
     db.commit()
     db.refresh(new_challenge)
 
+    context = {
+        "name": firebase_user.name or "User",
+        "tournament": tournament,
+        "start_time": convert_to_etc(tournament.start_time),
+        "end_time": convert_to_etc(tournament.end_time),
+    }
+
     # Thread to handle challenge updates
     thread = threading.Thread(
         target=register_and_update_challenge,
-        args=(new_challenge.id, "Tournament", "December Tournament Details", "TournamentDetail.html"),
+        args=(
+            new_challenge.id,
+            "Tournament",
+            tournament.name,
+            "TournamentDetail.html",
+            context,
+        ),
     )
     thread.start()
 
@@ -120,7 +142,7 @@ def register_tournament_payment(db, tournament_id, firebase_id, amount, referral
         receiver=firebase_user.email,
         template_name="TournamentRegistrationDetails.html",
         subject="Tournament Registration Confirmed",
-        context={"name": firebase_user.name or "User"}
+        context=context,
     )
 
     return {"message": f"Tournament Payment Registered Successfully"}

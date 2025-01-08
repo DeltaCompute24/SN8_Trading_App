@@ -88,15 +88,21 @@ def create_payment(db: Session, payment_data: PaymentCreate):
     if firebase_user and firebase_user.email == "dev@delta-mining.com" and payment_data.step == 1:
         raise HTTPException(status_code=400, detail=f"You '{firebase_user.email}' can't register minor as mainnet!")
 
+    first_name = ""
+    context = {}
     if not firebase_user:
         new_challenge = None
     elif firebase_user.username:
+        first_name = firebase_user.name or "User"
+        context = {"name": first_name}
         new_challenge = create_challenge(db, payment_data, network, phase, firebase_user)
         thread = threading.Thread(
             target=register_and_update_challenge,
-            args=(
-                new_challenge.id,
-            ))
+            kwargs={
+                "challenge_id": new_challenge.id,
+                "context": context,
+            }
+        )
         thread.start()
     # If Firebase user exists but lacks necessary fields
     else:
@@ -105,11 +111,10 @@ def create_payment(db: Session, payment_data: PaymentCreate):
 
     new_payment = create_payment_entry(db, payment_data, phase, new_challenge)
     if firebase_user and firebase_user.email:
-        first_name = firebase_user.name or "User"
         send_mail(
             receiver=firebase_user.email,
             subject=f"{first_name}, Payment Confirmed",
-            context={"name": first_name},
+            context=context,
         )
     return new_payment
 
@@ -119,6 +124,7 @@ def register_and_update_challenge(
         challenge_status="In Challenge",
         subject="Step 2 Challenge Details",
         test_template="ChallengeDetailStep2.html",
+        context=None,
 ):
     with TaskSessionLocal_() as db:
         try:
@@ -141,10 +147,9 @@ def register_and_update_challenge(
                 challenge.status = challenge_status
                 challenge.message = "Challenge Updated Successfully!"
                 challenge.hotkey_status = "Success"
-                context = {
-                    "name": challenge.user.name or "User",
+                context.update({
                     "trader_id": challenge.trader_id,
-                }
+                })
                 if network == "main":
                     challenge.register_on_main_net = datetime.utcnow()
                     send_mail(
