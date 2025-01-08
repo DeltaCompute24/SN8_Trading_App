@@ -32,7 +32,7 @@ class ConnectionManager:
                 task.cancel()
             self.broadcast_tasks = []
 
-    async def broadcast(self, message: dict):
+    async def broadcast(self, message: str):
         disconnected = []
         for connection in self.active_connections:
             try:

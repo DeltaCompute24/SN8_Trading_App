@@ -1,4 +1,5 @@
 import asyncio
+import json
 
 import aiohttp
 import websockets
@@ -32,7 +33,8 @@ class WebSocketManager:
         while True:
             try:
                 message = await self.websocket.recv()
-                set_live_prices(key="0", value=message)
+                data = json.loads(message)
+                set_live_prices(key="0", value=data.get("data"))
             except Exception as e:
                 print("Testnet WebSocket Connection Closed. Reconnecting...")
                 await self.close()

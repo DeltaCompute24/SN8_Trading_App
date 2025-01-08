@@ -43,11 +43,11 @@ def set_hash_value(key, value, hash_name=POSITIONS_TABLE):
     redis_client.hset(hash_name, key, json.dumps(value))
 
 
-def set_live_prices(key: str, value: str):
+def set_live_prices(key: str, value: dict):
     """
     set the key, value against a hash set, preserving the types in value object
     """
-    redis_client.hset(REDIS_LIVE_PRICES_TABLE, key, value)
+    redis_client.hset(REDIS_LIVE_PRICES_TABLE, key, json.dumps(value))
 
 
 def push_to_redis_queue(data, queue_name=OPERATION_QUEUE_NAME):
