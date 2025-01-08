@@ -1,12 +1,12 @@
-from google.cloud import storage
 import tempfile
 from datetime import datetime
 
 from fastapi import APIRouter, HTTPException
+from google.cloud import storage
 from weasyprint import HTML
 
+from src.config import GCP_BUCKET, GCP_PROJECT
 from src.services.email_service import render_to_string
-from src.config import GCP_BUCKET
 from src.utils.logging import setup_logging
 
 logger = setup_logging()
@@ -14,7 +14,7 @@ router = APIRouter()
 
 # Initialize GCP storage client and bucket
 # Initialize the gcp from the terminal by this command ```gcloud auth application-default login```
-client = storage.Client()
+client = storage.Client(project=GCP_PROJECT)
 bucket = client.bucket(GCP_BUCKET)
 
 
