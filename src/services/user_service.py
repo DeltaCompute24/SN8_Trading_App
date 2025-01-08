@@ -272,13 +272,17 @@ async def remove_from_favorites(db: Session, trade_pair_data: FavoriteTradePairs
     await db.refresh(user)
     return user
 
+from datetime import date
+
 
 async def is_user_already_invited_to_account(db: Session, access: UserAccessSchema) -> FirebaseUser:
-    referral_code = db.query(where(
+    today = date.today()
+    referral_code = await db.query(where(
             ReferralCode.generated_by_id == access.from_user,
            ReferralCode.users == access.to,
            ReferralCode.permissions.challenges.trader_id == access.trader_id,
-           ReferralCode.is_valid = True
+           ReferralCode.is_valid == True,
+           ReferralCode.valid_to > today
             )).scalar()
     
     if referral_code:
