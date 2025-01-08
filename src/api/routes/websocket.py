@@ -29,7 +29,7 @@ class ConnectionManager:
                 task.cancel()
             self.broadcast_tasks = []
 
-    async def broadcast(self, message: dict):
+    async def broadcast(self, message: str):
         disconnected = []
         for connection in self.active_connections:
             try:
@@ -49,7 +49,7 @@ class ConnectionManager:
             try:
                 current_prices = get_hash_values()
                 prices_dict = {k: json.loads(v) for k, v in current_prices.items()}
-                await self.broadcast(json.dumps(prices_dict))
+                await self.broadcast(json.dumps({"type": "prices", "data": prices_dict}))
             except Exception as e:
                 print(f"Error fetching prices: {e}")
             await asyncio.sleep(1)
@@ -58,7 +58,7 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 
-@router.websocket("/live-prices")
+@router.websocket("/delta")
 async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
     try:
