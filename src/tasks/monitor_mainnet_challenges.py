@@ -5,7 +5,7 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import and_
 
-from src.config import NEW_POSITIONS_URL
+from src.config import NEW_POSITIONS_URL, NEW_POSITIONS_TOKEN
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.models.challenge import Challenge
@@ -54,7 +54,7 @@ def update_challenge(db: Session, challenge, data):
 def monitor_mainnet_challenges():
     logger.info("Starting monitor mainnet challenges task")
     try:
-        response = call_main_net(url=NEW_POSITIONS_URL)
+        response = call_main_net(url=NEW_POSITIONS_URL, token=NEW_POSITIONS_TOKEN)
         if not response:
             return
         success = response["challengeperiod"]["success"]
@@ -113,5 +113,5 @@ def monitor_mainnet_challenges():
                     )
 
     except Exception as e:
-        # push_to_redis_queue(data=f"**Monitor Mainnet Challenges** - {e}", queue_name=ERROR_QUEUE_NAME)
+        push_to_redis_queue(data=f"**Monitor Mainnet Challenges** - {e}", queue_name=ERROR_QUEUE_NAME)
         logger.error(f"Error in monitor_mainnet_challenges task mainnet - {e}")

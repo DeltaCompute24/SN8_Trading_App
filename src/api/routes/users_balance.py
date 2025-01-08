@@ -3,7 +3,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from src.database_tasks import TaskSessionLocal_
+from src.database_tasks import get_sync_db
 from src.models import UsersBalance
 from src.schemas.user import CreateUserBalanceSchema, UserBalanceSchema
 from src.services.user_service import create_user_balance, get_user_balance
@@ -13,17 +13,8 @@ logger = setup_logging()
 router = APIRouter()
 
 
-# Dependency
-def get_db():
-    db = TaskSessionLocal_()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
 @router.post("/", response_model=UserBalanceSchema)
-def create_balance(user_data: CreateUserBalanceSchema, db: Session = Depends(get_db)):
+def create_balance(user_data: CreateUserBalanceSchema, db: Session = Depends(get_sync_db)):
     logger.info(f"Create User Balance for trader_id={user_data.trader_id}")
     try:
         return create_user_balance(db, user_data)
@@ -33,13 +24,13 @@ def create_balance(user_data: CreateUserBalanceSchema, db: Session = Depends(get
 
 
 @router.get("/", response_model=List[UserBalanceSchema])
-def get_user_balances(db: Session = Depends(get_db)):
+def get_user_balances(db: Session = Depends(get_sync_db)):
     logger.info("Fetching Users Balances")
     return db.query(UsersBalance).all()
 
 
 @router.put("/", response_model=UserBalanceSchema)
-def update_user_balance(user_data: CreateUserBalanceSchema, db: Session = Depends(get_db)):
+def update_user_balance(user_data: CreateUserBalanceSchema, db: Session = Depends(get_sync_db)):
     user = get_user_balance(db, user_data.hot_key)
     if user is None:
         raise HTTPException(status_code=404, detail=f"User Balance for this hotkey {user_data.hot_key} Not Found!")
