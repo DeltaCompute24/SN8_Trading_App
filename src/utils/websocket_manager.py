@@ -90,7 +90,7 @@ class WebSocketManager:
                     if item.get("ev") not in ["CAS", "XAS", "A"]:
                         print(f"Skipping non-CAS event: {item}")
                         continue
-                    print(item)
+                   
                     trade_pair = item.pop(self.pair_key, None)
                     item.pop("ev", None)
 

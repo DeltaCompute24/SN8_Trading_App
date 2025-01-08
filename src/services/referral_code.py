@@ -88,7 +88,8 @@ class ReferralCodeService:
         
         if validate:
           today = date.today()
-          if today > referral_code.valid_to or today < referral_code.valid_from:
+      
+          if today > referral_code.valid_to:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Referral code validity period has expired"

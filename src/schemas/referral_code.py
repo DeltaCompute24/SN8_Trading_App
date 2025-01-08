@@ -52,8 +52,8 @@ class ReferralCodeResponse(ReferralCodeBase):
         orm_model=ReferralCode,
         json_encoders = {
             date: lambda v: v.isoformat()
-          }
-      )
+        }
+    )
 
 class ReferralCodeListResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
