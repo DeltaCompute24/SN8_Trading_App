@@ -17,6 +17,7 @@ celery_app.conf.update(
         'src.tasks.monitor_miner_positions.monitor_miner': {'queue': 'monitor_miner'},
         'src.tasks.testnet_validator.testnet_validator': {'queue': 'testnet_validator'},
         'src.tasks.tournament_notifications.*': {'queue': 'tournament_notifications'},
+        'src.tasks.monitor_processing_positions.processing_positions': {'queue': 'processing_positions'},
     },
     beat_schedule={
         'send_notifications-every-5-minutes': {
@@ -59,6 +60,10 @@ celery_app.conf.update(
             'task': 'src.tasks.tournament_notifications.calculate_participants_score',
             'schedule': 60.0,  # Runs every 1 minute
         },
+        'monitor_processing_positions-seconds': {
+            'task': 'src.tasks.monitor_processing_positions.processing_positions',
+            'schedule': 30.0,  # Runs every 30 seconds
+        },
     },
     timezone='UTC',
 )
@@ -73,3 +78,4 @@ import src.tasks.monitor_mainnet_challenges
 import src.tasks.send_notification
 import src.tasks.testnet_validator
 import src.tasks.tournament_notifications
+import src.tasks.monitor_processing_positions

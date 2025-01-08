@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.database import get_db
 from src.schemas.transaction import ProfitLossRequest
 from src.services.fee_service import get_taoshi_values
-from src.services.trade_service import get_latest_position
+from src.services.trade_service import get_open_position
 from src.utils.logging import setup_logging
 from src.validations.position import validate_trade_pair
 
@@ -22,7 +22,7 @@ async def get_profit_loss(profit_loss_request: ProfitLossRequest, db: AsyncSessi
     profit_loss_request.asset_type, trade_pair = validate_trade_pair(profit_loss_request.asset_type,
                                                                      profit_loss_request.trade_pair)
 
-    latest_position = await get_latest_position(db, trader_id, trade_pair)
+    latest_position = await get_open_position(db, trader_id, trade_pair)
     if not latest_position:
         logger.error("No open position found for this trade pair and trader")
         raise HTTPException(status_code=404, detail="No open position found for this trade pair and trader")
