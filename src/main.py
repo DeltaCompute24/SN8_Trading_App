@@ -1,3 +1,6 @@
+import asyncio
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -23,6 +26,8 @@ app.add_middleware(
 async def startup_event():
     print("Starting to Listen for Multiple Prices...")
     print()
-    # asyncio.create_task(stocks_websocket_manager.listen_for_prices_multiple())
-    # asyncio.create_task(forex_websocket_manager.listen_for_prices_multiple())
-    # asyncio.create_task(crypto_websocket_manager.listen_for_prices_multiple())
+    environment = os.getenv("ENVIRONMENT") or "dev"
+    if environment == "prod":
+        asyncio.create_task(stocks_websocket_manager.listen_for_prices_multiple())
+        asyncio.create_task(forex_websocket_manager.listen_for_prices_multiple())
+        asyncio.create_task(crypto_websocket_manager.listen_for_prices_multiple())
