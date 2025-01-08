@@ -23,3 +23,7 @@ async def get_users(
     query = query.order_by(desc(Users.updated_at), desc(Users.created_at))
     result = await db.execute(query)
     return result.scalars().all()
+
+@router.get("/hello/", response_model=str)
+def hello_world():
+    return "Helloo World testing"
