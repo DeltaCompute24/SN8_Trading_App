@@ -19,11 +19,14 @@ def get_live_price(trade_pair: str) -> float:
         get the live_price of the trade pair
     """
     current_price = 0.0
-    price_object = redis_client.hget(REDIS_LIVE_PRICES_TABLE, trade_pair)
-    if price_object:
-        price_object = json.loads(price_object)
-        current_price = price_object.get("c") or 0.0
-    return float(current_price)
+    prices = redis_client.hget(REDIS_LIVE_PRICES_TABLE, key="0")
+    if not prices:
+        return current_price
+    prices = json.loads(prices)
+    price_object = prices.get(trade_pair)
+    if not price_object:
+        return current_price
+    return float(price_object.get("c")) or 0.0
 
 
 def get_hash_value(key, hash_name=POSITIONS_TABLE):
@@ -40,7 +43,7 @@ def set_hash_value(key, value, hash_name=POSITIONS_TABLE):
     redis_client.hset(hash_name, key, json.dumps(value))
 
 
-def set_live_price(key: str, value: dict):
+def set_live_prices(key: str, value: dict):
     """
     set the key, value against a hash set, preserving the types in value object
     """

@@ -1,8 +1,18 @@
 from datetime import datetime
+from enum import Enum
 
 from sqlalchemy import Column, Integer, String, Float, DateTime, JSON, Boolean
 
 from src.database import Base
+
+
+class Status(str, Enum):
+    open = "OPEN"
+    close = "CLOSED"
+    pending = "PENDING"
+    processing = "PROCESSING"
+    adjust_processing = "ADJUST-PROCESSING"
+    close_processing = "CLOSE-PROCESSING"
 
 
 class Transaction(Base):
@@ -12,6 +22,7 @@ class Transaction(Base):
     trader_id = Column(Integer, nullable=False)
     trade_pair = Column(String, nullable=False)
     open_time = Column(DateTime, default=datetime.utcnow)
+    adjust_time = Column(DateTime, nullable=True)
     initial_price = Column(Float, default=0, nullable=True)
     entry_price = Column(Float, nullable=False)
     upward = Column(Float, default=-1, nullable=True)

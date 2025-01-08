@@ -1,12 +1,10 @@
-import time
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import text
 
 from src.database import get_db
+from src.models.transaction import Status
 from src.schemas.transaction import TradeResponse, ProfitLossRequest
-from src.services.fee_service import get_taoshi_values
 from src.services.trade_service import close_transaction, get_latest_position
 from src.utils.logging import setup_logging
 from src.utils.websocket_manager import websocket_manager
@@ -30,6 +28,7 @@ async def close_position(position_data: ProfitLossRequest, db: AsyncSession = De
     await check_get_challenge(db, position_data)
     try:
         # Submit the FLAT signal to close the position
+        status = Status.close
         close_price = position.entry_price or 0.0
         profit_loss = position.profit_loss or 0.0
         profit_loss_without_fee = position.profit_loss_without_fee or 0.0
@@ -39,37 +38,18 @@ async def close_position(position_data: ProfitLossRequest, db: AsyncSession = De
         average_entry_price = position.average_entry_price
 
         if position.status != "PENDING":
+            status = Status.close_processing
             close_submitted = await websocket_manager.submit_trade(position_data.trader_id,
                                                                    position_data.trade_pair, "FLAT", 1)
             if not close_submitted:
                 logger.error("Failed to submit close signal")
                 raise HTTPException(status_code=500, detail="Failed to submit close signal")
-
-            # loop to get the current price
-            for i in range(20):
-                time.sleep(1)
-                close_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, *taoshi_profit_loss_without_fee = get_taoshi_values(
-                    position_data.trader_id,
-                    position_data.trade_pair,
-                    position_uuid=position.uuid,
-                    challenge=position.source,
-                )
-                len_order = taoshi_profit_loss_without_fee[-2]
-                if close_price != 0 and position.order_level < len_order:
-                    break
-
-            if close_price == 0:
-                logger.error("Failed to fetch current price for the trade pair")
-                raise HTTPException(status_code=500, detail="Failed to fetch current price for the trade pair")
-            average_entry_price = taoshi_profit_loss_without_fee[-1]
-            taoshi_profit_loss_without_fee = taoshi_profit_loss_without_fee[0]
-
         logger.info(f"Close price for {position.trade_pair} is {close_price}")
 
         # Close Previous Open Position
         await close_transaction(db, position.order_id, position.trader_id, close_price, profit_loss=profit_loss,
                                 old_status=position.status, profit_loss_without_fee=profit_loss_without_fee,
-                                taoshi_profit_loss=taoshi_profit_loss,
+                                taoshi_profit_loss=taoshi_profit_loss, status=status,
                                 taoshi_profit_loss_without_fee=taoshi_profit_loss_without_fee, order_level=len_order,
                                 average_entry_price=average_entry_price)
 

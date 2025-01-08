@@ -23,11 +23,10 @@ indices_pairs = [
 ]
 
 # ----------------------------- REDIS CONSTANTS --------------------------------
-REDIS_LIVE_PRICES_TABLE = 'live_prices'
+REDIS_LIVE_PRICES_TABLE = 'polygon_prices'
 POSITIONS_TABLE = 'positions'
 OPERATION_QUEUE_NAME = 'db_operations_queue'
 ERROR_QUEUE_NAME = 'errors'
-TESTNET_TABLE = 'testnet'
 TOURNAMENT = 'tournament_score'
 
 # -------------------- Assets Minimum and Maximum Leverages -------------------------
