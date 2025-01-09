@@ -5,7 +5,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.routes.websocket import router as prices_websocket
-from src.utils.websocket_manager import forex_websocket_manager, crypto_websocket_manager, stocks_websocket_manager
+from src.utils.websocket_manager import forex_websocket_manager, crypto_websocket_manager, stocks_websocket_manager, \
+    websocket_manager
 
 app = FastAPI()
 
@@ -31,3 +32,5 @@ async def startup_event():
         asyncio.create_task(stocks_websocket_manager.listen_for_prices_multiple())
         asyncio.create_task(forex_websocket_manager.listen_for_prices_multiple())
         asyncio.create_task(crypto_websocket_manager.listen_for_prices_multiple())
+    else:
+        asyncio.create_task(websocket_manager.listen_for_statis_prices())

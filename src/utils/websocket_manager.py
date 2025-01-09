@@ -5,7 +5,7 @@ from typing import List
 import websockets
 from throttler import Throttler
 
-from src.config import POLYGON_API_KEY
+from src.config import POLYGON_API_KEY, POLYGON_WEBSOCKET
 from src.utils.constants import forex_pairs, crypto_pairs, indices_pairs, stocks_pairs
 from src.utils.logging import setup_logging
 from src.utils.redis_manager import set_live_price
@@ -117,6 +117,32 @@ class WebSocketManager:
             await self.websocket.close()
             self.websocket = None
 
+    # ----------------------- READ PRICES FROM DELTA SERVER INSTEAD OF POLYGON -------------------------------
+    async def listen_for_statis_prices(self):
+        try:
+            self.websocket = await websockets.connect(POLYGON_WEBSOCKET)
+            await self.static_receive_and_log()
+        except Exception as e:
+            logger.error(f"Testnet Connection Failed: {e}. Retrying in {self.reconnect_interval} seconds...")
+            await asyncio.sleep(self.reconnect_interval)
+
+    async def static_receive_and_log(self):
+        while True:
+            try:
+                message = await self.websocket.recv()
+                data = json.loads(message)
+                if data.get("type") == "positions":
+                    continue
+                data = data.get("data")
+                for key, item in data.items():
+                    set_live_price(key, item)
+            except Exception as e:
+                print(f"EXCEPTION ------ {e}")
+                print("Testnet WebSocket Connection Closed. Reconnecting...")
+                await self.close()
+                await asyncio.sleep(self.reconnect_interval)
+                await self.connect()
+
 
 class ForexWebSocketManager(WebSocketManager):
     def __init__(self):
@@ -145,3 +171,5 @@ class StocksWebSocketManager(WebSocketManager):
 forex_websocket_manager = ForexWebSocketManager()
 crypto_websocket_manager = CryptoWebSocketManager()
 stocks_websocket_manager = StocksWebSocketManager()
+
+websocket_manager = WebSocketManager("", "")
