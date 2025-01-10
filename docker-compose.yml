@@ -36,7 +36,7 @@ services:
       celery -A src.core.celery_app worker -n monitor_mainnet_worker --concurrency=1 --loglevel=info -Q monitor_miner &
       celery -A src.core.celery_app worker -n monitor_testnet_worker --concurrency=1 --loglevel=info -Q testnet_validator &
       celery -A src.core.celery_app worker -n tournament_notifications_worker --concurrency=1 --loglevel=info -Q tournament_notifications &
-      celery -A src.core.celery_app worker -n processing_positions_worker --concurrency=1 --loglevel=info -Q processing_positions
+      celery -A src.core.celery_app worker -n processing_positions_worker --concurrency=1 --loglevel=info -Q processing_positions &
       wait -n"
 
   celery_beat:
