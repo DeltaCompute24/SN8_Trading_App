@@ -33,7 +33,7 @@ jobs:
         run: docker build -f docker/celery/Dockerfile -t celery_worker .
 
       - name: Build celery-beat image
-        run: docker build -f docker/celery-beat/DockerFile -t celery_beat .
+        run: docker build -f docker/celery-beat/Dockerfile -t celery_beat .
 
       - name: Login ECR Repository
         run: |
