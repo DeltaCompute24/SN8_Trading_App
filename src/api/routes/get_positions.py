@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy.sql import and_
+from sqlalchemy.sql import and_ , or_
 
 from src.database import get_db
 from src.models.transaction import Transaction, Status
@@ -31,8 +31,8 @@ async def get_positions(
     status = status.strip().upper()
     if status and status not in [Status.open, Status.pending, Status.close, Status.processing, Status.adjust_processing,
                                  Status.close_processing]:
-        logger.error("A status can only be open, pending and closed")
-        raise HTTPException(status_code=400, detail="A status can only be open, pending and closed!")
+        logger.error("A status can only be open, pending and closed, processing , adjust_processing")
+        raise HTTPException(status_code=400, detail="A status can only be open, pending, closed, processing , adjust_processing")
 
     source = get_challenge(trader_id, source=True)
 
@@ -43,7 +43,14 @@ async def get_positions(
     if trade_pair:
         query = query.where(and_(Transaction.trade_pair == trade_pair))
     if status:
-        query = query.where(and_(Transaction.status == status))
+        if status == Status.open:
+            query = query.where(or_(
+                Transaction.status == Status.open,
+                Transaction.status == Status.processing,
+                Transaction.status == Status.adjust_processing
+            ))
+        else:
+            query = query.where(and_(Transaction.status == status))
     elif only_open:
         query = query.where(and_(Transaction.status == "OPEN"))
 
