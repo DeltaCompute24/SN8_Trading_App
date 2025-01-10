@@ -3,16 +3,16 @@ import logging
 from datetime import datetime
 from datetime import timedelta
 
+from sqlalchemy import and_, or_
 from sqlalchemy.future import select
 from sqlalchemy.orm import Session
-from sqlalchemy.sql import or_
 
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
+from src.models import Challenge
 from src.models.transaction import Transaction, Status
 from src.services.email_service import send_mail
 from src.services.fee_service import get_taoshi_values
-from src.services.user_service import get_challenge
 from src.utils.constants import ERROR_QUEUE_NAME
 from src.utils.redis_manager import push_to_redis_queue
 from src.utils.websocket_manager import websocket_manager
@@ -20,8 +20,19 @@ from src.utils.websocket_manager import websocket_manager
 logger = logging.getLogger(__name__)
 
 
-def send_email_to_user(position, _type="OPEN"):
-    challenge = get_challenge(position.trader_id)
+def get_challenge(db: Session, challenge_id: int):
+    challenge = db.scalar(
+        select(Challenge).where(
+            and_(
+                Challenge.id == challenge_id,
+            )
+        )
+    )
+    return challenge
+
+
+def send_email_to_user(db, position, _type="OPEN"):
+    challenge = get_challenge(db, position.trader_id)
     if not challenge:
         return
     email = challenge.user.email
@@ -97,7 +108,7 @@ def check_initiate_position(db, position, data):
             "close_time": datetime.utcnow(),
         })
         update_position(db, position, data)
-        send_email_to_user(position)
+        send_email_to_user(db, position)
 
 
 def check_adjust_position(db, position, data):
@@ -136,7 +147,7 @@ def check_adjust_position(db, position, data):
             "close_time": datetime.utcnow(),
         })
         update_position(db, position, data)
-        send_email_to_user(position, _type="ADJUST")
+        send_email_to_user(db, position, _type="ADJUST")
 
 
 def check_close_position(db, position, data):
