@@ -92,6 +92,7 @@ def check_initiate_position(db, position, data):
             "status": "OPEN",
         })
         update_position(db, position, data)
+        return
 
     now = datetime.utcnow() - timedelta(minutes=5)
     if position.open_time < now:
@@ -130,6 +131,7 @@ def check_adjust_position(db, position, data):
             "status": "OPEN",
         })
         update_position(db, position, data)
+        return
 
     # close position if it's been 20 minutes and price is still zero
     now = datetime.utcnow() - timedelta(minutes=20)
@@ -168,6 +170,7 @@ def check_close_position(db, position, data):
         if data["profit_loss"] > position.max_profit_loss:
             data["max_profit_loss"] = data["profit_loss"]
         update_position(db, position, data)
+        return
 
     # close position if it's been 5 minutes and price is still zero
     # close at taoshi as well as in system
