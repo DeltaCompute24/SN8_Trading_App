@@ -21,7 +21,7 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
                              leverage_list: list = None, order_type_list: list = None, max_profit_loss: float = 0.0,
                              profit_loss_without_fee: float = 0.0, taoshi_profit_loss: float = 0.0,
                              taoshi_profit_loss_without_fee: float = 0.0, uuid: str = None, hot_key: str = None,
-                             source: str = "", limit_order: float = 0.0, open_time: datetime = datetime.utcnow(),
+                             source: str = "", limit_order: float = 0.0, open_time: datetime = None,
                              adjust_time: datetime = None,
                              ):
     if operation_type == "initiate":
@@ -37,7 +37,8 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
         max_trade_order = await db.scalar(
             select(func.max(Transaction.trade_order)).filter(Transaction.position_id == position_id))
         trade_order = (max_trade_order or 0) + 1
-
+    if not open_time:
+        open_time = datetime.utcnow()
     new_transaction = Transaction(
         trader_id=transaction_data.trader_id,
         trade_pair=transaction_data.trade_pair,

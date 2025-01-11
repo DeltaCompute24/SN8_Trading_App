@@ -20,9 +20,9 @@ celery_app.conf.update(
         'src.tasks.monitor_processing_positions.processing_positions': {'queue': 'processing_positions'},
     },
     beat_schedule={
-        'send_notifications-every-5-minutes': {
+        'send_notifications-every-15-minutes': {
             'task': 'src.tasks.send_notification.send_notifications',
-            'schedule': 400.0,  # every 5 minutes
+            'schedule': 900.0,  # every 15 minutes
         },
         'monitor_positions-every-5-seconds': {
             'task': 'src.tasks.position_monitor_sync.monitor_positions',
