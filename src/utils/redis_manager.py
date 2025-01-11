@@ -4,7 +4,7 @@ import redis
 
 from src.utils.constants import REDIS_LIVE_PRICES_TABLE, POSITIONS_TABLE, OPERATION_QUEUE_NAME
 
-redis_client = redis.StrictRedis(host="redis", port=6379, decode_responses=True)
+redis_client = redis.StrictRedis(host='redis', port=6379, decode_responses=True)
 
 
 def get_hash_values(hash_name=REDIS_LIVE_PRICES_TABLE):
@@ -19,14 +19,11 @@ def get_live_price(trade_pair: str) -> float:
         get the live_price of the trade pair
     """
     current_price = 0.0
-    prices = redis_client.hget(REDIS_LIVE_PRICES_TABLE, key="0")
-    if not prices:
-        return current_price
-    prices = json.loads(prices)
-    price_object = prices.get(trade_pair)
-    if not price_object:
-        return current_price
-    return float(price_object.get("c")) or 0.0
+    price_object = redis_client.hget(REDIS_LIVE_PRICES_TABLE, trade_pair)
+    if price_object:
+        price_object = json.loads(price_object)
+        current_price = price_object.get("c") or 0.0
+    return float(current_price)
 
 
 def get_hash_value(key, hash_name=POSITIONS_TABLE):
@@ -34,6 +31,12 @@ def get_hash_value(key, hash_name=POSITIONS_TABLE):
     get the value of the hash
     """
     return redis_client.hget(hash_name, key)
+
+def get_all_hash_value(hash_name=POSITIONS_TABLE):
+    """
+    get the value of the hash
+    """
+    return redis_client.hgetall(hash_name)
 
 
 def set_hash_value(key, value, hash_name=POSITIONS_TABLE):
@@ -43,7 +46,7 @@ def set_hash_value(key, value, hash_name=POSITIONS_TABLE):
     redis_client.hset(hash_name, key, json.dumps(value))
 
 
-def set_live_prices(key: str, value: dict):
+def set_live_price(key: str, value: dict):
     """
     set the key, value against a hash set, preserving the types in value object
     """
