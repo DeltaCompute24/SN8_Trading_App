@@ -4,7 +4,7 @@ from datetime import datetime
 from datetime import timedelta
 
 import pytz
-from sqlalchemy.sql import and_
+from sqlalchemy.sql import or_, and_
 
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
@@ -126,7 +126,10 @@ def monitor_tournaments():
                 transactions = db.query(Transaction).filter(
                     and_(
                         Transaction.trader_id == challenge.trader_id,
-                        Transaction.status != "CLOSED",
+                        or_(
+                            Transaction.status == "OPEN",
+                            Transaction.status == "PENDING",
+                        )
                     )
                 ).all()  # PENDING, OPEN
 
@@ -166,10 +169,6 @@ def calculate_tournament_results(db, tournament, challenges):
     try:
         test_net_data = testnet_websocket(monitor=True)
         if not test_net_data:
-            push_to_redis_queue(
-                data=f"**Testnet Listener** => Testnet Validator Checkpoint returns with status code other than 200",
-                queue_name=ERROR_QUEUE_NAME
-            )
             return
 
         positions = test_net_data["positions"]

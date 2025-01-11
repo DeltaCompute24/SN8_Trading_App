@@ -8,7 +8,7 @@ from sqlalchemy.orm import sessionmaker
 
 from src.database import Base
 from src.main import app
-from src.models.transaction import Position
+from src.models.transaction import Transaction
 from src.services.trade_service import calculate_profit_loss
 
 logging.basicConfig(level=logging.INFO)
@@ -48,7 +48,7 @@ class TestTradingApp(unittest.IsolatedAsyncioTestCase):
 
         # Verify the initiated position
         result = await self.session.execute(
-            select(Position).where(Position.trader_id == 4060, Position.trade_pair == "BTCUSD"))
+            select(Transaction).where(Transaction.trader_id == 4060, Transaction.trade_pair == "BTCUSD"))
         position = result.scalars().first()
 
         self.assertIsNotNone(position)
@@ -85,8 +85,8 @@ class TestTradingApp(unittest.IsolatedAsyncioTestCase):
 
         # Verify the closed position
         result = await self.session.execute(
-            select(Position).where(Position.trader_id == 4060, Position.trade_pair == "BTCUSD").order_by(
-                Position.open_time.desc()))
+            select(Transaction).where(Transaction.trader_id == 4060, Transaction.trade_pair == "BTCUSD").order_by(
+                Transaction.open_time.desc()))
         position = result.scalars().first()
 
         self.assertIsNotNone(position)
@@ -122,8 +122,8 @@ class TestTradingApp(unittest.IsolatedAsyncioTestCase):
 
         # Verify the profit/loss calculation
         result = await self.session.execute(
-            select(Position).where(Position.trader_id == 4060, Position.trade_pair == "BTCUSD").order_by(
-                Position.open_time.desc()))
+            select(Transaction).where(Transaction.trader_id == 4060, Transaction.trade_pair == "BTCUSD").order_by(
+                Transaction.open_time.desc()))
         position = result.scalars().first()
 
         self.assertIsNotNone(position)

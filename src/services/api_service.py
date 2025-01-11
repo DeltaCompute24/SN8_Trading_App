@@ -2,6 +2,8 @@ import requests
 
 from src.config import POSITIONS_URL, POSITIONS_TOKEN, TESTNET_CHECKPOINT_URL
 from src.services.user_service import get_hot_key
+from src.utils.constants import ERROR_QUEUE_NAME
+from src.utils.redis_manager import push_to_redis_queue
 
 
 def call_main_net(url=POSITIONS_URL, token=POSITIONS_TOKEN):
@@ -20,6 +22,10 @@ def testnet_websocket(monitor=False):
     try:
         response = requests.request(method="GET", url=TESTNET_CHECKPOINT_URL)
         if response.status_code != 200:
+            push_to_redis_queue(
+                data=f"**Testnet API Call** => Testnet Validator Checkpoint returns with status code other than 200, response => {response}",
+                queue_name=ERROR_QUEUE_NAME
+            )
             return {}
         testnet_data = response.json()
         if monitor:
@@ -27,6 +33,10 @@ def testnet_websocket(monitor=False):
         return testnet_data["positions"]
     except Exception as e:
         print(f"Error: {e}")
+        push_to_redis_queue(
+            data=f"**Testnet API Call** => Testnet Validator Checkpoint returns with status code other than 200, ERROR => {e}",
+            queue_name=ERROR_QUEUE_NAME
+        )
         return {}
 
 
