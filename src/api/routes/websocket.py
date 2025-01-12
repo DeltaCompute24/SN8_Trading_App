@@ -5,8 +5,8 @@ from typing import List
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from src.utils.constants import POSITIONS_TABLE, REDIS_LIVE_PRICES_TABLE
-from src.utils.redis_manager import get_hash_values, get_hash_value, get_all_hash_value
+from src.utils.constants import POSITIONS_TABLE
+from src.utils.redis_manager import get_hash_values
 
 router = APIRouter()
 
@@ -32,7 +32,7 @@ class ConnectionManager:
                 task.cancel()
             self.broadcast_tasks = []
 
-    async def broadcast(self, message: str):
+    async def broadcast(self, message: dict):
         disconnected = []
         for connection in self.active_connections:
             try:
@@ -50,11 +50,9 @@ class ConnectionManager:
                 # No active connections, stop broadcasting
                 break
             try:
-                current_prices = get_all_hash_value( hash_name=REDIS_LIVE_PRICES_TABLE)
-               
-               
-                
-                await self.broadcast({"type": "prices", "data": current_prices or {}})
+                current_prices = get_hash_values() or {}
+                prices_dict = {k: json.loads(v) for k, v in current_prices.items()}
+                await self.broadcast(json.dumps({"type": "prices", "data": prices_dict}))
             except Exception as e:
                 print(f"Error fetching prices: {e}")
             await asyncio.sleep(1)

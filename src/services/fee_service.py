@@ -22,14 +22,9 @@ def get_taoshi_values(trader_id, trade_pair, position_uuid=None, challenge="main
     position = get_hash_value(key)
     # if position exist in redis
     if position:
-        position = ast.literal_eval(position)
-        current_time = datetime.now()
-        position_time = datetime.strptime(position[0], '%Y-%m-%d %H:%M:%S.%f')
-
-        difference = abs(current_time - position_time)
-        if difference < timedelta(seconds=5):
-            logger.error("********Realtime Price Taken from Redis***********")
-            return position[1:]
+        position = ast.literal_eval(position)    
+        logger.error("********Realtime Price Taken from Redis***********")
+        return position[1:]
 
     # if position doesn't exist and belongs to main net
     main = (challenge.lower() == "main")

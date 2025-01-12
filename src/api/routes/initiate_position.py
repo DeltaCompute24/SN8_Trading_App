@@ -47,7 +47,7 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
         uuid = ""
         hot_key = ""
         average_entry_price = 0.0
-
+        first_price = 0
         # If entry_price == 0, it is empty then status will be "OPEN" so we can submit trade
         if (not entry_price or entry_price == 0) and (not limit_order or limit_order == 0):
             # Submit the trade and wait for confirmation
@@ -55,19 +55,19 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
                                                                    position_data.order_type, position_data.leverage)
             if not trade_submitted:
                 logger.error("Failed to submit trade")
-                raise HTTPException(status_code=500, detail="Failed to submit trade")
+                raise HTTPException(status_code=500, detail="Failed to submit trade to Taoshi. Tasohi API Error")
             logger.info("Trade submitted successfully")
-            first_price = 0
+          
         else:
             status = "PENDING"
             first_price = get_live_price(position_data.trade_pair)
 
-            if first_price == 0:
-                logger.error("Failed to fetch current price for the trade pair")
-                raise HTTPException(status_code=500, detail="Failed to fetch current price for the trade pair")
+            if first_price in [0,None]:
+                logger.error("Failed to fetch current price for the trade pair. Market Data not available")
+                raise HTTPException(status_code=500, detail="Failed to fetch current price for the trade pair,Market Data not available")
 
         initial_price = first_price
-        if entry_price and entry_price != 0 and entry_price != first_price:
+        if entry_price not in [None, 0 , first_price]:
             # upward: 1, downward: 0
             upward = 1 if entry_price > first_price else 0
             first_price = entry_price
