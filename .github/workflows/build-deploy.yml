@@ -3,7 +3,7 @@ name: Run Actions
 on:
   push:
     branches:
-      - gcp-main
+      - api-v2
 
 jobs:
   deploy:
