@@ -46,8 +46,10 @@ async def adjust_position_endpoint(position_data: TransactionUpdate, db: AsyncSe
         cumulative_leverage = position.cumulative_leverage
         average_entry_price = position.average_entry_price
         max_profit_loss = position.max_profit_loss
+        status = Status.open
 
         if new_leverage != prev_leverage:
+            status = Status.adjust_processing
             # Calculate new leverage based on the cumulative order type
             leverage = new_leverage - cumulative_leverage
             order_type = position.order_type
@@ -76,7 +78,7 @@ async def adjust_position_endpoint(position_data: TransactionUpdate, db: AsyncSe
             cumulative_stop_loss=cumulative_stop_loss,
             cumulative_take_profit=cumulative_take_profit,
             cumulative_order_type=position.cumulative_order_type,
-            status=Status.adjust_processing,
+            status=status,
             old_status=position.status,
             modified_by=str(position_data.trader_id),
             upward=position.upward,
