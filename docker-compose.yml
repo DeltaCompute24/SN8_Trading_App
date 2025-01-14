@@ -2,6 +2,7 @@ version: "3.8"
 
 services:
   fastapi:
+    image: fastapi:v1.0
     build:
       context: .
       dockerfile: docker/fastapi/Dockerfile
