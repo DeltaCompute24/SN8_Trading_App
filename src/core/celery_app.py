@@ -62,7 +62,7 @@ celery_app.conf.update(
         },
         'monitor_processing_positions-seconds': {
             'task': 'src.tasks.monitor_processing_positions.processing_positions',
-            'schedule': 30.0,  # Runs every 30 seconds
+            'schedule': 3.0,  # Runs every 3 seconds
         },
     },
     timezone='UTC',
