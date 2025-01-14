@@ -1,9 +1,25 @@
 from datetime import date , datetime , timezone
-from sqlalchemy import Column, ForeignKey, Integer, String,Boolean, Date, DateTime, Table
+from sqlalchemy import Column, ForeignKey, Integer, String,Boolean, Date, DateTime, Table,CheckConstraint
 from sqlalchemy.orm import relationship, Mapped
 from src.database import Base
 from typing import List
+from enum import Enum
+from sqlalchemy import Enum as SQLAlchemyEnum
 
+
+class ChallengeType(str, Enum):
+    MAIN = 'main'
+    TEST = 'test'
+    TOURNAMENT = 'tournament'
+    
+    def _generate_next_value_(name, start, count, last_values):
+        return name.lower()  
+
+    def __str__(self):
+        return self.value
+    
+    
+    
 # Create association table
 user_referral_codes = Table(
     'user_referral_codes',
@@ -40,4 +56,23 @@ class ReferralCode(Base):
     valid_from: Mapped[date] = Column(Date, default=date.today())
     valid_to: Mapped[date] = Column(Date, default=None, nullable=True)
     multiple_use :Mapped[bool] = Column(Boolean, default=False)
+    discount_fixed: Mapped[int] = Column(Integer(), default=0)
+    challenge_type: Mapped[ChallengeType] = Column(  # Add type hint
+        SQLAlchemyEnum(
+            ChallengeType,
+            name='challenge_type',
+            create_constraint=True,
+            validate_strings=True,
+            native_enum=True,
+            values_callable=lambda obj: [e.value for e in obj]  # Ensure values are used
+        ),
+        nullable=False,
+        default=ChallengeType.TEST
+    )
+    __table_args__ = (
+        CheckConstraint(
+            'discount_percentage >= 0 AND discount_percentage <= 100',
+            name='check_discount_percentage_range'
+        ),
+    )
 

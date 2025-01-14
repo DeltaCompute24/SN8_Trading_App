@@ -1,7 +1,7 @@
 from datetime import date
 from typing import Optional, List
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
-from src.models.referral_code import ReferralCode
+from src.models.referral_code import ReferralCode, ChallengeType
 from src.schemas.user import FirebaseUserBase
 
 
@@ -9,14 +9,22 @@ from src.schemas.user import FirebaseUserBase
 class ReferralCodeValidate(BaseModel):
     code: str
     user_id: str
+    challenge_type : ChallengeType
+    
+    class Config:  
+        use_enum_values = True  # <--
 
 class ReferralCodeBase(BaseModel):
     code: Optional[str] = Field(None, min_length=7, max_length=30)
-    discount_percentage: int = Field(..., ge=0, le=100)
+    discount_percentage: Optional[int] = Field(0, ge=0, le=100)
     valid_from: date
     valid_to: date
     multiple_use: bool = Field(default=False)
+    discount_fixed: Optional[int] = Field(0)
+    challenge_type : ChallengeType
    
+    class Config:
+        use_enum_values = True  
 
 
 class ReferralCodeCreate(ReferralCodeBase):
@@ -40,6 +48,7 @@ class ReferralCodeCreate(ReferralCodeBase):
         if v.valid_from > v.valid_to:
             raise ValueError('Valid-to date cannot be before valid-from date')
         return v
+
     
 class ReferralCodeResponse(ReferralCodeBase):
     id: Optional[int] = None
