@@ -24,4 +24,5 @@ indices_pairs = [
 
 # ----------------------------- REDIS CONSTANTS --------------------------------
 REDIS_LIVE_PRICES_TABLE = 'live_prices'
+POSITIONS_TABLE = 'positions'
 ERROR_QUEUE_NAME = 'errors'
