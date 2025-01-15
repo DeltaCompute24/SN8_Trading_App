@@ -1,5 +1,3 @@
-import asyncio
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.exc import ProgrammingError
@@ -24,7 +22,6 @@ from src.api.routes.users import router as user_routers
 from src.api.routes.users_balance import router as balance_routers
 from src.database import engine, Base, DATABASE_URL
 from src.services.user_service import populate_ambassadors
-from src.utils.websocket_manager import websocket_manager
 
 app = FastAPI()
 
@@ -60,7 +57,6 @@ app.add_middleware(
 async def startup_event():
     print("Starting to listen for prices multiple...")
     print()
-    asyncio.create_task(websocket_manager.connect())
 
     default_db_url = DATABASE_URL.rsplit("/", 1)[0] + "/postgres"
     default_engine = create_async_engine(default_db_url, echo=True)
