@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException
 from weasyprint import HTML
 
 from src.config import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, BUCKET_NAME
-# from src.services.cloud_storage_service import get_certificate_gcp
+from src.services.cloud_storage_service import get_certificate_gcp
 from src.services.email_service import render_to_string, send_mail
 from src.utils.logging import setup_logging
 
@@ -71,7 +71,7 @@ def send_certificate_email(email, name, data, celery_task=False):
     Send the certificate email to the user
     """
     certificate_name = f"{data.hot_key}/{data.phase}/{data.step}/certificate.pdf"
-    tmp_pdf_path = None
+    tmp_pdf_path = get_certificate_gcp(certificate_name, name, data.phase)
 
     attachment = {
         "path": tmp_pdf_path,
