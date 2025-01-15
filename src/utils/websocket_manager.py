@@ -7,7 +7,7 @@ from throttler import Throttler
 
 from src.config import SIGNAL_API_KEY, SIGNAL_API_BASE_URL, POLYGON_WEBSOCKET
 from src.utils.logging import setup_logging
-from src.utils.redis_manager import set_live_prices
+from src.utils.redis_manager import set_live_price
 
 # Set the rate limit: max 10 requests per second
 throttler = Throttler(rate_limit=10, period=1.0)
@@ -34,7 +34,11 @@ class WebSocketManager:
             try:
                 message = await self.websocket.recv()
                 data = json.loads(message)
-                set_live_prices(key="0", value=data.get("data"))
+                if data.get("type") == "positions":
+                    continue
+                data = data.get("data")
+                for key, item in data.items():
+                    set_live_price(key, item)
             except Exception as e:
                 print("Testnet WebSocket Connection Closed. Reconnecting...")
                 await self.close()
