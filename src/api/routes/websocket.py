@@ -1,4 +1,3 @@
-import ast
 import asyncio
 import json
 from typing import List
@@ -67,7 +66,7 @@ class ConnectionManager:
                 positions_dict = {}
                 for key, value in positions.items():
 
-                    value = ast.literal_eval(value)
+                    value = json.loads(value)
                     if value[-1] is True:
                         continue
                     trade_pair, trader_id = key.split("-")
