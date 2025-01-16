@@ -14,7 +14,7 @@ from src.models.transaction import Transaction, Status
 from src.services.email_service import send_mail
 from src.services.fee_service import get_taoshi_values
 from src.utils.constants import ERROR_QUEUE_NAME
-from src.utils.redis_manager import push_to_redis_queue
+from src.utils.redis_manager import push_to_redis_queue, delete_hash_value
 from src.utils.websocket_manager import websocket_manager
 
 logger = logging.getLogger(__name__)
@@ -152,7 +152,8 @@ def check_adjust_position(db, position, data):
         send_email_to_user(db, position, _type="ADJUST")
 
 
-def check_close_position(db, position, data):
+def check_close_position(db, position, data, closed):
+    key = f"{position.trade_pair}-{position.trader_id}"
     if position.status != Status.close_processing:
         return
     # no need to update entry or initial price
@@ -166,10 +167,11 @@ def check_close_position(db, position, data):
     })
 
     # if you get the price then close in the system as well
-    if price != 0 and position.order_level < data["order_level"]:
+    if price != 0 and closed:
         if data["profit_loss"] > position.max_profit_loss:
             data["max_profit_loss"] = data["profit_loss"]
         update_position(db, position, data)
+        delete_hash_value(key)
         return
 
     # close position if it's been 5 minutes and price is still zero
@@ -183,6 +185,7 @@ def check_close_position(db, position, data):
         )
         asyncio.run(websocket_manager.submit_trade(position.trader_id, position.trade_pair, "FLAT", 1))
         update_position(db, position, data)
+        delete_hash_value(key)
         # send_email_to_user(position, _type="CLOSE")
 
 
@@ -194,10 +197,12 @@ def processing_positions():
     with TaskSessionLocal_() as db:
         for position in get_processing_positions(db):
             # get the price
-            price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee, uuid, hot_key, len_order, average_entry_price = get_taoshi_values(
+            price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee, uuid, hot_key, len_order, average_entry_price, closed = get_taoshi_values(
                 position.trader_id,
                 position.trade_pair,
                 challenge=position.source,
+                position_uuid=position.uuid,
+                closed=True,
             )
             data = {
                 "entry_price": price,
@@ -216,4 +221,4 @@ def processing_positions():
 
             check_initiate_position(db, position, data)
             check_adjust_position(db, position, data)
-            check_close_position(db, position, data)
+            check_close_position(db, position, data, closed)
