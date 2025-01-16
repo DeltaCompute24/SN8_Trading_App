@@ -68,7 +68,8 @@ class ConnectionManager:
                 for key, value in positions.items():
 
                     value = ast.literal_eval(value)
-
+                    if value[-1] is True:
+                        continue
                     trade_pair, trader_id = key.split("-")
                     if trader_id not in positions_dict:
                         positions_dict[trader_id] = {}
