@@ -25,6 +25,7 @@ class WebSocketManager:
         self.pair_key = pair_key
 
     async def connect(self):
+        print("Let's connect to polygon websocket!")
         websocket_url = f"wss://socket.polygon.io/{self.asset_type}"
         try:
             self.websocket = await websockets.connect(websocket_url)

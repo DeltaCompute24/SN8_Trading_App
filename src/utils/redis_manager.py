@@ -13,9 +13,13 @@ def get_hash_values(hash_name=REDIS_LIVE_PRICES_TABLE, hosted=False):
     """
     get all the hash values against a key
     """
-    if hosted:
-        return hosted_redis.hgetall(hash_name)
-    return redis_client.hgetall(hash_name)
+    try:
+        if hosted:
+            return hosted_redis.hgetall(hash_name)
+        return redis_client.hgetall(hash_name)
+    except Exception as ex:
+        print(f"Exception Occurred While Connecting to Redis! - {ex}")
+        return {}
 
 
 def set_live_price(key: str, value: dict):
