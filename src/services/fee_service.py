@@ -1,4 +1,4 @@
-import ast
+import json
 import logging
 from datetime import datetime, timedelta
 
@@ -15,7 +15,7 @@ def get_taoshi_values(trader_id, trade_pair, position_uuid=None, challenge="main
     # if position exist in redis
     position = get_hash_value(key)
     if position:
-        position = ast.literal_eval(position)
+        position = json.loads(position)
         logger.error("********Realtime Price Taken from Redis***********")
         return position[1:last_index]
 
