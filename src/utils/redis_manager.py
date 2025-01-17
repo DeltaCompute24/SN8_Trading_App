@@ -9,11 +9,17 @@ redis_client = redis.StrictRedis(host="redis", port=6379, decode_responses=True)
 hosted_redis = redis.StrictRedis(host=REDIS_HOST, port=6379, decode_responses=True)
 
 
-def get_hash_values(hash_name=REDIS_LIVE_PRICES_TABLE):
+def get_hash_values(hash_name=REDIS_LIVE_PRICES_TABLE, hosted=False):
     """
     get all the hash values against a key
     """
-    return redis_client.hgetall(hash_name)
+    try:
+        if hosted:
+            return hosted_redis.hgetall(hash_name)
+        return redis_client.hgetall(hash_name)
+    except Exception as ex:
+        print(f"Exception Occurred While Connecting to Redis! - {ex}")
+        return {}
 
 
 def get_live_price(trade_pair: str) -> float:
