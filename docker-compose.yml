@@ -11,6 +11,14 @@ services:
       - .env
     depends_on:
       - redis
+    deploy:
+      resources:
+        limits:
+          cpus: "2" # Maximum CPU cores
+          memory: 2G # Maximum memory
+        reservations:
+          cpus: "2" # Guaranteed CPU cores
+          memory: 2G # Guaranteed memory
 
   redis:
     image: redis:6.2-alpine

@@ -26,34 +26,40 @@ jobs:
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # Build images with no cache
       - name: Build fastapi image
-        run: docker build -f docker/fastapi/Dockerfile -t fastapi .
+        run: |
+          docker build --no-cache \
+            --build-arg BUILDTIME=${{ github.sha }} \
+            -f docker/fastapi/Dockerfile \
+            -t 288792505174.dkr.ecr.us-east-1.amazonaws.com/defi-backend-fastapi:latest .
 
       - name: Build celery image
-        run: docker build -f docker/celery/Dockerfile -t celery_worker .
+        run: |
+          docker build --no-cache \
+            --build-arg BUILDTIME=${{ github.sha }} \
+            -f docker/celery/Dockerfile \
+            -t 288792505174.dkr.ecr.us-east-1.amazonaws.com/defi-backend-celery_worker:latest .
 
       - name: Build celery-beat image
-        run: docker build -f docker/celery-beat/Dockerfile -t celery_beat .
+        run: |
+          docker build --no-cache \
+            --build-arg BUILDTIME=${{ github.sha }} \
+            -f docker/celery-beat/Dockerfile \
+            -t 288792505174.dkr.ecr.us-east-1.amazonaws.com/defi-backend-celery_beat:latest .
 
       - name: Login ECR Repository
         run: |
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 288792505174.dkr.ecr.us-east-1.amazonaws.com
 
-      - name: Tag and push defi-fastapi-container
+      # Push images
+      - name: Push images to ECR
         run: |
-          docker tag fastapi:latest 288792505174.dkr.ecr.us-east-1.amazonaws.com/defi-backend-fastapi:latest    
           docker push 288792505174.dkr.ecr.us-east-1.amazonaws.com/defi-backend-fastapi:latest
-
-      - name: Tag and push celery-workers image
-        run: |
-          docker tag celery_worker:latest 288792505174.dkr.ecr.us-east-1.amazonaws.com/defi-backend-celery_worker:latest    
           docker push 288792505174.dkr.ecr.us-east-1.amazonaws.com/defi-backend-celery_worker:latest
-
-      - name: Tag and push celery-beat-workers image
-        run: |
-          docker tag celery_beat:latest 288792505174.dkr.ecr.us-east-1.amazonaws.com/defi-backend-celery_beat:latest    
           docker push 288792505174.dkr.ecr.us-east-1.amazonaws.com/defi-backend-celery_beat:latest
 
+      # Force new deployment
       - name: Deploy ECS task
         run: |
           aws ecs update-service \

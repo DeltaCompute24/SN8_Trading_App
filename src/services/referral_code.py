@@ -1,9 +1,9 @@
-from typing import Optional, Set, List
+from typing import Optional, Set, List, Union
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
-from src.models.referral_code import ReferralCode
-from src.schemas.referral_code import ReferralCodeCreate, ReferralCodeBase
+from src.models.referral_code import ReferralCode , ChallengeType
+from src.schemas.referral_code import ReferralCodeCreate, ReferralCodeBase , ReferralCodeValidate
 from datetime import date
 from sqlalchemy.orm import Session, joinedload
 import string
@@ -34,7 +34,7 @@ class ReferralCodeService:
         return result.scalars().unique().all()
     
     @staticmethod
-    async def validate_code(db: AsyncSession, code_data: ReferralCodeBase) -> ReferralCode:
+    async def validate_code(db: AsyncSession, code_data: Union[ReferralCodeBase, ReferralCodeValidate]) -> ReferralCode:
       referral_code = await ReferralCodeService.get_code(db, code_data.code)
       if not referral_code:
         raise HTTPException(
@@ -54,7 +54,13 @@ class ReferralCodeService:
     
     @staticmethod
     async def create(db: AsyncSession, code_data: ReferralCodeCreate) -> ReferralCode:
-        referral_code = ReferralCode(**code_data.model_dump(exclude={'auto_generate'}))
+        data = code_data.model_dump(exclude={'auto_generate'})
+        
+        print(data)
+        
+        referral_code = ReferralCode(**data)
+        
+        print(referral_code.challenge_type)
         generated_by = await get_user_by_email(db, code_data.generated_by_id)
         if not generated_by:
             raise HTTPException(
@@ -62,6 +68,7 @@ class ReferralCodeService:
                 detail=f"User not found for id: {code_data.generated_by_id}"
             )
         referral_code.generated_by = generated_by
+        
         db.add(referral_code)
         try:
             await db.commit()
@@ -82,13 +89,21 @@ class ReferralCodeService:
         validate: bool = False
     ) -> Optional[ReferralCode]:
       
-        for key, value in code_data.model_dump(exclude_unset=True, exclude={'auto_generate'}).items():
+        for key, value in code_data.model_dump(exclude_unset=True, exclude={'auto_generate', 'challenge_type'}).items():
             setattr(referral_code, key, value)
         
         
         if validate:
+     
+          
+          if referral_code.challenge_type != code_data.challenge_type:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Referral code is only valid for {referral_code.challenge_type} challenges."
+            )
+          
+
           today = date.today()
-      
           if today > referral_code.valid_to:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

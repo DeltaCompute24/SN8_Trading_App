@@ -69,5 +69,5 @@ def pop_queue_right_item(queue_name=OPERATION_QUEUE_NAME, count=1):
     redis_client.rpop(queue_name, count=count)
 
 
-def delete_hash_value(key, hash_name=REDIS_LIVE_PRICES_TABLE):
+def delete_hash_value(key, hash_name=POSITIONS_TABLE):
     redis_client.hdel(hash_name, key)

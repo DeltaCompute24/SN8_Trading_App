@@ -49,6 +49,13 @@ async def get_positions(
                 Transaction.status == Status.processing,
                 Transaction.status == Status.adjust_processing
             ))
+        elif status == Status.close:
+            query = query.where(or_(
+                Transaction.status == Status.close,
+                Transaction.status == Status.close_processing,
+
+            ))
+        
         else:
             query = query.where(and_(Transaction.status == status))
     elif only_open:
