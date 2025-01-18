@@ -8,7 +8,7 @@ from src.utils.redis_manager import set_hash_value, get_hash_value
 logger = logging.getLogger(__name__)
 
 
-def get_taoshi_values(trader_id, trade_pair, position_uuid=None, challenge="main", closed=False):
+def get_taoshi_values(trader_id, trade_pair, position_uuid=None, challenge="main", closed=False) -> list:
     key = f"{trade_pair}-{trader_id}"
     last_index = 11 if closed else -1
 

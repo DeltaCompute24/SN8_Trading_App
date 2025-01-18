@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import text
-
 from src.database import get_db
 from src.models.transaction import Status
 from src.schemas.transaction import TradeResponse, ProfitLossRequest
@@ -9,6 +8,8 @@ from src.services.trade_service import close_transaction, get_latest_position
 from src.utils.logging import setup_logging
 from src.utils.websocket_manager import websocket_manager
 from src.validations.position import validate_trade_pair, check_get_challenge
+from src.utils.redis_manager import set_hash_value, get_hash_value
+import json
 
 logger = setup_logging()
 router = APIRouter()
@@ -46,6 +47,14 @@ async def close_position(position_data: ProfitLossRequest, db: AsyncSession = De
                 raise HTTPException(status_code=500, detail="Failed to submit close signal")
         logger.info(f"Close price for {position.trade_pair} is {close_price}")
 
+        #Getting the return value from redis for immediate return update and then updating it to actual value through monitoring
+        redis_position : str | None = get_hash_value(f"{ position_data.trade_pair}-{position_data.trader_id}")
+        if redis_position:
+            redis_position : list = json.loads(redis_position)
+            profit_loss =  redis_position[2]
+            print(f"PROFTLOSS from REDIS {profit_loss}")
+            
+        
         # Close Previous Open Position
         await close_transaction(db, position.order_id, position.trader_id, close_price, profit_loss=profit_loss,
                                 old_status=position.status, profit_loss_without_fee=profit_loss_without_fee,

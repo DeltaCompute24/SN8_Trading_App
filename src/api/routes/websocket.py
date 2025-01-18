@@ -67,16 +67,19 @@ class ConnectionManager:
                 positions_dict = {}
                 for key, value in positions.items():
 
-                    value = ast.literal_eval(value)
+                    value = value.strip('"')  # Remove outer quotes
+                    value = json.loads(value)  # Parse the JSON string
+                    
 
                     trade_pair, trader_id = key.split("-")
                     if trader_id not in positions_dict:
                         positions_dict[trader_id] = {}
                     positions_dict[trader_id][trade_pair] = {
                         "time": value[0],
-                        "price": value[1],
+                        "entry_price": value[1],
                         "profit_loss": value[2],
                         "profit_loss_without_fee": value[3],
+                        "is_closed" : value[-1]
                     }
                 await self.broadcast(json.dumps({"type": "positions", "data": positions_dict}))
             except Exception as e:
