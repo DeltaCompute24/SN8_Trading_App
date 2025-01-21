@@ -5,7 +5,7 @@ from sqlalchemy.future import select
 from sqlalchemy.sql import and_, or_, text
 from sqlalchemy.sql import func
 
-from src.models.transaction import Transaction
+from src.models.transaction import Transaction,Status
 from src.schemas.monitored_position import MonitoredPositionCreate
 from src.schemas.transaction import TransactionCreate
 
@@ -187,8 +187,9 @@ async def get_latest_position(db: AsyncSession, trader_id: int, trade_pair: str)
                 Transaction.trader_id == trader_id,
                 Transaction.trade_pair == trade_pair,
                 or_(
-                    Transaction.status == "OPEN",
-                    Transaction.status == "PENDING",
+                    Transaction.status == Status.open,
+                    Transaction.status == Status.pending,
+                    Transaction.status == Status.adjust_processing
                 )
             )
         ).order_by(Transaction.trade_order.desc())
