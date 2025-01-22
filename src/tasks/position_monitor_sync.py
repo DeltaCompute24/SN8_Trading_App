@@ -1,87 +1,38 @@
-import asyncio
-import json
+
 import logging
-import time
 from datetime import datetime
 
 from sqlalchemy.future import select
-from sqlalchemy.sql import or_
+from sqlalchemy.sql import or_, and_, text
 
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
-from src.models.transaction import Transaction
+from src.models.transaction import Transaction , Status
 from src.services.fee_service import get_taoshi_values
 from src.utils.constants import ERROR_QUEUE_NAME
-from src.utils.redis_manager import get_live_price, push_to_redis_queue, get_queue_data
+from src.utils.redis_manager import get_live_price, push_to_redis_queue
 from src.utils.websocket_manager import websocket_manager
+from schemas.redis_position import RedisPosition
+from src.services.trade_service import close_transaction, update_transaction
+
 
 logger = logging.getLogger(__name__)
 
-FLUSH_INTERVAL = 20
-last_flush_time = time.time()
-objects_to_be_updated = []
 
 
-def object_exists(obj_list, new_obj_id):
-    raw_data = get_queue_data()
-    for item in raw_data:
-        redis_objects = json.loads(item)
-        obj_list.extend(redis_objects)
-
-    for obj in obj_list:
-        if obj["order_id"] == new_obj_id:
-            return True
-    return False
-
-
-def open_position(position, current_price, entry_price=False):
-    global objects_to_be_updated
+async def open_position(db, position, current_price, entry_price=False):
+   
     try:
         logger.info("Open Position Called!")
-        open_submitted = asyncio.run(
-            websocket_manager.submit_trade(position.trader_id, position.trade_pair, position.order_type,
-                                           position.leverage))
+        open_submitted = await websocket_manager.submit_trade(position.trader_id, position.trade_pair, position.order_type,
+                                           position.leverage)
         if not open_submitted:
             return
-        for i in range(10):
-            time.sleep(1)
-            first_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee, uuid, hot_key, len_order, average_entry_price = get_taoshi_values(
-                position.trader_id,
-                position.trade_pair,
-                challenge=position.source,
-            )
-            # 10 times
-            if first_price != 0:
-                break
+        #Creating a position immediately with status PROCESSING
+        await update_transaction(db, position.order_id, position.trader_id, entry_price= current_price,old_status=position.status
+                                , status=Status.processing)
 
-        if first_price == 0:
-            push_to_redis_queue(
-                data=f"**Monitor Positions** While Opening Position {position.trader_id}-{position.trade_pair}-{position.order_id} - Price is Zero -- Trade is not Submitted",
-                queue_name=ERROR_QUEUE_NAME,
-            )
-            return
 
-        new_object = {
-            "order_id": position.order_id,
-            "operation_type": "open",
-            "status": "OPEN",
-            "old_status": position.status,
-            "hot_key": hot_key,
-            "uuid": uuid,
-            "initial_price": first_price,
-            "profit_loss": profit_loss,
-            "profit_loss_without_fee": profit_loss_without_fee,
-            "taoshi_profit_loss": taoshi_profit_loss,
-            "taoshi_profit_loss_without_fee": taoshi_profit_loss_without_fee,
-            "order_level": len_order,
-            "average_entry_price": average_entry_price,
-            "modified_by": "system",
-
-        }
-        if entry_price:
-            new_object["entry_price"] = current_price
-
-        objects_to_be_updated.append(new_object)
     except Exception as e:
         push_to_redis_queue(
             data=f"**Monitor Positions** While Opening Position {position.trader_id}-{position.trade_pair}-{position.order_id} - {e}",
@@ -90,49 +41,28 @@ def open_position(position, current_price, entry_price=False):
         logger.error(f"An error occurred while opening position {position.position_id}: {e}")
 
 
-def close_position(position, profit_loss):
-    global objects_to_be_updated
+async def close_position( db , position, redis_position : RedisPosition):
+
     try:
         logger.info("Close Position Called!")
-        close_submitted = asyncio.run(
-            websocket_manager.submit_trade(position.trader_id, position.trade_pair, "FLAT", 1))
+        close_submitted = await websocket_manager.submit_trade(position.trader_id, position.trade_pair, "FLAT", 1)
         if not close_submitted:
             return
-        for i in range(10):
-            time.sleep(1)
-            close_price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, taoshi_profit_loss_without_fee, uuid, hot_key, len_order, average_entry_price = get_taoshi_values(
-                position.trader_id,
-                position.trade_pair,
-                position_uuid=position.uuid,
-                challenge=position.source
-            )
-            # 10 times
-            if close_price != 0 and position.order_level < len_order:
-                break
+        
+        #Closing a position immediately with status CLOSE_PROCESSING
+        await close_transaction(db, position.order_id, position.trader_id, redis_position.price, profit_loss=redis_position.profit_loss,
+                                old_status=position.status, profit_loss_without_fee=redis_position.profit_loss_without_fee,
+                                taoshi_profit_loss=redis_position.taoshi_profit_loss, status=Status.close_processing,
+                                taoshi_profit_loss_without_fee=redis_position.taoshi_profit_loss_without_fee, order_level=redis_position.len_order,
+                                average_entry_price=redis_position.average_entry_price)
 
-        if close_price == 0:
-            push_to_redis_queue(
-                data=f"**Monitor Positions** While Closing Position {position.trader_id}-{position.trade_pair}-{position.order_id} - Price is Zero",
-                queue_name=ERROR_QUEUE_NAME,
-            )
-            return
-        objects_to_be_updated.append(
-            {
-                "order_id": position.order_id,
-                "close_time": str(datetime.utcnow()),
-                "operation_type": "close",
-                "status": "CLOSED",
-                "old_status": position.status,
-                "close_price": close_price,
-                "profit_loss": profit_loss,
-                "profit_loss_without_fee": profit_loss_without_fee,
-                "taoshi_profit_loss": taoshi_profit_loss,
-                "taoshi_profit_loss_without_fee": taoshi_profit_loss_without_fee,
-                "order_level": len_order,
-                "average_entry_price": average_entry_price,
-                "modified_by": "system",
-            }
+        # Remove closed position from the monitored_positions table
+        await db.execute(
+            text("DELETE FROM monitored_positions WHERE position_id = :position_id"),
+            {"position_id": position.position_id}
         )
+        await db.commit()
+        
     except Exception as e:
         push_to_redis_queue(
             data=f"**Monitor Positions** While Closing Position {position.trader_id}-{position.trade_pair}-{position.order_id} - {e}",
@@ -143,11 +73,13 @@ def close_position(position, profit_loss):
 def check_take_profit(trailing, take_profit, profit_loss) -> bool:
     """
     Position should be closed if it reaches the expected profit
+    profit_loss should be > 0
+    take_profit should be > 0
     """
     # if profit_loss < 0 it means there is no profit so return False
-    if trailing or profit_loss < 0:
+    if trailing or profit_loss <= 0:
         return False
-    if take_profit is not None and take_profit != 0 and profit_loss >= take_profit:
+    if profit_loss >= take_profit:
         return True
     return False
 
@@ -160,7 +92,7 @@ def check_stop_loss(trailing, stop_loss, profit_loss) -> bool:
     if trailing or profit_loss > 0:
         return False
 
-    if stop_loss is not None and stop_loss != 0 and profit_loss <= -stop_loss:
+    if profit_loss <= -stop_loss:
         return True
     return False
 
@@ -170,7 +102,7 @@ def check_trailing_stop_loss(trailing, stop_loss, max_profit_loss, current_profi
     Position should be closed if it reaches the expected trailing loss
     """
     # return if trailing is false or stop_loss value is None or zero
-    if not trailing or stop_loss is None or stop_loss == 0:
+    if not trailing or stop_loss == 0:
         return False
 
     difference = max_profit_loss - current_profit_loss
@@ -180,21 +112,23 @@ def check_trailing_stop_loss(trailing, stop_loss, max_profit_loss, current_profi
     return False
 
 
-def should_close_position(profit_loss, position):
+def should_close_position(profit_loss, position) -> bool:
     """
-    profit_loss: Its direct
+     This function should run for OPEN or ADJUST_PROCESSING positions.
+     So check before it.
     """
     try:
+        #Cumulatives are set in create_transaction , all set, need to check in DB
         take_profit = position.cumulative_take_profit
-        stop_loss = position.cumulative_stop_loss
+        stop_loss = position.cumulative_stop_loss        
         max_profit = position.max_profit_loss
         trailing = position.trailing
 
-        close_result = (
-                check_trailing_stop_loss(trailing, stop_loss, max_profit, profit_loss) or
-                check_stop_loss(trailing, stop_loss, profit_loss) or
-                check_take_profit(trailing, take_profit, profit_loss)
-        )
+        close_result = any([
+            check_trailing_stop_loss(trailing, stop_loss, max_profit, profit_loss),
+            check_stop_loss(trailing, stop_loss, profit_loss),
+            check_take_profit(trailing, take_profit, profit_loss)
+        ])
 
         print(f"Determining whether to close position: {close_result}")
         logger.info(f"Determining whether to close position: {close_result}")
@@ -300,12 +234,13 @@ def check_pending_position(position, current_price):
     """
     For Pending Position to be Opened
     """
-    opened = (
-            (position.upward == 0 and current_price <= position.entry_price) or
+    opened = any[(
+            (position.upward == 0 and current_price <= position.entry_price),
             (position.upward == 1 and current_price >= position.entry_price)
-    )
-    logger.error(f"Determining whether to open pending position: {opened}")
+    )]
+    
 
+    
     if opened:
         open_position(position, current_price)
 
@@ -315,24 +250,28 @@ def check_open_position(db, position):
     For Open Position to be Closed
     """
     # get values from taoshi platform
-    price, profit_loss, profit_loss_without_fee, taoshi_profit_loss, *taoshi_profit_loss_without_fee = get_taoshi_values(
+    redis_array = get_taoshi_values(
         position.trader_id,
         position.trade_pair,
-        challenge=position.source,
         position_uuid=position.uuid,
+        challenge=position.source
     )
-    if price == 0:
+    
+    redis_position = RedisPosition.from_redis_array(redis_array)
+    
+    
+    if redis_position.price == 0:
         push_to_redis_queue(
-            data=f"**Monitor Positions** While Checking Open Position {position.trader_id}-{position.trade_pair}-{position.order_id} - Price is Zero",
+            data=f"**Monitor Positions** While Checking Open Position {position.trader_id}-{position.trade_pair}-{position.order_id} - Price is Zero in Redis Queue",
             queue_name=ERROR_QUEUE_NAME
         )
         return False
+     
+    print(f"Comparing Position Core Logic:{position.uuid} - profit:{redis_position.profit_loss} SL-{position.cumulative_stop_loss} TP-{position.cumulative_take_profit}")
 
-    position = update_position_profit(db, position, profit_loss, profit_loss_without_fee, taoshi_profit_loss,
-                                      taoshi_profit_loss_without_fee[0])
-    if position.status == "OPEN" and should_close_position(profit_loss, position):
+    if should_close_position(redis_position.profit_loss, position):
         logger.info(f"Position should be closed: {position.position_id}: {position.trader_id}: {position.trade_pair}")
-        close_position(position, profit_loss)
+        close_position(db, position, redis_position)
         return True
 
 
@@ -343,27 +282,26 @@ def monitor_position(db, position):
     if status is OPEN then check if it meets the criteria to CLOSE the position
     if status is PENDING then check if it meets the criteria to OPEN the position
     """
-    global objects_to_be_updated
-    if object_exists(objects_to_be_updated, position.order_id):
-        logger.info("Return back as Close Position already exists in queue!")
-        return
+   
     try:
         logger.error(f"Current Pair: {position.trader_id}-{position.trade_pair}")
         # ---------------------------- OPENED POSITION ---------------------------------
-        if position.status == "OPEN":
-            return check_open_position(db, position)
+        if position.status in [Status.open , Status.adjust_processing]:
+            return check_open_position(db , position)
 
         # ---------------------------- PENDING POSITION --------------------------------
-        current_price = get_live_price(position.trade_pair)
-        if not current_price:
-            return
-
-        # if it is not a trailing pending position
-        if position.limit_order is None or position.limit_order == 0:
+        
+        if position.status in [Status.pending]:
+            current_price = get_live_price(position.trade_pair)
+            if not current_price:
+                return
+            print(f"Processing Pending Position: UUID:{position.uuid} trade-pair:{position.trade_pair} current-price:{current_price}")
+            # if it is not a trailing pending position
+            
             check_pending_position(position, current_price)
-        else:  # trailing pending position
-            position = update_position_prices(db, position, current_price)
-            check_pending_trailing_position(position, current_price)
+            # else:  # trailing pending position
+            #     position = update_position_prices(db, position, current_price)
+            #     check_pending_trailing_position(position, current_price)
 
     except Exception as e:
         push_to_redis_queue(
@@ -374,21 +312,26 @@ def monitor_position(db, position):
 
 
 def get_monitored_positions(db):
-    """
-    fetch OPEN and PENDING positions from database
-    """
     try:
         logger.info("Fetching monitored positions from database")
+        # Use joinedload to prevent N+1 queries
         result = db.execute(
-            select(Transaction).where(
+            select(Transaction)
+            .where(
                 or_(
-                    Transaction.status == "OPEN",
-                    Transaction.status == "PENDING",
+                    Transaction.status.in_([Status.open, Status.pending, Status.adjust_processing]),
+                    and_(
+                        Transaction.take_profit.isnot(None),
+                        Transaction.take_profit != 0
+                    ),
+                    and_(
+                        Transaction.stop_loss.isnot(None),
+                        Transaction.stop_loss != 0
+                    )
                 )
             )
         )
-        positions = result.scalars().all()
-        logger.info(f"Retrieved {len(positions)} monitored positions")
+        positions = result.scalars().unique().all()
         return positions
     except Exception as e:
         push_to_redis_queue(data=f"**Monitor Positions** Database Error - {e}", queue_name=ERROR_QUEUE_NAME)
@@ -400,31 +343,12 @@ def monitor_positions_sync():
     """
     loop through all the positions and monitor them one by one
     """
-    global objects_to_be_updated, last_flush_time
+ 
     try:
         logger.info("Starting monitor_positions_sync")
 
-        current_time = time.time()
-
-        if objects_to_be_updated and (current_time - last_flush_time) >= FLUSH_INTERVAL:
-            logger.error(f"Going to Flush previous Objects!: {str(current_time - last_flush_time)}")
-            last_flush_time = current_time
-            push_to_redis_queue(json.dumps(objects_to_be_updated))
-            objects_to_be_updated = []
-
         with TaskSessionLocal_() as db:
             for position in get_monitored_positions(db):
-
-                # if position is open and take_profit and stop_loss are zero then don't monitor position
-                skip_position = (
-                        (position.status == "OPEN") and
-                        (not position.take_profit or position.take_profit == 0) and
-                        (not position.stop_loss or position.stop_loss == 0)
-                )
-
-                if skip_position:
-                    logger.info(f"Skip position {position.position_id}: {position.trader_id}: {position.trade_pair}")
-                    continue
 
                 logger.info(f"Processing position {position.position_id}: {position.trader_id}: {position.trade_pair}")
                 monitor_position(db, position)

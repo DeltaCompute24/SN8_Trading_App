@@ -134,6 +134,52 @@ async def close_transaction(
     await db.commit()
 
 
+async def update_transaction(
+        db: AsyncSession,
+        order_id: int,
+        trader_id: int,
+        entry_price: float,
+        old_status: str,
+        status: str,
+):
+    """
+    Update a transaction record with processing status.
+    
+    Args:
+        db: AsyncSession - database session
+        order_id: int - ID of the order to update
+        trader_id: int - ID of the trader
+        entry_price: float - entry price for the position
+        old_status: str - previous status of the transaction
+        status: str - new status to set
+    """
+    close_time = datetime.utcnow()
+    
+    statement = text("""
+            UPDATE transactions
+            SET status = :status, 
+                old_status = :old_status,
+                close_time = :close_time, 
+                close_price = :close_price,
+                modified_by = :modified_by
+            WHERE order_id = :order_id
+            AND trader_id = :trader_id
+        """)
+
+    await db.execute(
+        statement,
+        {
+            "status": status,
+            "old_status": old_status,
+            "close_time": close_time,
+            "close_price": entry_price,
+            "order_id": order_id,
+            "trader_id": trader_id,
+            "modified_by": str(trader_id),
+        }
+    )
+    await db.commit()
+
 async def update_monitored_positions(db: AsyncSession, position_data: MonitoredPositionCreate):
     await db.execute(
         text("""

@@ -26,7 +26,7 @@ celery_app.conf.update(
         },
         'monitor_positions-every-5-seconds': {
             'task': 'src.tasks.position_monitor_sync.monitor_positions',
-            'schedule': 5.0,  # every 1 second
+            'schedule': 1.0,  # every 1 second
         },
         'redis-listener-every-15-seconds': {
             'task': 'src.tasks.redis_listener.event_listener',
