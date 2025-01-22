@@ -1,3 +1,5 @@
+from enum import Enum
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.exc import ProgrammingError
@@ -21,26 +23,39 @@ from src.services.user_service import populate_ambassadors
 
 app = FastAPI()
 
+
+# tag enums
+class Tags(Enum):
+    positions = "Positions"
+    payments = "Payments"
+    tournaments = "Tournaments"
+    payouts = "Payouts"
+    certificate = "Generate Certificate"
+    balances = "Users Balance"
+    codes = "Referral Codes"
+    fav_pairs = "Favorite Pairs"
+
+
 # Include routes
-app.include_router(initiate_router, prefix="/trades", tags=["Positions"])
-app.include_router(adjust_router, prefix="/trades", tags=["Positions"])
-app.include_router(close_router, prefix="/trades", tags=["Positions"])
-app.include_router(profit_loss_router, prefix="/trades", tags=["Positions"])
-app.include_router(get_positions_router, prefix="/trades", tags=["Positions"])
+app.include_router(initiate_router, prefix="/trades", tags=[Tags.positions])
+app.include_router(adjust_router, prefix="/trades", tags=[Tags.positions])
+app.include_router(close_router, prefix="/trades", tags=[Tags.positions])
+app.include_router(profit_loss_router, prefix="/trades", tags=[Tags.positions])
+app.include_router(get_positions_router, prefix="/trades", tags=[Tags.positions])
 
-app.include_router(payment_routers, prefix="/payments", tags=["Payment"])
+app.include_router(payment_routers, prefix="/payments", tags=[Tags.payments])
 
-app.include_router(tournament_routers, prefix="/tournaments", tags=["Tournament"])
+app.include_router(tournament_routers, prefix="/tournaments", tags=[Tags.tournaments])
 
-app.include_router(payout, prefix="/payout", tags=["Payout"])
+app.include_router(payout, prefix="/payout", tags=[Tags.payouts])
 
-app.include_router(generate_certificate, prefix="/generate-certificate", tags=["Generate Certificate"])
+app.include_router(generate_certificate, prefix="/generate-certificate", tags=[Tags.certificate])
 
-app.include_router(balance_routers, prefix="/users-balance", tags=["Users Balance"])
+app.include_router(balance_routers, prefix="/users-balance", tags=[Tags.balances])
 
-app.include_router(referral_code_router, prefix="/referral-code", tags=["Referral Codes"])
+app.include_router(referral_code_router, prefix="/referral-code", tags=[Tags.codes])
 
-app.include_router(favorite_pairs_router, prefix="/favorite-pairs", tags=["Favorite Pairs"])
+app.include_router(favorite_pairs_router, prefix="/favorite-pairs", tags=[Tags.fav_pairs])
 
 # Enable CORS
 app.add_middleware(
