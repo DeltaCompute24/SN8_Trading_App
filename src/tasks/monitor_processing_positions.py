@@ -107,6 +107,7 @@ def check_initiate_position(db, position, data):
             "status": "CLOSED",
             "close_price": data["entry_price"],
             "close_time": datetime.utcnow(),
+            "modified_by" : "processing_positions_task"
         })
         update_position(db, position, data)
         send_email_to_user(db, position)
@@ -147,6 +148,7 @@ def check_adjust_position(db, position, data):
             "status": "CLOSED",
             "close_price": price,
             "close_time": datetime.utcnow(),
+            "modified_by" : "processing_positions_task"
         })
         update_position(db, position, data)
         send_email_to_user(db, position, _type="ADJUST")
@@ -184,6 +186,9 @@ def check_close_position(db, position, data, closed):
             queue_name=ERROR_QUEUE_NAME
         )
         asyncio.run(websocket_manager.submit_trade(position.trader_id, position.trade_pair, "FLAT", 1))
+        data.update({
+            "modified_by" : "processing_positions_task"
+        })
         update_position(db, position, data)
         delete_hash_value(key)
         # send_email_to_user(position, _type="CLOSE")

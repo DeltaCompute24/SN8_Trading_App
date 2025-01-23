@@ -4,7 +4,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.sql import and_
 
 from src.database_tasks import TaskSessionLocal_
@@ -68,6 +68,28 @@ def get_firebase_user(db: Session, firebase_id: str):
             )
         )
     )
+    return user
+
+
+def get_firebase_user_by_trader_id(db: Session, trader_id: str):
+    """
+    Get a firebase user by matching trader_id in their challenges
+    
+    Args:
+        db: Database session
+        trader_id: Trader ID to search for in challenges
+        
+    Returns:
+        FirebaseUser or None
+    """
+    query = (
+        select(FirebaseUser)
+        .join(FirebaseUser.challenges)  # Join with challenges relationship
+        .options(joinedload(FirebaseUser.challenges))  # Optionally load challenges
+        .where(Challenge.trader_id == trader_id)  # Filter by trader_id in challenges
+    )
+    
+    user = db.scalar(query)
     return user
 
 

@@ -1,10 +1,12 @@
-
 import logging
 from datetime import datetime
-
+import asyncio
 from sqlalchemy.future import select
 from sqlalchemy.sql import or_, and_, text
-
+from typing import List
+from sqlalchemy.ext.asyncio import  create_async_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.models.transaction import Transaction , Status
@@ -12,26 +14,29 @@ from src.services.fee_service import get_taoshi_values
 from src.utils.constants import ERROR_QUEUE_NAME
 from src.utils.redis_manager import get_live_price, push_to_redis_queue
 from src.utils.websocket_manager import websocket_manager
-from schemas.redis_position import RedisPosition
-from src.services.trade_service import close_transaction, update_transaction
-
+from src.schemas.redis_position import RedisPosition
+from src.services.trade_service import close_transaction_sync, update_transaction_sync
+from src.services.notification_service import NotificationService
+from src.schemas.notification import NotificationCreate
+from src.services.user_service import get_firebase_user_by_trader_id
+from src.config import DATABASE_URL
 
 logger = logging.getLogger(__name__)
 
 
-
-async def open_position(db, position, current_price, entry_price=False):
+def open_position(db, position, current_price, entry_price):
    
     try:
         logger.info("Open Position Called!")
-        open_submitted = await websocket_manager.submit_trade(position.trader_id, position.trade_pair, position.order_type,
-                                           position.leverage)
-        if not open_submitted:
-            return
+        asyncio.run( websocket_manager.submit_trade(position.trader_id, position.trade_pair, position.order_type,
+                                           position.leverage))
+        
         #Creating a position immediately with status PROCESSING
-        await update_transaction(db, position.order_id, position.trader_id, entry_price= current_price,old_status=position.status
+        update_transaction_sync(db, position.order_id, position.trader_id, entry_price= current_price,old_status=position.status
                                 , status=Status.processing)
 
+        logger.info(f"Save notification called for  redis profit_loss: id : {position.order_id}  redis entry price: {current_price} , position entry price {entry_price} - upward {position.upward}")
+        save_notification(db, position , f"Position Opened Succcessfully , redis entry price: {current_price} , position entry price {entry_price} - upward {position.upward}"  )
 
     except Exception as e:
         push_to_redis_queue(
@@ -41,33 +46,46 @@ async def open_position(db, position, current_price, entry_price=False):
         logger.error(f"An error occurred while opening position {position.position_id}: {e}")
 
 
-async def close_position( db , position, redis_position : RedisPosition):
+def close_position( db , position : Transaction, redis_position : RedisPosition):
 
     try:
         logger.info("Close Position Called!")
-        close_submitted = await websocket_manager.submit_trade(position.trader_id, position.trade_pair, "FLAT", 1)
-        if not close_submitted:
-            return
-        
+        asyncio.run( websocket_manager.submit_trade(position.trader_id, position.trade_pair, "FLAT", 1))
+ 
         #Closing a position immediately with status CLOSE_PROCESSING
-        await close_transaction(db, position.order_id, position.trader_id, redis_position.price, profit_loss=redis_position.profit_loss,
+        close_transaction_sync(db, position.order_id, position.trader_id, redis_position.price, profit_loss=redis_position.profit_loss,
                                 old_status=position.status, profit_loss_without_fee=redis_position.profit_loss_without_fee,
-                                taoshi_profit_loss=redis_position.taoshi_profit_loss, status=Status.close_processing,
+                                taoshi_profit_loss=redis_position.taoshi_profit_loss, status=Status.close,
                                 taoshi_profit_loss_without_fee=redis_position.taoshi_profit_loss_without_fee, order_level=redis_position.len_order,
                                 average_entry_price=redis_position.average_entry_price)
 
-        # Remove closed position from the monitored_positions table
-        await db.execute(
-            text("DELETE FROM monitored_positions WHERE position_id = :position_id"),
-            {"position_id": position.position_id}
-        )
-        await db.commit()
-        
+        logger.info(f"Save notification called for  redis profit_loss: id : {position.order_id} {redis_position.profit_loss} , position SL {position.stop_loss} - TP {position.take_profit}")
+        save_notification(db, position , f"Position Closed Succcessfully , redis profit_loss: {redis_position.profit_loss} , position SL {position.stop_loss} - TP {position.take_profit}"  )
+                
     except Exception as e:
         push_to_redis_queue(
             data=f"**Monitor Positions** While Closing Position {position.trader_id}-{position.trade_pair}-{position.order_id} - {e}",
             queue_name=ERROR_QUEUE_NAME)
         logger.error(f"An error occurred while closing position {position.position_id}: {e}")
+
+
+
+def save_notification(db, position : Transaction , message :str):
+    
+    try:
+        user =  get_firebase_user_by_trader_id(db , position.trader_id)
+        logger.info(f"Saving notification for user: {user.firebase_id if user else 'No User'}")
+    
+        NotificationService.create_notification(db, NotificationCreate( 
+            trader_id= position.trader_id,
+            trader_pair = position.trade_pair,
+            message = message ,
+            ) , user = user )
+
+    except Exception as e:
+        print(f"An error occurred while saving notification :{e} {message}")
+
+
 
 
 def check_take_profit(trailing, take_profit, profit_loss) -> bool:
@@ -130,7 +148,7 @@ def should_close_position(profit_loss, position) -> bool:
             check_take_profit(trailing, take_profit, profit_loss)
         ])
 
-        print(f"Determining whether to close position: {close_result}")
+       
         logger.info(f"Determining whether to close position: {close_result}")
         return close_result
 
@@ -208,7 +226,7 @@ def update_position_prices(db, position, current_price):
         logger.error(f"An error occurred while updating position {position.position_id}: {e}")
 
 
-def check_pending_trailing_position(position, current_price):
+def check_pending_trailing_position(db , position, current_price):
     """
     Open Pending Position based on the trailing limit order
     """
@@ -227,23 +245,21 @@ def check_pending_trailing_position(position, current_price):
 
     logger.error(f"Determining whether to open pending trailing position: {opened}")
     if opened:
-        open_position(position, current_price, entry_price=True)
+        open_position(db, position, current_price, entry_price=True)
 
-
-def check_pending_position(position, current_price):
+def check_pending_position(db, position, current_price):
     """
     For Pending Position to be Opened
     """
-    opened = any[(
-            (position.upward == 0 and current_price <= position.entry_price),
-            (position.upward == 1 and current_price >= position.entry_price)
-    )]
+    opened = any([  
+        (position.upward == 0 and current_price <= position.entry_price),
+        (position.upward == 1 and current_price >= position.entry_price)
+    ])
     
 
     
     if opened:
-        open_position(position, current_price)
-
+        open_position(db, position, current_price , position.entry_price )
 
 def check_open_position(db, position):
     """
@@ -259,7 +275,7 @@ def check_open_position(db, position):
     
     redis_position = RedisPosition.from_redis_array(redis_array)
     
-    
+    #If position doesnt exits in redis (taoshi) it can mean anything, so we shouldnt process
     if redis_position.price == 0:
         push_to_redis_queue(
             data=f"**Monitor Positions** While Checking Open Position {position.trader_id}-{position.trade_pair}-{position.order_id} - Price is Zero in Redis Queue",
@@ -267,7 +283,7 @@ def check_open_position(db, position):
         )
         return False
      
-    print(f"Comparing Position Core Logic:{position.uuid} - profit:{redis_position.profit_loss} SL-{position.cumulative_stop_loss} TP-{position.cumulative_take_profit}")
+    logger.info(f"Comparing Position Core Logic:{position.uuid} - profit:{redis_position.profit_loss} SL-{position.cumulative_stop_loss} TP-{position.cumulative_take_profit}")
 
     if should_close_position(redis_position.profit_loss, position):
         logger.info(f"Position should be closed: {position.position_id}: {position.trader_id}: {position.trade_pair}")
@@ -284,9 +300,10 @@ def monitor_position(db, position):
     """
    
     try:
-        logger.error(f"Current Pair: {position.trader_id}-{position.trade_pair}")
+
         # ---------------------------- OPENED POSITION ---------------------------------
         if position.status in [Status.open , Status.adjust_processing]:
+            logger.info(f"Processing Opened Position: trade-pair:{position.trade_pair} {position.trader_id}")
             return check_open_position(db , position)
 
         # ---------------------------- PENDING POSITION --------------------------------
@@ -295,10 +312,10 @@ def monitor_position(db, position):
             current_price = get_live_price(position.trade_pair)
             if not current_price:
                 return
-            print(f"Processing Pending Position: UUID:{position.uuid} trade-pair:{position.trade_pair} current-price:{current_price}")
+            logger.info(f"Processing Pending Position: Trader:{position.trader_id} trade-pair:{position.trade_pair} current-price:{current_price} ask-price {position.entry_price}")
             # if it is not a trailing pending position
             
-            check_pending_position(position, current_price)
+            return check_pending_position(db, position, current_price)
             # else:  # trailing pending position
             #     position = update_position_prices(db, position, current_price)
             #     check_pending_trailing_position(position, current_price)
@@ -308,58 +325,79 @@ def monitor_position(db, position):
             data=f"**Monitor Positions** While Monitoring Position {position.trader_id}-{position.trade_pair}-{position.order_id} - {e}",
             queue_name=ERROR_QUEUE_NAME
         )
-        logger.error(f"An error occurred while monitoring position {position.position_id}: {e}")
+        logger.error(f"An error occurred while monitoring position {position.position_id} in SL/TP task: {e}")
 
 
-def get_monitored_positions(db):
+def get_monitored_positions(db: Session) -> List[Transaction]:
+    """Get all monitored positions with proper async handling"""
     try:
         logger.info("Fetching monitored positions from database")
-        # Use joinedload to prevent N+1 queries
-        result = db.execute(
-            select(Transaction)
-            .where(
-                or_(
-                    Transaction.status.in_([Status.open, Status.pending, Status.adjust_processing]),
-                    and_(
-                        Transaction.take_profit.isnot(None),
-                        Transaction.take_profit != 0
-                    ),
-                    and_(
-                        Transaction.stop_loss.isnot(None),
-                        Transaction.stop_loss != 0
-                    )
-                )
-            )
+         # Base query for all statuses
+        base_query = select(Transaction)
+        
+        # Combine conditions using OR for different status types
+        status_conditions = or_(
+            # For OPEN and ADJUST_PROCESSING, check all conditions
+            and_(
+                Transaction.status.in_([Status.open, Status.adjust_processing]),
+                Transaction.take_profit.isnot(None),
+                Transaction.take_profit != 0,
+                Transaction.stop_loss.isnot(None),
+                Transaction.stop_loss != 0,
+                Transaction.cumulative_stop_loss.isnot(None),
+                Transaction.cumulative_stop_loss != 0,
+                Transaction.cumulative_take_profit.isnot(None),
+                Transaction.cumulative_take_profit != 0
+            ),
+            # For PENDING, no additional conditions needed
+            Transaction.status == Status.pending
         )
+        
+        # Apply the combined conditions
+        query = base_query.where(status_conditions)
+        
+        result = db.execute(query)
         positions = result.scalars().unique().all()
         return positions
+            
     except Exception as e:
-        push_to_redis_queue(data=f"**Monitor Positions** Database Error - {e}", queue_name=ERROR_QUEUE_NAME)
-        logger.error(f"An error occurred while fetching monitored positions: {e}")
+        logger.error(f"An error occurred while fetching new bug fix monitored positions: {e}")
+        push_to_redis_queue(
+            data=f"**Monitor Positions** Database Error - {e}", 
+            queue_name=ERROR_QUEUE_NAME
+        )
         return []
 
 
 def monitor_positions_sync():
-    """
-    loop through all the positions and monitor them one by one
-    """
- 
+    """Monitor positions with proper async session handling"""
     try:
         logger.info("Starting monitor_positions_sync")
-
+        
+        # First get all positions in one transaction
         with TaskSessionLocal_() as db:
-            for position in get_monitored_positions(db):
-
-                logger.info(f"Processing position {position.position_id}: {position.trader_id}: {position.trade_pair}")
-                monitor_position(db, position)
-
+            positions =  get_monitored_positions(db)
+            
+            # Process each position with a new session
+            for position in positions:
+                logger.info(f"Processing position {position.trader_id} {position.position_id}: {position.status}: {position.take_profit} {position.stop_loss} ")
+                # monitor_position(db, position)
+                    
         logger.info("Finished monitor_positions_sync")
     except Exception as e:
         logger.error(f"An error occurred in monitor_positions_sync: {e}")
-        push_to_redis_queue(data=f"**Monitor Positions** Celery Task - {e}", queue_name=ERROR_QUEUE_NAME)
+        push_to_redis_queue(
+            data=f"**Monitor Positions** Celery Task - {e}", 
+            queue_name=ERROR_QUEUE_NAME
+        )
 
 
 @celery_app.task(name='src.tasks.position_monitor_sync.monitor_positions')
 def monitor_positions():
+    
     logger.info("Starting monitor_positions task")
-    monitor_positions_sync()
+    try:
+        monitor_positions_sync() 
+    except Exception as e:
+        logger.error(f"Task failed: {e}")
+        raise

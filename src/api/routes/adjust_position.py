@@ -76,7 +76,7 @@ async def adjust_position_endpoint(position_data: TransactionUpdate, db: AsyncSe
             cumulative_stop_loss=cumulative_stop_loss,
             cumulative_take_profit=cumulative_take_profit,
             cumulative_order_type=position.cumulative_order_type,
-            status=Status.adjust_processing,
+            status=Status.adjust_processing if position.status == Status.open else position.status,
             old_status=position.status,
             modified_by=str(position_data.trader_id),
             upward=position.upward,

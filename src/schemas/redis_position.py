@@ -12,7 +12,6 @@ class RedisPosition(BaseModel):
     hot_key: str = Field(..., description="Hot key identifier")
     len_order: int = Field(..., description="Order length")
     average_entry_price: float = Field(..., description="Average entry price")
-    closed: bool = Field(..., description="Position closed status")
 
     @classmethod
     def from_redis_array(cls, data: list):
@@ -30,5 +29,5 @@ class RedisPosition(BaseModel):
             hot_key=data[6],
             len_order=data[7],
             average_entry_price=data[8],
-            closed=data[9]
+           
         )
