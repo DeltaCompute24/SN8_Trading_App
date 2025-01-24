@@ -31,6 +31,9 @@ class NotificationService:
         if trader_pair:
             query = query.filter(Notification.trader_pair == trader_pair)
             
+        # Add ordering by created_at descending
+        query = query.order_by(Notification.created_at.desc())
+            
         result = await db.execute(query)
         return result.scalars().unique().all()
     

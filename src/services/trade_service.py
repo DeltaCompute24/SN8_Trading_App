@@ -259,13 +259,13 @@ async def update_monitored_positions(db: AsyncSession, position_data: MonitoredP
     await db.commit()
 
 
-async def get_open_position(db: AsyncSession, trader_id: int, trade_pair: str):
+async def get_open_or_adjusted_position(db: AsyncSession, trader_id: int, trade_pair: str):
     open_transaction = await db.scalar(
         select(Transaction).where(
             and_(
                 Transaction.trader_id == trader_id,
                 Transaction.trade_pair == trade_pair,
-                Transaction.status == "OPEN"
+                Transaction.status.in_([Status.open, Status.adjust_processing])
             )
         ).order_by(Transaction.trade_order.desc())
     )

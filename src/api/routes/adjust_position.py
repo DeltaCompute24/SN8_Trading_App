@@ -8,7 +8,7 @@ from src.database import get_db
 from src.models.transaction import Status
 from src.schemas.monitored_position import MonitoredPositionCreate
 from src.schemas.transaction import TransactionUpdate
-from src.services.trade_service import create_transaction, get_open_position, update_monitored_positions, \
+from src.services.trade_service import create_transaction, get_open_or_adjusted_position, update_monitored_positions, \
     close_transaction
 from src.utils.logging import setup_logging
 from src.utils.websocket_manager import websocket_manager
@@ -25,7 +25,7 @@ async def adjust_position_endpoint(position_data: TransactionUpdate, db: AsyncSe
     position_data = validate_position(position_data, adjust=True)
 
     # Get the latest transaction record for the given trader and trade pair
-    position = await get_open_position(db, position_data.trader_id, position_data.trade_pair)
+    position = await get_open_or_adjusted_position(db, position_data.trader_id, position_data.trade_pair)
     if not position:
         logger.error("No open position found for this trade pair and trader")
         raise HTTPException(status_code=404, detail="No open position found for this trade pair and trader")
