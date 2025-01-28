@@ -5,7 +5,7 @@ from sqlalchemy.future import select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import and_
 
-from src.config import NEW_POSITIONS_URL, NEW_POSITIONS_TOKEN
+from src.config import NEW_POSITIONS_URL, TAOSHI_MAINNET_VALIDATOR_API_KEY
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.models.challenge import Challenge
@@ -54,7 +54,7 @@ def update_challenge(db: Session, challenge, data):
 def monitor_mainnet_challenges():
     logger.info("Starting monitor mainnet challenges task")
     try:
-        response = call_main_net(url=NEW_POSITIONS_URL, token=NEW_POSITIONS_TOKEN)
+        response = call_main_net(url=NEW_POSITIONS_URL, token=TAOSHI_MAINNET_VALIDATOR_API_KEY)
         if not response:
             return
         success = response["challengeperiod"]["success"]
