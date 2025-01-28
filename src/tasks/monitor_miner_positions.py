@@ -31,7 +31,7 @@ def populate_redis_positions(data, _type="Mainnet"):
                     current_time = datetime.utcnow() - timedelta(hours=1)
                     close_time = convert_timestamp_to_datetime(position["close_ms"])
 
-                    if position["is_closed_position"] is True and current_time > close_time:
+                    if position["is_closed_position"] and current_time > close_time:
                         delete_hash_value(key)
                         continue
 

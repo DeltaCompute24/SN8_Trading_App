@@ -24,7 +24,7 @@ celery_app.conf.update(
             'task': 'src.tasks.send_notification.send_notifications',
             'schedule': 900.0,  # every 15 minutes
         },
-        'monitor_positions-every-1-seconds': {
+        'SL/TP-Limit-Price-Bot': {
             'task': 'src.tasks.position_monitor_sync.monitor_positions',
             'schedule': 1.0,  # every 1 second
         },
@@ -36,11 +36,11 @@ celery_app.conf.update(
         #     'task': 'src.tasks.monitor_mainnet_challenges.monitor_mainnet_challenges',
         #     'schedule': 5.0,  # every 1 second
         # },
-        'monitor_miner_every_1_second': {
+        'Updates-Redis-with-Mainnet-Trades': {
             'task': 'src.tasks.monitor_miner_positions.monitor_miner',
             'schedule': 2.0,  # every 1 second
         },
-        'testnet_validator_every_1_second': {
+        'Updates-Redis-with-TestNet-Trades-And-Checks-Pass-Fail': {
             'task': 'src.tasks.testnet_validator.testnet_validator',
             'schedule': 2.0,  # every 1 second
         },
@@ -60,7 +60,7 @@ celery_app.conf.update(
         #     'task': 'src.tasks.tournament_notifications.calculate_participants_score',
         #     'schedule': 60.0,  # Runs every 1 minute
         # },
-        'monitor_processing_positions-seconds': {
+        'open_close_trades_bot_covering_taoshi_lag': {
             'task': 'src.tasks.monitor_processing_positions.processing_positions',
             'schedule': 30.0,  # Runs every 30 seconds
         },

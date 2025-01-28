@@ -16,6 +16,12 @@ from src.utils.redis_manager import push_to_redis_queue
 logger = logging.getLogger(__name__)
 
 
+test_net_pass_criteria = {
+    "2% / return on a single position cannot exist",
+    "Look at evrry 24 hr trades of miner, make sure no 24hr eriod of ralized returns , accounts for more than 30%/ of the total realized returns,"
+}
+
+
 def get_profit_sum_and_draw_down(challenge, positions, perf_ledgers):
     hot_key = challenge.hot_key
     p_content = positions.get(hot_key)
@@ -25,14 +31,23 @@ def get_profit_sum_and_draw_down(challenge, positions, perf_ledgers):
 
     profit_sum = 0
     for position in p_content["positions"]:
+        if not position["is_closed_position"]: continue
+        
+        
+        
         profit_loss = (position["return_at_close"] * 100) - 100
-        if position["is_closed_position"] is True:
-            profit_sum += profit_loss
+        
+        if profit_loss >= 2: return False
+        
+        
+        profit_sum += profit_loss
 
     return {
         "draw_down": (l_content["cps"][-1]["mdd"] * 100) - 100,
         "profit_sum": profit_sum,
     }
+
+
 
 
 def monitor_testnet_challenges(positions, perf_ledgers):
