@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-
+from src.models.transaction import Status
 from pydantic import BaseModel, model_validator
 
 
@@ -29,6 +29,17 @@ class TransactionUpdate(BaseModel):
     trailing: Optional[bool] = False  # trailing stop loss default value will be false if user didn't submit
     stop_loss: Optional[float]
     take_profit: Optional[float]
+
+class TransactionUpdateDatabase(BaseModel):
+    operation_type : str
+    order_type : str 
+    cumulative_leverage : int
+    cumulative_stop_loss : int
+    cumulative_take_profit : int
+    status : Status
+    old_status : Status
+    leverage : int
+
 
 
 class Transaction(TransactionBase):

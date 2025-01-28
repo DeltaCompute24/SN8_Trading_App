@@ -7,7 +7,7 @@ from sqlalchemy.sql import func
 from fastapi import HTTPException, status
 from src.models.transaction import Transaction,Status 
 from src.schemas.monitored_position import MonitoredPositionCreate
-from src.schemas.transaction import TransactionCreate , TransactionUpdate
+from src.schemas.transaction import TransactionCreate , TransactionUpdate , TransactionUpdateDatabase
 from sqlalchemy.orm import Session
 
 async def create_transaction(db: AsyncSession, transaction_data: TransactionCreate, entry_price: float,
@@ -229,13 +229,12 @@ def update_transaction_sync(
 async def update_transaction_async(
         db: Session,
         transaction : Transaction,
-        updated_values : Transaction
+        updated_values : TransactionUpdateDatabase
 ):
     """
     Update a transaction record with provided values status.
     
     """
-    
     for key, value in updated_values.model_dump(exclude_unset=True).items():
             setattr(transaction, key, value)
 
