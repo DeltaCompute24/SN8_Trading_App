@@ -14,7 +14,7 @@ from src.services.api_service import testnet_websocket
 from src.services.email_service import send_mail
 from src.services.tournament_service import update_tournament_object
 from src.services.user_service import bulk_update_challenges
-from src.tasks.testnet_validator import get_profit_sum_and_draw_down
+# from src.tasks.testnet_validator import get_profit_sum_and_draw_down
 from src.utils.constants import ERROR_QUEUE_NAME, TOURNAMENT
 from src.utils.redis_manager import push_to_redis_queue, set_hash_value
 from src.utils.websocket_manager import websocket_manager
@@ -152,7 +152,8 @@ def monitor_tournaments():
 
 
 def calculate_score(challenge, positions, perf_ledgers):
-    data = get_profit_sum_and_draw_down(challenge, positions, perf_ledgers)
+    # data = get_profit_sum_and_draw_down(challenge, positions, perf_ledgers)
+    data = {}
     if not data:
         return {}
     profit_sum = data["profit_sum"]

@@ -16,7 +16,7 @@ from src.services.email_service import send_mail
 from src.services.s3_services import send_certificate_email
 from src.utils.constants import ERROR_QUEUE_NAME
 from src.utils.redis_manager import push_to_redis_queue
-from vali_config import DeltaDevConstants
+from .vali_config import DeltaDevConstants
 logger = logging.getLogger(__name__)
 
 DEV_ACCOUNTS = DeltaDevConstants.DEV_ACCOUNTS

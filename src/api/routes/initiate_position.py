@@ -92,22 +92,6 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
                                                    limit_order=limit_order,
                                                    )
 
-        # Create MonitoredPositionCreate data
-        monitored_position_data = MonitoredPositionCreate(
-            position_id=new_transaction.position_id,
-            order_id=new_transaction.trade_order,
-            trader_id=new_transaction.trader_id,
-            trade_pair=new_transaction.trade_pair,
-            cumulative_leverage=new_transaction.cumulative_leverage,
-            cumulative_order_type=new_transaction.cumulative_order_type,
-            cumulative_stop_loss=new_transaction.cumulative_stop_loss,
-            cumulative_take_profit=new_transaction.cumulative_take_profit,
-            asset_type=new_transaction.asset_type,
-            entry_price=new_transaction.entry_price,
-        )
-
-        # Update the monitored_positions table
-        await update_monitored_positions(db, monitored_position_data)
 
         logger.info(f"Position initiated successfully with entry price {first_price}")
         return TradeResponse(message="Position initiated successfully")

@@ -2,7 +2,7 @@ import logging
 from datetime import datetime , timedelta
 from enum import Enum
 import requests
-from vali_config import DeltaValiConfig
+from .vali_config import DeltaValiConfig
 from src.config import SWITCH_TO_MAINNET_URL
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
@@ -14,6 +14,7 @@ from src.utils.constants import ERROR_QUEUE_NAME
 from src.utils.redis_manager import push_to_redis_queue
 from src.models.challenge import Challenge
 from typing import Tuple, List, Dict
+from src.mocks.api import mock_switch_to_mainnet_response
 logger = logging.getLogger(__name__)
 
 REALIZED_RETURNS_LIMIT = DeltaValiConfig.CHALLENGE_PERIOD_MAX_POSITIONAL_RETURNS_RATIO * 100
@@ -39,11 +40,15 @@ def check_all_returns_passing_criteria( positions : list) -> Tuple[bool, float]:
         profit_loss = (position["return_at_close"] * 100) - 100
         if profit_loss >= REALIZED_RETURNS_LIMIT : return False,0
         
-        if position['close_time'] > cutoff_time:
+        close_time = datetime.fromtimestamp(position.get("close_ms") / 1000)
+        if close_time > cutoff_time:
             one_day_realized_returns += profit_loss
         
         
         total_realized_returns += profit_loss
+    
+    logger.info(f"Ran Criteria Checks : total {total_realized_returns} , one day {one_day_realized_returns}")
+
     
     if total_realized_returns < TOTAL_REALIZED_RETURNS_LIMIT: return False,0
     
@@ -60,20 +65,25 @@ def is_miner_passing_all_screening_criterias(test_net_positions : list[Dict]):
     return check_all_returns_passing_criteria(test_net_positions)
 
 
-def pass_miner_to_main_net(challenge : Challenge, draw_down : float, total_profits : float):
+def pass_miner_to_main_net(challenge : Challenge, total_profits : float):
     email = challenge.user.email
     network = "main"
     payload = {
         "name": challenge.challenge_name,
         "trader_id": challenge.trader_id,
     }
-    _response = requests.post(SWITCH_TO_MAINNET_URL, json=payload)
-    data = _response.json()
-    if _response.status_code == 200:
+    # _response = requests.post(SWITCH_TO_MAINNET_URL, json=payload)
+    
+    _response = type('Response', (), {
+        'status_code': 200,
+        'json': lambda: mock_switch_to_mainnet_response()
+    })()
+    data = _response
+    logger.info(f"Switch to Mainnet called : {_response}")
+    if _response.get("status_code") == 200:
         c_response = challenge.response or {}
         c_response["main_net_response"] = data
         passing_details = {
-            "draw_down" : draw_down,
             "profit_sum" : total_profits,
             "status": "Passed",
             "pass_the_challenge": datetime.utcnow(),
@@ -86,70 +96,98 @@ def pass_miner_to_main_net(challenge : Challenge, draw_down : float, total_profi
         }
         return passing_details
 
-    send_support_email(
-        subject=f"Switch from testnet to mainnet API call failed with status code: {_response.status_code}",
-        content=f"User {email} passed step {challenge.step} and phase {challenge.phase} "
-                f"but switch_to_mainnet Failed. Response from switch_to_mainnet api => {data}",
-    )
+    # send_support_email(
+    #     subject=f"Switch from testnet to mainnet API call failed with status code: {_response.status_code}",
+    #     content=f"User {email} passed step {challenge.step} and phase {challenge.phase} "
+    #             f"but switch_to_mainnet Failed. Response from switch_to_mainnet api => {data}",
+    # )
     return {}
 
+def fail_miner_in_delta(db , challenge: Challenge ,total_profits : float):
+    logger.info(f"{challenge.hot_key}  last status update : Fail")
+    name = challenge.user.name
+    email = challenge.user.email
+    challenge_details = {
+         "profit_loss" : total_profits,
+        "status": "Failed",
+        "active": "0",
+    }
+    context = {
+                "name": name,
+                "trader_id": challenge.trader_id,
+            }
+    subject = "Phase 1 Challenge Failed"
+    template_name = "ChallengeFailedPhase1.html"
 
+    # update_challenge(db, challenge, challenge_details)
+    # send_mail(email, subject=subject, template_name=template_name, context=context)
 
-def monitor_testnet_challenges(test_net_positions, perf_ledgers):
+def pass_miner_in_delta(db , challenge: Challenge ,total_profits : float ):
+    
+    logger.info(f"{challenge.hot_key}  last status update : Pass")
+    challenge_details = pass_miner_to_main_net(challenge, total_profits  )
+    name = challenge.user.name
+    email = challenge.user.email
+    
+    if not challenge_details: return
+    subject = "Congratulations on Completing Phase 1!"
+    template_name = "ChallengePassedPhase1Step2.html"
+    context = {
+        "name": name,
+        "trader_id": challenge_details["trader_id"],
+    }
+    
+    # update_challenge(db, challenge, challenge_details)
+    # send_mail(email, subject=subject, template_name=template_name, context=context)
+
+def is_miner_eliminated(eliminations : list, hot_key : str) -> bool:
+    
+    for miner in eliminations:
+        if miner.get("hotkey") == hot_key:
+            return True
+    
+    return False
+
+def monitor_testnet_challenges(test_net_positions, perf_ledgers , eliminations , challenge_period):
     try:
         with TaskSessionLocal_() as db:
             for challenge in get_monitored_challenges(db):
                 logger.info(f"Checking Pass/Fail testnet challenge : {challenge.trader_id}")
-                name = challenge.user.name
-                email = challenge.user.email
-                status = ChallengeStatus.IN_CHALLENGE
+             
                 hot_key = challenge.hot_key
                 
                 #check testnet positions structure
                 p_content = test_net_positions.get(hot_key)
                 l_content = perf_ledgers.get(hot_key)
-                if not p_content or not l_content:
-                    continue
-                draw_down = (l_content["cps"][-1]["mdd"] * 100) - 100
-                is_passing,  total_profits = is_miner_passing_all_screening_criterias(p_content)
-                is_failing = draw_down <= -DeltaValiConfig.CHALLENGE_PERIOD_MAX_DRAWDOWN  # 5%
-                challenge_details = {
-                    "draw_down" : draw_down,
-                    "profit_loss" : total_profits
-                }
-                
-                context = {
-                        "name": name,
-                        "trader_id": challenge.trader_id,
-                    }
-                subject = ""
-                template_name = ""
-                
-                if is_passing:
-                    status = ChallengeStatus.PASSED
-                    challenge_details = pass_miner_to_main_net(challenge , draw_down, total_profits  )
-                    if challenge_details:
-                        subject = "Congratulations on Completing Phase 1!"
-                        template_name = "ChallengePassedPhase1Step2.html"
-                        context = {
-                            "name": name,
-                            "trader_id": challenge_details["trader_id"],
-                        }
+                is_eliminated = is_miner_eliminated(eliminations , hot_key)
+               
+                logger.info(f"{challenge.hot_key}  Running Checks")
 
-                elif is_failing: 
-                    status = ChallengeStatus.FAILED
-                    challenge_details = {
-                        **challenge_details,
-                        "status": "Failed",
-                        "active": "0",
-                    }
-                    subject = "Phase 1 Challenge Failed"
-                    template_name = "ChallengeFailedPhase1.html"
-                    
+                
+                if l_content and is_eliminated:
+                    #Miner Already Failed in TestNet, So Fail in Delta 
+                    logger.info(f"{challenge.hot_key}  last status update : Fail")
 
-                if status != ChallengeStatus.IN_CHALLENGE:
-                    update_challenge(db, challenge, challenge_details)
-                    send_mail(email, subject=subject, template_name=template_name, context=context)
+                    fail_miner_in_delta(db, challenge , 0)
+                        
+                elif hot_key in challenge_period.get("success"):
+                    logger.info(f"{challenge.hot_key}  last status update : Pass")
+
+                    #Miner Already Passed in TestNet, So Pass in Delta 
+                    pass_miner_in_delta(db , challenge ,0 )
+                
+                elif hot_key in challenge_period.get("testing"):
+                    logger.info(f"{challenge.hot_key}  last status update : Teting")
+
+                    #hot key in positions
+                    if not p_content: continue
+                    positions = p_content.get("positions")
+                    is_passing,  total_profits = is_miner_passing_all_screening_criterias(positions)
+                    if not is_passing : continue
+                    # Miner was In Challenge in TestNet but Passes Delta Criteria
+                    logger.info(f"{challenge.hot_key}  last status update : pass")
+                    pass_miner_in_delta(db , challenge ,total_profits  )
+                
 
         logger.info("Finished monitor_challenges task")
     except Exception as e:
@@ -160,13 +198,22 @@ def monitor_testnet_challenges(test_net_positions, perf_ledgers):
 
 @celery_app.task(name='src.tasks.testnet_validator.testnet_validator')
 def testnet_validator():
+    """
+        perf ledgers object have only eliminated hotkeys.
+        positions have all hot keys - eliminated or successful
+        Some hotkeys in positions wont exist in perfs because they are still in challenge
+        
+        
+    """
     logger.info("Starting monitor testnet validator task")
     test_net_data = testnet_websocket(monitor=True)
 
     if not test_net_data:
         return
 
-    positions = test_net_data["positions"]
-    perf_ledgers = test_net_data["perf_ledgers"]
+    positions = test_net_data.get("positions")
+    perf_ledgers = test_net_data.get("perf_ledgers")
+    eliminations = test_net_data.get("eliminations")
+    challenge_period = test_net_data.get("challengeperiod")
     populate_redis_positions(positions, _type="Testnet")
-    monitor_testnet_challenges(positions, perf_ledgers)
+    monitor_testnet_challenges(positions, perf_ledgers , eliminations , challenge_period)

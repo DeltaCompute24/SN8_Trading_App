@@ -95,7 +95,7 @@ def check_take_profit(trailing, take_profit, profit_loss) -> bool:
     take_profit should be > 0
     """
     # if profit_loss < 0 it means there is no profit so return False
-    if trailing or profit_loss <= 0:
+    if trailing or profit_loss <= 0 or take_profit <= 0:
         return False
     if profit_loss >= take_profit:
         return True
@@ -107,7 +107,7 @@ def check_stop_loss(trailing, stop_loss, profit_loss) -> bool:
     Position should be closed if it reaches the expected loss
     """
     # if profit_loss > 0 it means there is no loss so return False
-    if trailing or profit_loss > 0:
+    if trailing or profit_loss > 0 or stop_loss <= 0:
         return False
 
     if profit_loss <= -stop_loss:
