@@ -2,36 +2,43 @@ import logging
 from datetime import datetime
 
 from sqlalchemy.future import select
-from sqlalchemy.orm import Session
-from sqlalchemy.sql import and_
+from sqlalchemy.orm import Session , selectinload
+from sqlalchemy.sql import and_ 
 
 from src.config import NEW_POSITIONS_URL, NEW_POSITIONS_TOKEN
 from src.core.celery_app import celery_app
 from src.database_tasks import TaskSessionLocal_
 from src.models.challenge import Challenge
+from src.models.firebase_user import FirebaseUser
+
 from src.services.api_service import call_main_net
 from src.services.email_service import send_mail
 from src.services.s3_services import send_certificate_email
 from src.utils.constants import ERROR_QUEUE_NAME
 from src.utils.redis_manager import push_to_redis_queue
-
+from vali_config import DeltaDevConstants
 logger = logging.getLogger(__name__)
 
+DEV_ACCOUNTS = DeltaDevConstants.DEV_ACCOUNTS
 
 def get_monitored_challenges(db: Session, challenge="test", status="In Challenge"):
     try:
         logger.info("Fetching monitored challenges from database")
         result = db.execute(
-            select(Challenge).where(
+            select(Challenge)
+            .options(selectinload(Challenge.user))  # Eagerly load user relationship
+            .join(Challenge.user)
+            .where(
                 and_(
                     Challenge.status == status,
                     Challenge.active == "1",
                     Challenge.challenge == challenge,
+                    FirebaseUser.email.not_in(DEV_ACCOUNTS)
                 )
             )
         )
         challenges = result.scalars().all()
-        logger.info(f"Retrieved {len(challenges)} monitored challenges")
+        logger.info(f"Retrieved {len(challenges)} monitored {challenge} challenges")
         return challenges
     except Exception as e:
         push_to_redis_queue(data=f"**Monitor {challenge.title()}net Challenges** Database Error - {e}",
