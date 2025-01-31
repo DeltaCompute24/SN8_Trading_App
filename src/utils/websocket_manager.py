@@ -192,4 +192,4 @@ websocket_manager = WebSocketManager("forex", 'pair')
 forex_websocket_manager = ForexWebSocketManager()
 crypto_websocket_manager = CryptoWebSocketManager()
 stocks_websocket_manager = StocksWebSocketManager()
-# indices_websocket_manager = IndicesWebSocketManager()
+

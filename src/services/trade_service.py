@@ -4,10 +4,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.sql import and_, or_, text
 from sqlalchemy.sql import func
-
-from src.models.transaction import Transaction,Status
+from fastapi import HTTPException, status
+from src.models.transaction import Transaction,Status 
 from src.schemas.monitored_position import MonitoredPositionCreate
-from src.schemas.transaction import TransactionCreate
+from src.schemas.transaction import TransactionCreate , TransactionUpdate , TransactionUpdateDatabase
 from sqlalchemy.orm import Session
 
 async def create_transaction(db: AsyncSession, transaction_data: TransactionCreate, entry_price: float,
@@ -199,14 +199,14 @@ def update_transaction_sync(
         old_status: str - previous status of the transaction
         status: str - new status to set
     """
-    close_time = datetime.utcnow()
+    open_time = datetime.utcnow()
     
     statement = text("""
             UPDATE transactions
             SET status = :status, 
                 old_status = :old_status,
-                close_time = :close_time, 
-                close_price = :close_price,
+                open_time = :open_time, 
+                entry_price = :entry_price,
                 modified_by = :modified_by
             WHERE order_id = :order_id
             AND trader_id = :trader_id
@@ -217,14 +217,37 @@ def update_transaction_sync(
         {
             "status": status,
             "old_status": old_status,
-            "close_time": close_time,
-            "close_price": entry_price,
+            "open_time": open_time,
+            "entry_price": entry_price,
             "order_id": order_id,
             "trader_id": trader_id,
             "modified_by": "monitor_position_sync",
         }
     )
     db.commit()
+    
+async def update_transaction_async(
+        db: Session,
+        transaction : Transaction,
+        updated_values : TransactionUpdateDatabase
+):
+    """
+    Update a transaction record with provided values status.
+    
+    """
+    for key, value in updated_values.model_dump(exclude_unset=True).items():
+            setattr(transaction, key, value)
+
+    try:
+        await db.commit()
+        await db.refresh(transaction)
+        return transaction
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Could not update payout: {str(e)}"
+        )
 
 async def update_monitored_positions(db: AsyncSession, position_data: MonitoredPositionCreate):
     await db.execute(
