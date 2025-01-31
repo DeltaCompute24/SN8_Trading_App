@@ -26,16 +26,16 @@ celery_app.conf.update(
         },
         'SL/TP-Limit-Price-Bot': {
             'task': 'src.tasks.position_monitor_sync.monitor_positions',
-            'schedule': 1.0,  # every 1 second
+            'schedule': 2.0,  # every 1 second
         },
         # 'redis-listener-every-15-seconds': {
         #     'task': 'src.tasks.redis_listener.event_listener',
         #     'schedule': 15.0,  # every 20 second
         # },
-        # 'monitor_mainnet_challenges_every_1_second': {
-        #     'task': 'src.tasks.monitor_mainnet_challenges.monitor_mainnet_challenges',
-        #     'schedule': 5.0,  # every 1 second
-        # },
+        'monitor_mainnet_challenges_every_1_second': {
+            'task': 'src.tasks.monitor_mainnet_challenges.monitor_mainnet_challenges',
+            'schedule': 5.0,  # every 1 second
+        },
         'Updates-Redis-with-Mainnet-Trades': {
             'task': 'src.tasks.monitor_miner_positions.monitor_miner',
             'schedule': 2.0,  # every 1 second

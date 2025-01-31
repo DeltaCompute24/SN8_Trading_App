@@ -33,6 +33,7 @@ def get_monitored_challenges(db: Session, challenge="test", status="In Challenge
                     Challenge.status == status,
                     Challenge.active == "1",
                     Challenge.challenge == challenge,
+                    Challenge.admin_status == 'pass',
                     FirebaseUser.email.not_in(DEV_ACCOUNTS)
                 )
             )

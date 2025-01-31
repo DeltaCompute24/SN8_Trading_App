@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime , timedelta
 from enum import Enum
+import traceback
 import requests
 from .vali_config import DeltaValiConfig
 from src.config import SWITCH_TO_MAINNET_URL
@@ -10,11 +11,8 @@ from src.services.api_service import testnet_websocket
 from src.services.email_service import send_mail, send_support_email
 from src.tasks.monitor_mainnet_challenges import get_monitored_challenges, update_challenge
 from src.tasks.monitor_miner_positions import populate_redis_positions
-from src.utils.constants import ERROR_QUEUE_NAME
-from src.utils.redis_manager import push_to_redis_queue
 from src.models.challenge import Challenge
 from typing import Tuple, List, Dict
-from src.mocks.api import mock_switch_to_mainnet_response
 logger = logging.getLogger(__name__)
 
 REALIZED_RETURNS_LIMIT = DeltaValiConfig.CHALLENGE_PERIOD_MAX_POSITIONAL_RETURNS_RATIO * 100
@@ -72,15 +70,13 @@ def pass_miner_to_main_net(challenge : Challenge, total_profits : float):
         "name": challenge.challenge_name,
         "trader_id": challenge.trader_id,
     }
-    # _response = requests.post(SWITCH_TO_MAINNET_URL, json=payload)
     
-    _response = type('Response', (), {
-        'status_code': 200,
-        'json': lambda: mock_switch_to_mainnet_response()
-    })()
-    data = _response
-    logger.info(f"Switch to Mainnet called : {_response}")
-    if _response.get("status_code") == 200:
+    logger.info(f"Switch to Mainnet called : Miner Passed")
+    _response = requests.post(SWITCH_TO_MAINNET_URL, json=payload)
+    
+    data = _response.json()
+  
+    if _response.status_code == 200:
         c_response = challenge.response or {}
         c_response["main_net_response"] = data
         passing_details = {
@@ -96,11 +92,11 @@ def pass_miner_to_main_net(challenge : Challenge, total_profits : float):
         }
         return passing_details
 
-    # send_support_email(
-    #     subject=f"Switch from testnet to mainnet API call failed with status code: {_response.status_code}",
-    #     content=f"User {email} passed step {challenge.step} and phase {challenge.phase} "
-    #             f"but switch_to_mainnet Failed. Response from switch_to_mainnet api => {data}",
-    # )
+    send_support_email(
+        subject=f"Switch from testnet to mainnet API call failed with status code: {_response.status_code}",
+        content=f"User {email} passed step {challenge.step} and phase {challenge.phase} "
+                f"but switch_to_mainnet Failed. Response from switch_to_mainnet api => {data}",
+    )
     return {}
 
 def fail_miner_in_delta(db , challenge: Challenge ,total_profits : float):
@@ -119,12 +115,14 @@ def fail_miner_in_delta(db , challenge: Challenge ,total_profits : float):
     subject = "Phase 1 Challenge Failed"
     template_name = "ChallengeFailedPhase1.html"
 
-    # update_challenge(db, challenge, challenge_details)
-    # send_mail(email, subject=subject, template_name=template_name, context=context)
+    update_challenge(db, challenge, challenge_details)
+    send_mail(email, subject=subject, template_name=template_name, context=context)
+    
+    logger.info(f"{challenge.hot_key}  last status update : Miner Failed Success")
+
 
 def pass_miner_in_delta(db , challenge: Challenge ,total_profits : float ):
-    
-    logger.info(f"{challenge.hot_key}  last status update : Pass")
+
     challenge_details = pass_miner_to_main_net(challenge, total_profits  )
     name = challenge.user.name
     email = challenge.user.email
@@ -137,8 +135,8 @@ def pass_miner_in_delta(db , challenge: Challenge ,total_profits : float ):
         "trader_id": challenge_details["trader_id"],
     }
     
-    # update_challenge(db, challenge, challenge_details)
-    # send_mail(email, subject=subject, template_name=template_name, context=context)
+    update_challenge(db, challenge, challenge_details)
+    send_mail(email, subject=subject, template_name=template_name, context=context)
 
 def is_miner_eliminated(eliminations : list, hot_key : str) -> bool:
     
@@ -189,11 +187,13 @@ def monitor_testnet_challenges(test_net_positions, perf_ledgers , eliminations ,
                     pass_miner_in_delta(db , challenge ,total_profits  )
                 
 
+                
+
         logger.info("Finished monitor_challenges task")
     except Exception as e:
-        push_to_redis_queue(data=f"**Monitor Testnet Challenges** Testnet Monitoring - {e}",
-                            queue_name=ERROR_QUEUE_NAME)
-        logger.error(f"Error in monitor_challenges task testnet - {e}")
+        stack_trace = ''.join(traceback.format_exception(type(e), e, e.__traceback__))
+
+        logger.error(f"Error in Pass/Fail TestNet task - {stack_trace}")
 
 
 @celery_app.task(name='src.tasks.testnet_validator.testnet_validator')
