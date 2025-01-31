@@ -33,12 +33,14 @@ class TransactionUpdate(BaseModel):
 class TransactionUpdateDatabase(BaseModel):
     operation_type : str
     order_type : str 
-    cumulative_leverage : int
-    cumulative_stop_loss : int
-    cumulative_take_profit : int
+    cumulative_leverage : float
+    cumulative_stop_loss : float
+    cumulative_take_profit : float
+    stop_loss : float
+    take_profit : float
     status : Status
     old_status : Status
-    leverage : int
+    leverage : float
 
 
 

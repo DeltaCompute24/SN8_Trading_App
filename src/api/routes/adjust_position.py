@@ -60,6 +60,8 @@ async def adjust_position_endpoint(position_data: TransactionUpdate, db: AsyncSe
             order_type = position.order_type, 
             leverage = new_leverage,
             cumulative_leverage = leverage,
+            stop_loss = cumulative_stop_loss,
+            take_profit = cumulative_take_profit,
             cumulative_stop_loss = cumulative_stop_loss,
             cumulative_take_profit = cumulative_take_profit,
             status = Status.adjust_processing if position.status == Status.open else position.status,

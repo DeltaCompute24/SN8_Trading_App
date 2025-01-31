@@ -20,6 +20,13 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
         f"Initiating position for trader_id={position_data.trader_id} and trade_pair={position_data.trade_pair}")
 
     challenge = await check_get_challenge(db, position_data)
+    
+    if challenge.active == 0 and challenge.status == 'Failed':
+        logger.error("Cannot Trade on Failed Challenges")
+        raise HTTPException(status_code=400,
+                            detail="Cannot Trade on Failed Challenges")
+
+    
     position_data = validate_position(position_data)
     validate_leverage(position_data.asset_type, position_data.leverage)
 
