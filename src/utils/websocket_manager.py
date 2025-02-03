@@ -9,7 +9,7 @@ from throttler import Throttler
 from src.config import POLYGON_API_KEY, SIGNAL_API_KEY, SIGNAL_API_BASE_URL
 from src.utils.constants import forex_pairs, crypto_pairs, indices_pairs, stocks_pairs
 from src.utils.logging import setup_logging
-from src.utils.redis_manager import set_live_price
+from src.utils.redis_manager import set_live_price, set_quotes
 
 # Set the rate limit: max 10 requests per second
 throttler = Throttler(rate_limit=10, period=1.0)
@@ -25,7 +25,8 @@ class WebSocketManager:
         self.trade_pair = None
         self.reconnect_interval = 5  # seconds
         self._recv_lock = asyncio.Lock()  # Lock to ensure single access to recv
-        self.trade_pairs = []
+        self.aggregates = []
+        self.quotes = []
         self.pair_key = pair_key
 
     async def connect(self):
@@ -39,16 +40,14 @@ class WebSocketManager:
             await asyncio.sleep(self.reconnect_interval)
 
     async def listen_for_prices_multiple(self):
-        print(self.trade_pairs, self.asset_type, self.websocket)
-        print("Listening for prices multiple inside fubnc   ")
-        if not self.trade_pairs or not self.asset_type:
+        if not self.quotes or not self.asset_type:
             logger.error(
                 "WebSocket, trade pairs, or asset type is not set. Please set them before calling this method.")
             return
         try:
             logger.info(f"Starting to listen for prices multiple {self.asset_type}...")
             await self.connect()
-            await self.subscribe_multiple(self.trade_pairs)
+            await self.manage_subscriptions('subscribe')
             await self.receive_and_log()
         except Exception as e:
             print(f"WebSocket error: {e}. Reconnecting...")
@@ -68,15 +67,20 @@ class WebSocketManager:
         else:
             raise Exception("WebSocket authentication failed")
 
-    async def subscribe_multiple(self, trade_pairs: List[str]):
-        subscribe_message = {
-            "action": "subscribe",
-            "params": ",".join(trade_pairs)
+    async def manage_subscriptions(self, action : str):
+        subscribe_aggregates = {
+            "action": action,
+            "params": ",".join(self.aggregates)
+        }
+        subscribe_quotes = {
+            "action": action,
+            "params": ",".join(self.quotes)
         }
         async with throttler:
-            await self.websocket.send(json.dumps(subscribe_message))
+            await self.websocket.send(json.dumps(subscribe_aggregates))
+            await self.websocket.send(json.dumps(subscribe_quotes))
         response = await self.websocket.recv()
-        logger.info(f"Subscription response: {response}")
+        logger.info(f"{action} response: {response}")
 
     async def receive_and_log(self):
         print("Displaying prices for all trade pairs...")
@@ -87,16 +91,19 @@ class WebSocketManager:
 
                 for item in data:
 
-                    if item.get("ev") not in ["CAS", "XAS", "A"]:
+                    if item.get("ev") not in ["CAS", "XAS", "A", "XQ"]:
                         print(f"Skipping non-CAS event: {item}")
                         continue
                    
                     trade_pair = item.pop(self.pair_key, None)
-                    item.pop("ev", None)
+                    ev_type = item.pop("ev", None)
 
                     try:
-                        trade_pair = trade_pair.replace("-", "").replace("/", "") if "-" in trade_pair or "/" in trade_pair else trade_pair
-                        set_live_price(trade_pair, item)
+                        trade_pair = trade_pair.translate(str.maketrans('', '', '-/'))
+                        if 'Q' in ev_type:
+                            set_quotes(trade_pair, item)
+                        else:
+                            set_live_price(trade_pair, item)
                     except Exception as e:
                         print(f"Failed to add to Redis: {e}")
             except Exception as e:
@@ -105,15 +112,6 @@ class WebSocketManager:
                 await asyncio.sleep(self.reconnect_interval)
                 await self.listen_for_prices_multiple()
 
-    async def unsubscribe_multiple(self):
-        unsubscribe_message = {
-            "action": "unsubscribe",
-            "params": ",".join(self.trade_pairs)
-        }
-        async with throttler:
-            await self.websocket.send(json.dumps(unsubscribe_message))
-        response = await self.websocket.recv()
-        logger.info(f"Unsubscription response: {response}")
 
     async def submit_trade(self, trader_id, trade_pair, order_type, leverage):
         signal_api_url = SIGNAL_API_BASE_URL.format(id=trader_id)
@@ -152,44 +150,43 @@ class WebSocketManager:
 class ForexWebSocketManager(WebSocketManager):
     def __init__(self):
         super().__init__("forex", 'pair')
-        self.trade_pairs = [self.format_pair_updated(pair) for pair in forex_pairs]
+        self.aggregates = [self.format_aggregates(pair) for pair in forex_pairs]
+        self.quotes = [self.format_quotes(pair) for pair in forex_pairs]
 
-    def format_pair_updated(self, pair):
+    def format_aggregates(self, pair):
         return f"CAS.{pair[:-3]}/{pair[-3:]}"
 
-
+    def format_quotes(self, pair):
+        return f"C.{pair[:-3]}/{pair[-3:]}"
+    
 class CryptoWebSocketManager(WebSocketManager):
     def __init__(self):
         super().__init__("crypto", 'pair')
-        self.trade_pairs = [self.format_pair_updated(pair) for pair in crypto_pairs]
-
-    def format_pair_updated(self, pair):
+        self.aggregates = [self.format_aggregates(pair) for pair in crypto_pairs]
+        self.quotes = [self.format_quotes(pair) for pair in crypto_pairs]
+    
+    def format_aggregates(self, pair):
         return f"XAS.{pair[:-3]}-{pair[-3:]}"
 
-
-class IndicesWebSocketManager(WebSocketManager):
-    def __init__(self):
-        super().__init__("indices", 'pair')
-        self.trade_pairs = [self.format_pair_updated(pair) for pair in indices_pairs]
-
-    def format_pair_updated(self, pair):
-        prefix = "A."
-        if pair in ["SPX", "DJI", "FTSE", "GDAXI", "VIX", "NDX"]:
-            formatted_pair = pair
-        else:
-            formatted_pair = f"{pair[:-3]}-{pair[-3:]}"
-        return f"{prefix}{formatted_pair}"
+    def format_quotes(self, pair):
+        return f"XQ.{pair[:-3]}-{pair[-3:]}"
 
 
 class StocksWebSocketManager(WebSocketManager):
     def __init__(self):
         super().__init__("stocks", 'sym')
-        self.trade_pairs = [f"A.{pair}" for pair in stocks_pairs]
+        self.aggregates = [f"A.{pair}" for pair in stocks_pairs]
+        self.quotes = [self.format_quotes(pair) for pair in stocks_pairs]
 
+    def format_quotes(self, pair):
+        return f"Q.{pair}"
+    
+    
+crypto_websocket_manager = CryptoWebSocketManager()
 
 websocket_manager = WebSocketManager("forex", 'pair')
 
 forex_websocket_manager = ForexWebSocketManager()
-crypto_websocket_manager = CryptoWebSocketManager()
+
 stocks_websocket_manager = StocksWebSocketManager()
 

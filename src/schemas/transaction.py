@@ -12,8 +12,8 @@ class TransactionBase(BaseModel):
     trailing: Optional[bool] = False
     stop_loss: Optional[float]
     take_profit: Optional[float]
-    entry_price: Optional[float] = 0.0
-    limit_order: Optional[float] = 0.0
+    entry_price: Optional[float] = 0.0 #in Dollars, used as a fixed point
+    limit_order: Optional[float] = 0.0 #In percentage, used for trailing
     order_type: str
 
 
@@ -41,7 +41,47 @@ class TransactionUpdateDatabase(BaseModel):
     status : Status
     old_status : Status
     leverage : float
-
+    
+    
+class TransactionUpdateDatabaseGen(BaseModel):
+    
+    trader_id: Optional[int] = None
+    trade_pair: Optional[str] = None
+    leverage: Optional[float] = None
+    asset_type: Optional[str] = None
+    trailing: Optional[bool] = False
+    stop_loss: Optional[float] = None
+    take_profit: Optional[float] = None
+    limit_order: Optional[float] = 0.0 #In percentage, used for trailing
+    order_type: Optional[str] = None
+    order_id: Optional[int] = None
+    open_time: Optional[datetime] = None
+    initial_price: Optional[float] = None
+    entry_price: Optional[float] = None
+    operation_type: Optional[str] = None
+    cumulative_leverage: Optional[float] = None
+    cumulative_stop_loss: Optional[float] = None
+    cumulative_take_profit: Optional[float] = None
+    average_entry_price: Optional[float] = None
+    cumulative_order_type: Optional[str] = None
+    status: Optional[str] = None
+    old_status: Optional[str] = None
+    adjust_time: Optional[datetime] = None
+    close_time: Optional[datetime] = None
+    close_price: Optional[float] = None
+    profit_loss: Optional[float] = None
+    profit_loss_without_fee: Optional[float] = None
+    max_profit_loss: Optional[float] = None
+    fee: Optional[float] = None
+    position_id: Optional[int] = None
+    trade_order: Optional[int] = None
+    min_price: Optional[float] = None
+    max_price: Optional[float] = None
+    uuid: Optional[str] = None
+    hot_key: Optional[str] = None
+    modified_by: Optional[str] = None
+    upward: Optional[float] = None
+    source: Optional[str] = None
 
 
 class Transaction(TransactionBase):

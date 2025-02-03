@@ -14,6 +14,9 @@ class Status(str, Enum):
     adjust_processing = "ADJUST-PROCESSING"
     close_processing = "CLOSE-PROCESSING"
 
+class OrderType(str, Enum):
+    sell = "SHORT"
+    buy = "LONG"
 
 class Transaction(Base):
     __tablename__ = "transactions"

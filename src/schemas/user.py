@@ -20,6 +20,7 @@ class FirebaseUserBase(BaseModel):
     email: Optional[str] = None
     name: Optional[str] = None
     username: Optional[str] = None
+    account_type: Optional[str] = None
     favorite_trade_pairs: List[str] = Field(default_factory=list)
 
     model_config = ConfigDict(
@@ -107,6 +108,7 @@ class FirebaseUserRead(FirebaseUserBase):
     name: Optional[str]
     username: Optional[str]
     email: Optional[str]
+    
     created_at: datetime
     updated_at: datetime
     challenges: list[ChallengeRead] = []

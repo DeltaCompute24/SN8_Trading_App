@@ -35,9 +35,7 @@ def check_all_returns_passing_criteria( positions : list) -> Tuple[bool, float]:
     
     for position in positions:
         if not position["is_closed_position"]: continue
-        profit_loss = (position["return_at_close"] * 100) - 100
-        if profit_loss >= REALIZED_RETURNS_LIMIT : return False,0
-        
+        profit_loss = (position["return_at_close"] * 100) - 100 
         close_time = datetime.fromtimestamp(position.get("close_ms") / 1000)
         if close_time > cutoff_time:
             one_day_realized_returns += profit_loss
@@ -158,27 +156,25 @@ def monitor_testnet_challenges(test_net_positions, perf_ledgers , eliminations ,
                 p_content = test_net_positions.get(hot_key)
                 l_content = perf_ledgers.get(hot_key)
                 is_eliminated = is_miner_eliminated(eliminations , hot_key)
-               
                 logger.info(f"{challenge.hot_key}  Running Checks")
 
                 
                 if l_content and is_eliminated:
                     #Miner Already Failed in TestNet, So Fail in Delta 
-                    logger.info(f"{challenge.hot_key}  last status update : Fail")
+                    logger.info(f"{challenge.hot_key}  checking if Eliminated")
 
                     fail_miner_in_delta(db, challenge , 0)
-                        
-                elif hot_key in challenge_period.get("success"):
-                    logger.info(f"{challenge.hot_key}  last status update : Pass")
-
-                    #Miner Already Passed in TestNet, So Pass in Delta 
-                    pass_miner_in_delta(db , challenge ,0 )
                 
-                elif hot_key in challenge_period.get("testing"):
-                    logger.info(f"{challenge.hot_key}  last status update : Teting")
-
-                    #hot key in positions
-                    if not p_content: continue
+                elif l_content:
+                    #Checking Miners Most Recent Drawdown
+                    logger.info(f"{challenge.hot_key} checking mdd in ledgers")
+                    cps = l_content.get('cps',[])
+                    most_recent_drawdown = cps[0]['mdd'] if cps else 0
+                    if most_recent_drawdown > 5:
+                        fail_miner_in_delta(db, challenge , 0)
+                    
+                elif p_content and (hot_key in challenge_period.get("success") or hot_key in challenge_period.get("testing")) :
+                    logger.info(f"{challenge.hot_key}  last status update : Testing or Success")
                     positions = p_content.get("positions")
                     is_passing,  total_profits = is_miner_passing_all_screening_criterias(positions)
                     if not is_passing : continue

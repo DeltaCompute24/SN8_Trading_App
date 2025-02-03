@@ -33,3 +33,7 @@ class RedisPosition(BaseModel):
             closed=data[9]
            
         )
+
+class RedisQuotesData(BaseModel):
+    bp: float = Field(..., description="Bid /BUY price")
+    ap: float = Field(..., description="Ask / SELL price")

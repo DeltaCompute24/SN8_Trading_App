@@ -7,8 +7,9 @@ from sqlalchemy.sql import func
 from fastapi import HTTPException, status
 from src.models.transaction import Transaction,Status 
 from src.schemas.monitored_position import MonitoredPositionCreate
-from src.schemas.transaction import TransactionCreate , TransactionUpdate , TransactionUpdateDatabase
+from src.schemas.transaction import TransactionCreate , TransactionUpdate , TransactionUpdateDatabase , TransactionUpdateDatabaseGen
 from sqlalchemy.orm import Session
+from typing import List
 
 async def create_transaction(db: AsyncSession, transaction_data: TransactionCreate, entry_price: float,
                              operation_type: str, initial_price: float, position_id: int = None,
@@ -249,6 +250,31 @@ async def update_transaction_async(
             detail=f"Could not update payout: {str(e)}"
         )
 
+
+def update_transaction_sync_gen(
+        db: Session,
+        transaction : Transaction,
+        updated_values : TransactionUpdateDatabaseGen
+):
+    """
+    Update a transaction record with provided values status.
+    
+    """
+    for key, value in updated_values.model_dump(exclude_unset=True).items():
+            setattr(transaction, key, value)
+    
+    try:
+        db.commit()
+        db.refresh(transaction)
+        return transaction
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Could not update payout: {str(e)}"
+        )
+        
+        
 async def update_monitored_positions(db: AsyncSession, position_data: MonitoredPositionCreate):
     await db.execute(
         text("""
@@ -323,3 +349,37 @@ async def get_non_closed_position(db: AsyncSession, trader_id: int, trade_pair: 
         ).order_by(Transaction.trade_order.desc())
     )
     return transaction
+
+
+def get_SLTP_pending_positions(db: Session) -> List[Transaction]:
+    """Get all SLTP_pending_positions positions with proper async handling"""
+   
+    # Base query for all statuses
+    base_query = select(Transaction)
+    
+    # Combine conditions using OR for different status types
+    status_conditions = or_(
+    
+            and_(
+                Transaction.status.in_([Status.open, Status.adjust_processing]),
+                
+                or_(    
+                    and_(    Transaction.cumulative_take_profit.isnot(None),
+                            Transaction.cumulative_take_profit != 0),
+                    
+                    and_(
+                            Transaction.cumulative_stop_loss.isnot(None),
+                            Transaction.cumulative_stop_loss != 0),
+                    )
+                
+            ),
+            # For PENDING, no additional conditions needed
+            Transaction.status == Status.pending
+        )
+    
+    # Apply the combined conditions
+    query = base_query.where(status_conditions)
+    
+    result = db.execute(query)
+    positions = result.scalars().unique().all()
+    return positions
