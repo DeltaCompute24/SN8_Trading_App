@@ -1,12 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-
 from src.database import get_db
-from src.schemas.monitored_position import MonitoredPositionCreate
-from src.schemas.transaction import TransactionCreate, TradeResponse
-from src.services.trade_service import create_transaction, update_monitored_positions, get_non_closed_position
+from src.schemas.transaction import TransactionCreate, TradeResponse ,Transaction
+from src.models.transaction import Status , OrderType
+from src.services.trade_service import create_transaction, get_non_closed_position
 from src.utils.logging import setup_logging
-from src.utils.redis_manager import get_live_price
+from src.utils.redis_manager import  get_bid_ask_price
 from src.utils.websocket_manager import websocket_manager
 from src.validations.position import validate_position, validate_leverage, check_get_challenge
 
@@ -14,12 +13,19 @@ logger = setup_logging()
 router = APIRouter()
 
 
-@router.post("/initiate-position/", response_model=TradeResponse)
+@router.post("/initiate-position/", response_model=Transaction)
 async def initiate_position(position_data: TransactionCreate, db: AsyncSession = Depends(get_db)):
     logger.info(
         f"Initiating position for trader_id={position_data.trader_id} and trade_pair={position_data.trade_pair}")
 
     challenge = await check_get_challenge(db, position_data)
+    
+    if challenge.active == 0 and challenge.status == 'Failed':
+        logger.error("Cannot Trade on Failed Challenges")
+        raise HTTPException(status_code=400,
+                            detail="Cannot Trade on Failed Challenges")
+
+    
     position_data = validate_position(position_data)
     validate_leverage(position_data.asset_type, position_data.leverage)
 
@@ -31,7 +37,7 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
 
     try:
         upward = -1
-        status = "PROCESSING"
+        status = Status.processing
         entry_price = position_data.entry_price
         limit_order = position_data.limit_order
 
@@ -48,6 +54,8 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
         hot_key = ""
         average_entry_price = 0.0
         first_price = 0
+        new_entry_price = 0
+        
         # If entry_price == 0, it is empty then status will be "OPEN" so we can submit trade
         if (not entry_price or entry_price == 0) and (not limit_order or limit_order == 0):
             # Submit the trade and wait for confirmation
@@ -59,24 +67,33 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
             logger.info("Trade submitted successfully")
           
         else:
-            status = "PENDING"
-            first_price = get_live_price(position_data.trade_pair)
-
-            if first_price in [0,None]:
+            status = Status.pending
+            quotes = get_bid_ask_price(position_data.trade_pair)
+            #Case 1 : user provided entry price
+            new_entry_price = position_data.entry_price 
+            
+            if not quotes.ap or not quotes.bp:
                 logger.error("Failed to fetch current price for the trade pair. Market Data not available")
                 raise HTTPException(status_code=500, detail="Failed to fetch current price for the trade pair,Market Data not available")
-
-        initial_price = first_price
-        if entry_price not in [None, 0 , first_price]:
-            # upward: 1, downward: 0
-            upward = 1 if entry_price > first_price else 0
-            first_price = entry_price
-            status = "PENDING"
+            
+            first_price = quotes.ap if position_data.order_type == OrderType.sell else quotes.bp
+            
+            #Case 2: Limit Order Set, Ovverrides Entry Price
+            if position_data.limit_order and first_price:
+                if position_data.order_type == OrderType.buy:        
+                    entry_price_decrement = (first_price * (position_data.limit_order / 100))
+                    new_entry_price = first_price +  entry_price_decrement
+                    
+            
+                elif position_data.order_type == OrderType.sell:
+                    entry_price_increment = (first_price * (position_data.limit_order/ 100))
+                    new_entry_price = first_price -  entry_price_increment
+    
 
         # Create the transaction with the first received price
-        new_transaction = await create_transaction(db, position_data, entry_price=first_price,
+        new_transaction = await create_transaction(db, position_data, entry_price=new_entry_price,
                                                    order_type=position_data.order_type,
-                                                   initial_price=initial_price, operation_type="initiate",
+                                                   initial_price=first_price, operation_type="initiate",
                                                    status=status, upward=upward, old_status=status,
                                                    modified_by=str(position_data.trader_id),
                                                    average_entry_price=average_entry_price,
@@ -90,27 +107,12 @@ async def initiate_position(position_data: TransactionCreate, db: AsyncSession =
                                                    order_level=len_order,
                                                    max_profit_loss=profit_loss,
                                                    limit_order=limit_order,
+                                                   
                                                    )
 
-        # Create MonitoredPositionCreate data
-        monitored_position_data = MonitoredPositionCreate(
-            position_id=new_transaction.position_id,
-            order_id=new_transaction.trade_order,
-            trader_id=new_transaction.trader_id,
-            trade_pair=new_transaction.trade_pair,
-            cumulative_leverage=new_transaction.cumulative_leverage,
-            cumulative_order_type=new_transaction.cumulative_order_type,
-            cumulative_stop_loss=new_transaction.cumulative_stop_loss,
-            cumulative_take_profit=new_transaction.cumulative_take_profit,
-            asset_type=new_transaction.asset_type,
-            entry_price=new_transaction.entry_price,
-        )
-
-        # Update the monitored_positions table
-        await update_monitored_positions(db, monitored_position_data)
 
         logger.info(f"Position initiated successfully with entry price {first_price}")
-        return TradeResponse(message="Position initiated successfully")
+        return new_transaction
 
     except Exception as e:
         logger.error(f"Error initiating position: {e}")

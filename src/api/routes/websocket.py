@@ -5,7 +5,7 @@ from typing import List
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from src.utils.constants import POSITIONS_TABLE
+from src.utils.constants import POSITIONS_TABLE ,REDIS_LIVE_QUOTES_TABLE , STOP_LOSS_POSITIONS_TABLE
 from src.utils.redis_manager import get_hash_values
 
 router = APIRouter()
@@ -51,7 +51,15 @@ class ConnectionManager:
                 break
             try:
                 current_prices = get_hash_values() or {}
-                prices_dict = {k: json.loads(v) for k, v in current_prices.items()}
+                current_quotes = get_hash_values( REDIS_LIVE_QUOTES_TABLE)
+                # Parse both JSON strings and merge
+                prices_dict = {
+                        k: {
+                            **json.loads(v), 
+                            **json.loads(current_quotes.get(k, '{}'))
+                        } for k, v in current_prices.items()
+                    }
+                    
                 await self.broadcast(json.dumps({"type": "prices", "data": prices_dict}))
             except Exception as e:
                 print(f"Error fetching prices: {e}")
@@ -59,14 +67,14 @@ class ConnectionManager:
 
     async def broadcast_positions(self):
         while True:
-            if not self.active_connections:
+            if not self.active_connections:\
                 # No active connections, stop broadcasting
                 break
             try:
                 positions = get_hash_values(POSITIONS_TABLE)
+                positions_with_stop_loss = get_hash_values(STOP_LOSS_POSITIONS_TABLE)
                 positions_dict = {}
                 for key, value in positions.items():
-
                     value = value.strip('"')  # Remove outer quotes
                     value = json.loads(value)  # Parse the JSON string
                     
@@ -79,7 +87,8 @@ class ConnectionManager:
                         "entry_price": value[1],
                         "profit_loss": value[2],
                         "profit_loss_without_fee": value[3],
-                        "is_closed" : value[-1]
+                        "is_closed" : value[-1],
+                        "stop_loss" : json.loads(positions_with_stop_loss.get(key, "0"))
                     }
                 await self.broadcast(json.dumps({"type": "positions", "data": positions_dict}))
             except Exception as e:

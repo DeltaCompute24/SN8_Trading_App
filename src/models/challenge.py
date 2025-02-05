@@ -30,6 +30,7 @@ class Challenge(Base):
     response = Column(JSON, nullable=True)
     message = Column(String, nullable=False)
     hotkey_status = Column(String, nullable=False)
+    admin_status = Column(String, nullable=False, default='pass')
 
     # Foreign key to reference the FirebaseUser
     user_id = Column(Integer, ForeignKey("firebase_users.id"))
@@ -45,3 +46,4 @@ class Challenge(Base):
 
     # Many-to-one relationship with Tournament
     tournament = relationship("Tournament", back_populates="challenges")
+

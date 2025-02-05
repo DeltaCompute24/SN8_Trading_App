@@ -59,10 +59,21 @@ jobs:
           docker push 288792505174.dkr.ecr.us-east-1.amazonaws.com/defi-backend-celery_worker:latest
           docker push 288792505174.dkr.ecr.us-east-1.amazonaws.com/defi-backend-celery_beat:latest
 
-      # Force new deployment
+      - name: Update ECS task definition
+        run: |
+          # Get current task definition and remove invalid fields
+          TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition Defi-Backend --query 'taskDefinition')
+          echo "$TASK_DEFINITION" | jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)' > task-definition.json
+
+          # Register new task definition revision
+          aws ecs register-task-definition --cli-input-json file://task-definition.json
+          NEW_TASK_ARN=$(aws ecs describe-task-definition --task-definition Defi-Backend --query 'taskDefinition.taskDefinitionArn' --output text)
+          echo "NEW_TASK_ARN=$NEW_TASK_ARN" >> $GITHUB_ENV
+
       - name: Deploy ECS task
         run: |
           aws ecs update-service \
             --cluster arn:aws:ecs:us-east-1:288792505174:cluster/DefiTradingCluster \
             --service Defi-Backend \
+            --task-definition "$NEW_TASK_ARN" \
             --force-new-deployment

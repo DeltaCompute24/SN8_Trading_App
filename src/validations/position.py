@@ -75,6 +75,7 @@ def validate_leverage(asset_type, leverage):
 async def check_get_challenge(db: AsyncSession, position_data):
     challenge = get_challenge(position_data.trader_id)
 
+
     if not challenge.tournament_id:
         return challenge
 

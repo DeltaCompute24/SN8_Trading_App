@@ -32,6 +32,7 @@ class FirebaseUser(Base):
         back_populates="generated_by",
         cascade="all, delete"
     )
+    notifications = relationship("Notification", back_populates="user")
     
     favorite_trade_pairs: Mapped[List[str]] = Column(ARRAY(String), default=list)
     

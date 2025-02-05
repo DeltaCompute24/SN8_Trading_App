@@ -4,11 +4,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.sql import and_, or_, text
 from sqlalchemy.sql import func
-
-from src.models.transaction import Transaction
+from fastapi import HTTPException, status
+from src.models.transaction import Transaction,Status 
 from src.schemas.monitored_position import MonitoredPositionCreate
-from src.schemas.transaction import TransactionCreate
-
+from src.schemas.transaction import TransactionCreate , TransactionUpdate , TransactionUpdateDatabase , TransactionUpdateDatabaseGen
+from sqlalchemy.orm import Session
+from typing import List
 
 async def create_transaction(db: AsyncSession, transaction_data: TransactionCreate, entry_price: float,
                              operation_type: str, initial_price: float, position_id: int = None,
@@ -134,6 +135,146 @@ async def close_transaction(
     await db.commit()
 
 
+def close_transaction_sync(
+        db: Session, order_id, trader_id, close_price: float = None,
+        profit_loss: float = None, old_status: str = "", order_level: int = 0,
+        profit_loss_without_fee: float = 0.0, taoshi_profit_loss: float = 0.0,
+        taoshi_profit_loss_without_fee: float = 0.0, average_entry_price: float = 0.0,
+        operation_type="close", status="CLOSED",
+):
+    close_time = datetime.utcnow()
+    statement = text("""
+            UPDATE transactions
+            SET operation_type = :operation_type, 
+                status = :status, 
+                old_status = :old_status,
+                close_time = :close_time, 
+                close_price = :close_price,
+                profit_loss = :profit_loss,
+                modified_by = :modified_by,
+                order_level = :order_level,
+                profit_loss_without_fee = :profit_loss_without_fee,
+                taoshi_profit_loss = :taoshi_profit_loss,
+                taoshi_profit_loss_without_fee = :taoshi_profit_loss_without_fee,
+                average_entry_price = :average_entry_price
+            WHERE order_id = :order_id
+        """)
+
+    db.execute(
+        statement,
+        {
+            "operation_type": operation_type,
+            "status": status,
+            "old_status": old_status,
+            "close_time": close_time,
+            "close_price": close_price,
+            "profit_loss": profit_loss,
+            "order_id": order_id,
+            "modified_by": "monitor_position_sync",
+            "order_level": order_level,
+            "profit_loss_without_fee": profit_loss_without_fee,
+            "taoshi_profit_loss": taoshi_profit_loss,
+            "taoshi_profit_loss_without_fee": taoshi_profit_loss_without_fee,
+            "average_entry_price": average_entry_price,
+        }
+    )
+    db.commit()
+
+
+def update_transaction_sync(
+        db: Session,
+        order_id: int,
+        trader_id: int,
+        entry_price: float,
+        old_status: str,
+        status: str,
+):
+    """
+    Update a transaction record with processing status.
+    
+    Args:
+        db: Session - database session
+        order_id: int - ID of the order to update
+        trader_id: int - ID of the trader
+        entry_price: float - entry price for the position
+        old_status: str - previous status of the transaction
+        status: str - new status to set
+    """
+    open_time = datetime.utcnow()
+    
+    statement = text("""
+            UPDATE transactions
+            SET status = :status, 
+                old_status = :old_status,
+                open_time = :open_time, 
+                entry_price = :entry_price,
+                modified_by = :modified_by
+            WHERE order_id = :order_id
+            AND trader_id = :trader_id
+        """)
+
+    db.execute(
+        statement,
+        {
+            "status": status,
+            "old_status": old_status,
+            "open_time": open_time,
+            "entry_price": entry_price,
+            "order_id": order_id,
+            "trader_id": trader_id,
+            "modified_by": "monitor_position_sync",
+        }
+    )
+    db.commit()
+    
+async def update_transaction_async(
+        db: Session,
+        transaction : Transaction,
+        updated_values : TransactionUpdateDatabase
+):
+    """
+    Update a transaction record with provided values status.
+    
+    """
+    for key, value in updated_values.model_dump(exclude_unset=True).items():
+            setattr(transaction, key, value)
+
+    try:
+        await db.commit()
+        await db.refresh(transaction)
+        return transaction
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Could not update payout: {str(e)}"
+        )
+
+
+def update_transaction_sync_gen(
+        db: Session,
+        transaction : Transaction,
+        updated_values : TransactionUpdateDatabaseGen
+):
+    """
+    Update a transaction record with provided values status.
+    
+    """
+    for key, value in updated_values.model_dump(exclude_unset=True).items():
+            setattr(transaction, key, value)
+    
+    try:
+        db.commit()
+        db.refresh(transaction)
+        return transaction
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Could not update payout: {str(e)}"
+        )
+        
+        
 async def update_monitored_positions(db: AsyncSession, position_data: MonitoredPositionCreate):
     await db.execute(
         text("""
@@ -167,13 +308,13 @@ async def update_monitored_positions(db: AsyncSession, position_data: MonitoredP
     await db.commit()
 
 
-async def get_open_position(db: AsyncSession, trader_id: int, trade_pair: str):
+async def get_open_or_adjusted_position(db: AsyncSession, trader_id: int, trade_pair: str):
     open_transaction = await db.scalar(
         select(Transaction).where(
             and_(
                 Transaction.trader_id == trader_id,
                 Transaction.trade_pair == trade_pair,
-                Transaction.status == "OPEN"
+                Transaction.status.in_([Status.open, Status.adjust_processing])
             )
         ).order_by(Transaction.trade_order.desc())
     )
@@ -187,8 +328,9 @@ async def get_latest_position(db: AsyncSession, trader_id: int, trade_pair: str)
                 Transaction.trader_id == trader_id,
                 Transaction.trade_pair == trade_pair,
                 or_(
-                    Transaction.status == "OPEN",
-                    Transaction.status == "PENDING",
+                    Transaction.status == Status.open,
+                    Transaction.status == Status.pending,
+                    Transaction.status == Status.adjust_processing
                 )
             )
         ).order_by(Transaction.trade_order.desc())
@@ -207,3 +349,37 @@ async def get_non_closed_position(db: AsyncSession, trader_id: int, trade_pair: 
         ).order_by(Transaction.trade_order.desc())
     )
     return transaction
+
+
+def get_SLTP_pending_positions(db: Session) -> List[Transaction]:
+    """Get all SLTP_pending_positions positions with proper async handling"""
+   
+    # Base query for all statuses
+    base_query = select(Transaction)
+    
+    # Combine conditions using OR for different status types
+    status_conditions = or_(
+    
+            and_(
+                Transaction.status.in_([Status.open, Status.adjust_processing]),
+                
+                or_(    
+                    and_(    Transaction.cumulative_take_profit.isnot(None),
+                            Transaction.cumulative_take_profit != 0),
+                    
+                    and_(
+                            Transaction.cumulative_stop_loss.isnot(None),
+                            Transaction.cumulative_stop_loss != 0),
+                    )
+                
+            ),
+            # For PENDING, no additional conditions needed
+            Transaction.status == Status.pending
+        )
+    
+    # Apply the combined conditions
+    query = base_query.where(status_conditions)
+    
+    result = db.execute(query)
+    positions = result.scalars().unique().all()
+    return positions

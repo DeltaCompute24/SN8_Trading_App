@@ -24,7 +24,9 @@ indices_pairs = [
 
 # ----------------------------- REDIS CONSTANTS --------------------------------
 REDIS_LIVE_PRICES_TABLE = 'polygon_prices'
+REDIS_LIVE_QUOTES_TABLE = 'polygon_quotes'
 POSITIONS_TABLE = 'positions'
+STOP_LOSS_POSITIONS_TABLE = 'sl_positions'
 OPERATION_QUEUE_NAME = 'db_operations_queue'
 ERROR_QUEUE_NAME = 'errors'
 TOURNAMENT = 'tournament_score'
