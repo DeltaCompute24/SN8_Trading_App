@@ -88,7 +88,7 @@ class ConnectionManager:
                         "profit_loss": value[2],
                         "profit_loss_without_fee": value[3],
                         "is_closed" : value[-1],
-                        "stop_loss" : positions_with_stop_loss.get(key, 0)
+                        "stop_loss" : json.loads(positions_with_stop_loss.get(key, "0"))
                     }
                 await self.broadcast(json.dumps({"type": "positions", "data": positions_dict}))
             except Exception as e:

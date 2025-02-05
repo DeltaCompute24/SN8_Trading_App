@@ -19,9 +19,10 @@ logger = setup_logging()
 
 
 class WebSocketManager:
-    def __init__(self, asset_type, pair_key):
+    def __init__(self, asset_type, pair_key, alt_pair_key):
         self.websocket = None
         self.asset_type = asset_type
+        self.alt_pair_key = alt_pair_key
         self.trade_pair = None
         self.reconnect_interval = 5  # seconds
         self._recv_lock = asyncio.Lock()  # Lock to ensure single access to recv
@@ -91,17 +92,17 @@ class WebSocketManager:
 
                 for item in data:
 
-                    if item.get("ev") not in ["CAS", "XAS", "A", "XQ"]:
+                    if item.get("ev") not in ["CAS", "XAS", "A", "XQ","C", "Q"]:
                         print(f"Skipping non-CAS event: {item}")
                         continue
-                   
-                    trade_pair = item.pop(self.pair_key, None)
+                    
+                    trade_pair = item.pop(self.pair_key, None) or item.pop(self.alt_pair_key, None)
                     ev_type = item.pop("ev", None)
 
                     try:
                         trade_pair = trade_pair.translate(str.maketrans('', '', '-/'))
-                        if 'Q' in ev_type:
-                            set_quotes(trade_pair, item)
+                        if not 'A' in ev_type:
+                            set_quotes(trade_pair, item , format= True  if self.alt_pair_key == 'p' else False)
                         else:
                             set_live_price(trade_pair, item)
                     except Exception as e:
@@ -149,7 +150,7 @@ class WebSocketManager:
 
 class ForexWebSocketManager(WebSocketManager):
     def __init__(self):
-        super().__init__("forex", 'pair')
+        super().__init__("forex", 'pair', 'p')
         self.aggregates = [self.format_aggregates(pair) for pair in forex_pairs]
         self.quotes = [self.format_quotes(pair) for pair in forex_pairs]
 
@@ -161,7 +162,7 @@ class ForexWebSocketManager(WebSocketManager):
     
 class CryptoWebSocketManager(WebSocketManager):
     def __init__(self):
-        super().__init__("crypto", 'pair')
+        super().__init__("crypto", 'pair', 'pair')
         self.aggregates = [self.format_aggregates(pair) for pair in crypto_pairs]
         self.quotes = [self.format_quotes(pair) for pair in crypto_pairs]
     
@@ -174,7 +175,7 @@ class CryptoWebSocketManager(WebSocketManager):
 
 class StocksWebSocketManager(WebSocketManager):
     def __init__(self):
-        super().__init__("stocks", 'sym')
+        super().__init__("stocks", 'sym' , 'sym')
         self.aggregates = [f"A.{pair}" for pair in stocks_pairs]
         self.quotes = [self.format_quotes(pair) for pair in stocks_pairs]
 
@@ -184,7 +185,7 @@ class StocksWebSocketManager(WebSocketManager):
     
 crypto_websocket_manager = CryptoWebSocketManager()
 
-websocket_manager = WebSocketManager("forex", 'pair')
+websocket_manager = WebSocketManager("forex", 'pair', 'p')
 
 forex_websocket_manager = ForexWebSocketManager()
 

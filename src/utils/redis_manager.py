@@ -51,10 +51,14 @@ def set_live_price(key: str, value: dict):
     """
     redis_client.hset(REDIS_LIVE_PRICES_TABLE, key, json.dumps(value))
 
-def set_quotes(key: str, value: dict):
+def set_quotes(key: str, value: dict , format = False):
     """
     set the key, value against a hash set, preserving the types in value object
     """
+    if format:
+        value['bp'] = value.get('b')
+        value['ap'] = value.get('a')
+    
     redis_client.hset(REDIS_LIVE_QUOTES_TABLE, key, json.dumps(value))
 
 

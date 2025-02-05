@@ -89,16 +89,17 @@ def check_stop_loss(trailing, stop_loss, profit_loss) -> bool:
 
 
 def update_stop_loss(db , new_trailing_stop_loss : float , position : Transaction , new_entry_price : float):
-        print(f"{new_trailing_stop_loss} {position.entry_price} {new_entry_price}")
         new_trailing_stop_loss_percent = (new_trailing_stop_loss / position.entry_price) * 100
         position.stop_loss = new_trailing_stop_loss_percent
         position.cumulative_stop_loss =  position.stop_loss
         
+        # NotificationService.save_notification(db, position , f" {position.trader_id} - {position.trade_pair} - {position.order_type} Trail SL: {new_trailing_stop_loss_percent}, E: {position.entry_price} - NE: {new_entry_price}"  )
         set_hash_value(f'{position.trade_pair}-{position.trader_id}',new_trailing_stop_loss_percent ,STOP_LOSS_POSITIONS_TABLE  )
         update_transaction_gen(db , position , { "stop_loss" : new_trailing_stop_loss_percent , 
                                                 "cumulative_stop_loss" : new_trailing_stop_loss_percent,
                                                 "entry_price" : new_entry_price
-                                                })
+                                            })
+
 
 
 def update_trailing_stop_loss(db , position : Transaction) -> bool:
@@ -108,7 +109,6 @@ def update_trailing_stop_loss(db , position : Transaction) -> bool:
     
     quotes = get_bid_ask_price(position.trade_pair)
     if quotes.ap == 0.0 or quotes.bp == 0.0 : return
-    logger.info(f"Trade-Pair {position.trade_pair} bp {quotes.ap} ap: {quotes.bp}  ")
     
     if position.trailing and position.stop_loss > 0:
         buy_price = quotes.bp
@@ -166,7 +166,6 @@ def should_close_position(redis_position : RedisPosition , position : Transactio
 
 
 
-
 def update_transaction_gen(db, position: int, update_values: dict):
     """
     Update transaction with provided values using dictionary unpacking
@@ -179,29 +178,34 @@ def update_transaction_gen(db, position: int, update_values: dict):
     )
 
 
-def update_trailing_limit(db, position : Transaction , buy_price : float , sell_price : float):
+def check_trailing_limit(db, position : Transaction , buy_price : float , sell_price : float):
     
     if position.order_type == OrderType.buy:
         
         #Market Moves in favorable direction
-        if buy_price < position.initial_price:
+        if buy_price >= position.entry_price:
+            open_position(db, position, buy_price)
+
+        elif buy_price < position.initial_price:
             #Trailing Percent Moves Up
-            entry_price_decrement = (buy_price * position.limit_order)
-            entry_price_decrement_percent = (entry_price_decrement / position.initial_price)
-            new_entry_price = buy_price -  entry_price_decrement
-            update_transaction_gen(db , position , { "entry_price" : new_entry_price , "initial_price" : buy_price , 'limit_order' : entry_price_decrement_percent })
-                
+            entry_price_increment = (buy_price * (position.limit_order/ 100))
+            new_entry_price = buy_price +  entry_price_increment
+            update_transaction_gen(db , position , { "entry_price" : new_entry_price , "initial_price" : buy_price  })
+            # NotificationService.save_notification(db, position , f"{position.trader_id} - {position.trade_pair} - {position.order_type} Limit: {new_entry_price}, M: {buy_price} - LP: {position.limit_order}" )
+
     
     elif position.order_type == OrderType.sell:
         
+        if sell_price <= position.entry_price:
+            open_position(db, position, sell_price)
         #Market Moves in favorable direction
-        if sell_price > position.initial_price:
+        elif sell_price > position.initial_price:
             #Stop Loss moves down
-            entry_price_increment = (sell_price * position.limit_order)
-            entry_price_increment_percent = (entry_price_increment / position.initial_price)
-            new_entry_price = sell_price  +  entry_price_increment
-            update_transaction_gen(db , position , { "entry_price" : new_entry_price , "initial_price" : sell_price,  "limit_order" : entry_price_increment_percent  })
-    
+            entry_price_decrement = (sell_price * (position.limit_order/ 100))
+            new_entry_price = sell_price -  entry_price_decrement
+            update_transaction_gen(db , position , { "entry_price" : new_entry_price , "initial_price" : buy_price  })
+            # NotificationService.save_notification(db, position , f"{position.trader_id} - {position.trade_pair} - {position.order_type} Limit: {new_entry_price}, M: {sell_price} - LP: {position.limit_order}" )
+
     
 
 def check_pending_position(db, position : Transaction , buy_price : float, sell_price : float):
@@ -276,9 +280,8 @@ def monitor_position(db, position : Transaction):
                 logger.error("BUY SELL in Redis is 0, cannot process pending orders")
                 return
             if position.trailing and position.limit_order and position.initial_price:
-                logger.error("UPDATE TRAILING LIMIT CALLED")
-
-                # update_trailing_limit(db, position , quotes.bp , quotes.ap)
+                
+                return check_trailing_limit(db, position , quotes.bp , quotes.ap)
             return check_pending_position(db, position , quotes.bp , quotes.ap)
 
 
