@@ -61,7 +61,7 @@ def close_position( db , position : Transaction, redis_position : RedisPosition)
 
 
 
-def check_take_profit(trailing, take_profit, profit_loss) -> bool:
+def check_take_profit( take_profit, profit_loss) -> bool:
     """
     Position should be closed if it reaches the expected profit
     profit_loss should be > 0
@@ -69,13 +69,14 @@ def check_take_profit(trailing, take_profit, profit_loss) -> bool:
     """
     # if profit_loss < 0 it means there is no profit so return False
     if  profit_loss <= 0 or take_profit <= 0:
+    if  profit_loss <= 0 or take_profit <= 0:
         return False
     if profit_loss >= take_profit:
         return True
     return False
 
 
-def check_stop_loss(trailing, stop_loss, profit_loss) -> bool:
+def check_stop_loss( stop_loss, profit_loss) -> bool:
     """
     Position should be closed if it reaches the expected loss
     """
@@ -141,13 +142,13 @@ def should_close_position(redis_position : RedisPosition , position : Transactio
         #Cumulatives are set in create_transaction , all set, need to check in DB
         take_profit = position.cumulative_take_profit
         stop_loss = position.cumulative_stop_loss        
-        trailing = position.trailing
+  
         
        
 
         close_result = any([
-            check_stop_loss(trailing, stop_loss, redis_position.profit_loss),
-            check_take_profit(trailing, take_profit, redis_position.profit_loss)
+            check_stop_loss( stop_loss, redis_position.profit_loss),
+            check_take_profit( take_profit, redis_position.profit_loss)
         ])
 
        

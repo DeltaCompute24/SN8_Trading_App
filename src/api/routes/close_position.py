@@ -8,7 +8,7 @@ from src.services.trade_service import close_transaction, get_latest_position
 from src.utils.logging import setup_logging
 from src.utils.websocket_manager import websocket_manager
 from src.validations.position import validate_trade_pair, check_get_challenge
-from src.utils.redis_manager import set_hash_value, get_hash_value
+from src.utils.redis_manager import set_hash_value, get_hash_value, delete_hash_value
 import json
 
 logger = setup_logging()
@@ -61,7 +61,8 @@ async def close_position(position_data: ProfitLossRequest, db: AsyncSession = De
                                 taoshi_profit_loss_without_fee=taoshi_profit_loss_without_fee, order_level=len_order,
                                 average_entry_price=average_entry_price)
 
-      
+        delete_hash_value(f"{position.trade_pair}-{position.trader_id}")
+
 
         return TradeResponse(message="Position closed successfully")
 
