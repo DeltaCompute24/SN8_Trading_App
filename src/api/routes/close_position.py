@@ -17,8 +17,7 @@ router = APIRouter()
 
 @router.post("/close-position/", response_model=TradeResponse)
 async def close_position(position_data: ProfitLossRequest, db: AsyncSession = Depends(get_db)):
-    logger.info(f"Closing position for trader_id={position_data.trader_id} and trade_pair={position_data.trade_pair}")
-
+ 
     position_data.asset_type, position_data.trade_pair = validate_trade_pair(position_data.asset_type,
                                                                              position_data.trade_pair)
 
@@ -45,7 +44,7 @@ async def close_position(position_data: ProfitLossRequest, db: AsyncSession = De
             if not close_submitted:
                 logger.error("Failed to submit close signal")
                 raise HTTPException(status_code=500, detail="Failed to submit close signal")
-        logger.info(f"Close price for {position.trade_pair} is {close_price}")
+       
 
         #Getting the return value from redis for immediate return update and then updating it to actual value through monitoring
         redis_position : str | None = get_hash_value(f"{ position_data.trade_pair}-{position_data.trader_id}")
@@ -62,17 +61,9 @@ async def close_position(position_data: ProfitLossRequest, db: AsyncSession = De
                                 taoshi_profit_loss_without_fee=taoshi_profit_loss_without_fee, order_level=len_order,
                                 average_entry_price=average_entry_price)
 
-        # Remove closed position from the monitored_positions table
-        await db.execute(
-            text("DELETE FROM monitored_positions WHERE position_id = :position_id"),
-            {"position_id": position.position_id}
-        )
-        await db.commit()
-        
-        key = f"{position.trade_pair}-{position.trader_id}"
-        delete_hash_value(key)
+        delete_hash_value(f"{position.trade_pair}-{position.trader_id}")
 
-        logger.info(f"Position closed successfully with close price {close_price} and profit/loss {profit_loss}")
+
         return TradeResponse(message="Position closed successfully")
 
     except Exception as e:
