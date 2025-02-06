@@ -69,7 +69,6 @@ def check_take_profit( take_profit, profit_loss) -> bool:
     """
     # if profit_loss < 0 it means there is no profit so return False
     if  profit_loss <= 0 or take_profit <= 0:
-    if  profit_loss <= 0 or take_profit <= 0:
         return False
     if profit_loss >= take_profit:
         return True
