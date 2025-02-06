@@ -68,7 +68,7 @@ def check_take_profit(trailing, take_profit, profit_loss) -> bool:
     take_profit should be > 0
     """
     # if profit_loss < 0 it means there is no profit so return False
-    if trailing or profit_loss <= 0 or take_profit <= 0:
+    if  profit_loss <= 0 or take_profit <= 0:
         return False
     if profit_loss >= take_profit:
         return True
@@ -80,7 +80,7 @@ def check_stop_loss(trailing, stop_loss, profit_loss) -> bool:
     Position should be closed if it reaches the expected loss
     """
     # if profit_loss > 0 it means there is no loss so return False
-    if trailing or profit_loss > 0 or stop_loss <= 0:
+    if  profit_loss > 0 or stop_loss <= 0:
         return False
 
     if profit_loss <= -stop_loss:
@@ -119,7 +119,6 @@ def update_trailing_stop_loss(db , position : Transaction) -> bool:
             if buy_price > position.entry_price:
                 #Stop Loss Moves Up
                 new_trailing_stop_loss =  (buy_price * (position.stop_loss / 100)) 
-                logger.info(f" BUY - {buy_price} {position.entry_price} - New Trailing SL {new_trailing_stop_loss}   ")
                 update_stop_loss(db , new_trailing_stop_loss , position, buy_price)
                  
         
@@ -128,7 +127,6 @@ def update_trailing_stop_loss(db , position : Transaction) -> bool:
             if sell_price < position.entry_price:
                 #Stop Loss moves down
                 new_trailing_stop_loss =  (sell_price * (position.stop_loss / 100)) 
-                logger.info(f" SELL  - {sell_price} {position.entry_price}- New Trailing SL {new_trailing_stop_loss}   ")
                 update_stop_loss(db ,new_trailing_stop_loss , position , sell_price)
 
                 
@@ -191,7 +189,7 @@ def check_trailing_limit(db, position : Transaction , buy_price : float , sell_p
             entry_price_increment = (buy_price * (position.limit_order/ 100))
             new_entry_price = buy_price +  entry_price_increment
             update_transaction_gen(db , position , { "entry_price" : new_entry_price , "initial_price" : buy_price  })
-            # NotificationService.save_notification(db, position , f"{position.trader_id} - {position.trade_pair} - {position.order_type} Limit: {new_entry_price}, M: {buy_price} - LP: {position.limit_order}" )
+            NotificationService.save_notification(db, position , f"{position.trader_id} - {position.trade_pair} - {position.order_type} Limit: {new_entry_price}, M: {buy_price} - LO: {position.limit_order}" )
 
     
     elif position.order_type == OrderType.sell:
@@ -204,7 +202,7 @@ def check_trailing_limit(db, position : Transaction , buy_price : float , sell_p
             entry_price_decrement = (sell_price * (position.limit_order/ 100))
             new_entry_price = sell_price -  entry_price_decrement
             update_transaction_gen(db , position , { "entry_price" : new_entry_price , "initial_price" : buy_price  })
-            # NotificationService.save_notification(db, position , f"{position.trader_id} - {position.trade_pair} - {position.order_type} Limit: {new_entry_price}, M: {sell_price} - LP: {position.limit_order}" )
+            NotificationService.save_notification(db, position , f"{position.trader_id} - {position.trade_pair} - {position.order_type} Limit: {new_entry_price}, M: {sell_price} - LO: {position.limit_order}" )
 
     
 
