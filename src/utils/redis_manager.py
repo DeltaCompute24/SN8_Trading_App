@@ -45,6 +45,14 @@ def set_hash_value(key, value, hash_name=POSITIONS_TABLE):
     redis_client.hset(hash_name, key, json.dumps(value))
 
 
+def set_hash_value_generic(hash_name, key, value):
+    """
+    Set the key, value against a hash set in Redis
+    """
+    redis_client.hset(hash_name, key, json.dumps(value))
+
+
+
 def set_live_price(key: str, value: dict):
     """
     set the key, value against a hash set, preserving the types in value object
@@ -80,3 +88,59 @@ def pop_queue_right_item(queue_name=OPERATION_QUEUE_NAME, count=1):
 
 def delete_hash_value(key, hash_name=POSITIONS_TABLE):
     redis_client.hdel(hash_name, key)
+
+
+def get_all_trader_returns():
+    """
+    Retrieve all trader returns from Redis
+    """
+    trader_returns = redis_client.hgetall("trader_returns")
+    return {hot_key: int(float(rank)) for hot_key, rank in trader_returns.items() if float(rank).is_integer()}
+
+def get_trader_data(hot_key):
+    """
+    Retrieve the most frequently used currency for a trader from Redis
+    """
+    trader_data = redis_client.hget("trader_data", hot_key)
+    return json.loads(trader_data) if trader_data else None
+
+
+def get_trader_scores_and_weight(hot_key):
+    """
+    Retrieve the scores and weight for a trader from Redis
+    """
+    trader_scores_weight = redis_client.hget("trader_rank_data", hot_key)
+    return json.loads(trader_scores_weight) if trader_scores_weight else None
+
+
+def get_top_traders_by_rank_and_metrics(top_n=3):
+    """
+    Get the top N traders sorted by rank and include their most frequently used currency,
+    Sortino, Omega, and Sharpe ratios, and annualized all_time_returns
+    """
+    trader_returns = get_all_trader_returns()
+
+    
+    sorted_traders = sorted(trader_returns.items(), key=lambda x: x[1])
+    top_traders = sorted_traders[:top_n]
+    
+    result = []
+    for hot_key, rank in top_traders:
+        trader_data = get_trader_data(hot_key)
+        trader_scores_weight = get_trader_scores_and_weight(hot_key)
+        if not trader_data or not trader_scores_weight:
+            continue
+        
+        result.append({
+            "hot_key": hot_key,
+            "rank": str(int(float(rank))),
+            "trader_pairs": trader_data["trader_pairs"],
+            "username": trader_data["username"],
+            "email": trader_data["email"],
+            "all_time_returns": trader_data["all_time_returns"],
+            "sortino": trader_scores_weight["scores"]["sortino"]["value"],
+            "omega": trader_scores_weight["scores"]["omega"]["value"],
+            "sharpe": trader_scores_weight["scores"]["sharpe"]["value"]
+        })
+    
+    return result
