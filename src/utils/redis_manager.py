@@ -1,10 +1,17 @@
 import json
 
 import redis
+from urllib.parse import urlparse
 from src.schemas.redis_position import RedisQuotesData
+from src.config import REDIS_URL
 from src.utils.constants import REDIS_LIVE_QUOTES_TABLE, REDIS_LIVE_PRICES_TABLE, POSITIONS_TABLE, OPERATION_QUEUE_NAME
 
-redis_client = redis.StrictRedis(host='redis', port=6379, decode_responses=True)
+parsed_url = urlparse(REDIS_URL)
+redis_client = redis.StrictRedis(
+    host=parsed_url.hostname,
+    port=parsed_url.port or 6379,
+    decode_responses=True
+)
 
 
 def get_hash_values(hash_name=REDIS_LIVE_PRICES_TABLE):

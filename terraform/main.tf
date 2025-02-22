@@ -28,6 +28,8 @@ module "networking" {
   region         = var.region
   subnet_cidr    = var.subnet_cidr
   connector_cidr = var.connector_cidr
+  use_existing_vpc = var.use_existing_vpc
+  existing_vpc_name = var.existing_vpc_name
 }
 
 module "registry" {
@@ -64,7 +66,7 @@ module "services" {
   
   vpc_connector_id     = module.networking.vpc_connector_id
   
-  redis_host           = module.database.redis_host
+  redis_host           = var.redis_host
   
   api_service_account  = module.iam.api_sa_email
   celery_service_account = module.iam.celery_sa_email

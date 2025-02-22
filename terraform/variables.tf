@@ -40,7 +40,11 @@ variable "redis_memory_size" {
   default     = 4
 }
 
-variable "redis_host" {}
+variable "redis_host" {
+  description = "Redis host address"
+  type        = string
+  default     = "10.139.40.3"  # Your existing Redis host
+}
 
 variable "api_cpu" {
   default = "4000m"

@@ -6,7 +6,7 @@ import aiohttp
 import websockets
 from throttler import Throttler
 
-from src.config import POLYGON_API_KEY, SIGNAL_API_KEY, SIGNAL_API_BASE_URL
+from src.config import POLYGON_API_KEY, SIGNAL_API_KEY, SIGNAL_API_BASE_URL, REDIS_URL
 from src.utils.constants import forex_pairs, crypto_pairs, indices_pairs, stocks_pairs
 from src.utils.logging import setup_logging
 from src.utils.redis_manager import set_live_price, set_quotes
@@ -106,7 +106,7 @@ class WebSocketManager:
                         else:
                             set_live_price(trade_pair, item)
                     except Exception as e:
-                        print(f"Failed to add to Redis: {e}")
+                        print(f"Failed to add to Redis: {e} {REDIS_URL}")
             except Exception as e:
                 print("WebSocket connection closed. Reconnecting...")
                 await self.close()

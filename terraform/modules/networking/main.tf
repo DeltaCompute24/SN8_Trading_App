@@ -1,7 +1,14 @@
-# VPC Network
-resource "google_compute_network" "vpc" {
-  name                    = "${var.project_prefix}-vpc"
-  auto_create_subnetworks = false
+# Data source for existing VPC
+data "google_compute_network" "vpc" {
+  count   = var.use_existing_vpc ? 1 : 0
+  name    = var.existing_vpc_name
+  project = var.project_id
+}
+
+
+locals {
+  # Use existing VPC if specified, otherwise use the new one
+  vpc_id =  data.google_compute_network.vpc[0].id
 }
 
 # Subnet
@@ -9,7 +16,7 @@ resource "google_compute_subnetwork" "subnet" {
   name          = "${var.project_prefix}-subnet"
   ip_cidr_range = var.subnet_cidr
   region        = var.region
-  network       = google_compute_network.vpc.id
+  network       = local.vpc_id
 }
 
 # VPC Connector
@@ -17,13 +24,13 @@ resource "google_vpc_access_connector" "connector" {
   name          = "${var.project_prefix}-vpc-connector"
   region        = var.region
   ip_cidr_range = var.connector_cidr
-  network       = google_compute_network.vpc.id
+  network       = local.vpc_id
 }
 
 # VPC Connector Firewall
 resource "google_compute_firewall" "connector_firewall" {
   name    = "aet-useast1-defi--vpc--connector-hcfw"
-  network = google_compute_network.vpc.id
+  network = local.vpc_id
   project = var.project_id
 
   allow {
@@ -51,7 +58,7 @@ resource "google_compute_firewall" "connector_firewall" {
 # 1. Allow internal communication between services
 resource "google_compute_firewall" "internal" {
   name    = "${var.project_prefix}-allow-internal"
-  network = google_compute_network.vpc.id
+  network = local.vpc_id
 
   allow {
     protocol = "tcp"
@@ -73,7 +80,7 @@ resource "google_compute_firewall" "internal" {
 # 2. Allow external HTTP/HTTPS traffic
 resource "google_compute_firewall" "external" {
   name    = "${var.project_prefix}-allow-external"
-  network = google_compute_network.vpc.id
+  network = local.vpc_id
 
   allow {
     protocol = "tcp"
@@ -88,7 +95,7 @@ resource "google_compute_firewall" "external" {
 # 3. Allow SSH access
 resource "google_compute_firewall" "ssh" {
   name    = "${var.project_prefix}-allow-ssh"
-  network = google_compute_network.vpc.id
+  network = local.vpc_id
 
   allow {
     protocol = "tcp"

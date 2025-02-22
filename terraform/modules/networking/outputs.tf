@@ -1,12 +1,12 @@
 # VPC outputs
 output "vpc_id" {
   description = "The ID of the VPC"
-  value       = google_compute_network.vpc.id
+  value       = data.google_compute_network.vpc[0].id
 }
 
 output "vpc_name" {
   description = "The name of the VPC"
-  value       = google_compute_network.vpc.name
+  value       = data.google_compute_network.vpc[0].name
 }
 
 # Subnet outputs

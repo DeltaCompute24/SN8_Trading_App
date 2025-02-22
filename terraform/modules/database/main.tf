@@ -21,7 +21,3 @@ resource "google_redis_instance" "cache" {
   display_name  = "${var.project_prefix} Redis Instance"
 }
 
-# Fix the output syntax
-output "redis_host" {
-  value = var.use_existing_redis ? data.google_redis_instance.existing[0].host : google_redis_instance.cache.host
-}

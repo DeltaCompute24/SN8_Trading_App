@@ -4,8 +4,10 @@ steps:
     args:
       [
         "build",
+        "--build-arg",
+        "CACHEBUST=${BUILD_ID}",
         "-t",
-        "us-east1-docker.pkg.dev/delta-prop-shop/defi-backend-base:latest",
+        "us-east1-docker.pkg.dev/delta-prop-shop/defi-backend-base/api:latest",
         ".",
       ]
 
@@ -14,28 +16,10 @@ steps:
     args:
       [
         "tag",
-        "us-east1-docker.pkg.dev/delta-prop-shop/defi-backend-base:latest",
-        "us-east1-docker.pkg.dev/delta-prop-shop/defi-backend-fastapi:latest",
-      ]
-
-  - name: "gcr.io/cloud-builders/docker"
-    args:
-      [
-        "tag",
-        "us-east1-docker.pkg.dev/delta-prop-shop/defi-backend-base:latest",
-        "us-east1-docker.pkg.dev/delta-prop-shop/defi-backend-celery_worker:latest",
-      ]
-
-  - name: "gcr.io/cloud-builders/docker"
-    args:
-      [
-        "tag",
-        "us-east1-docker.pkg.dev/delta-prop-shop/defi-backend-base:latest",
-        "us-east1-docker.pkg.dev/delta-prop-shop/defi-backend-celery_beat:latest",
+        "us-east1-docker.pkg.dev/delta-prop-shop/defi-backend-base/api:latest",
+        "us-east1-docker.pkg.dev/delta-prop-shop/defi-backend-fastapi/api:latest",
       ]
 
 images:
-  - "us-east1-docker.pkg.dev/delta-prop-shop/defi-backend-base:latest"
-  - "us-east1-docker.pkg.dev/delta-prop-shop/defi-backend-fastapi:latest"
-  - "us-east1-docker.pkg.dev/delta-prop-shop/defi-backend-celery_worker:latest"
-  - "us-east1-docker.pkg.dev/delta-prop-shop/defi-backend-celery_beat:latest"
+  - "us-east1-docker.pkg.dev/delta-prop-shop/defi-backend-base/api:latest"
+  - "us-east1-docker.pkg.dev/delta-prop-shop/defi-backend-fastapi/api:latest"

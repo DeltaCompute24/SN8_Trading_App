@@ -26,7 +26,7 @@ from src.database import engine, Base, DATABASE_URL
 from src.api.routes.referral_code import router as referral_code_router
 from src.api.routes.favorite_trade_pairs import router as favorite_pairs_router
 from src.api.routes.notifications import router as notifications_router
-
+from src.config import REDIS_URL
 from src.services.user_service import populate_ambassadors
 from src.utils.websocket_manager import forex_websocket_manager, crypto_websocket_manager, stocks_websocket_manager
 
@@ -65,7 +65,8 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     print("Starting to listen for prices multiple...")
-    print()
+    print(REDIS_URL)
+    print(REDIS_URL)
     environment = os.getenv("ENVIRONMENT") or "dev"
     if environment == "prod":
         asyncio.create_task(stocks_websocket_manager.listen_for_prices_multiple())

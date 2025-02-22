@@ -22,34 +22,55 @@ def populate_redis_positions(data, _type="Mainnet"):
             content = data.get(challenge.hot_key)
             if not content:
                 continue
+            
 
+
+            #updates miner positions in redis, then is released by a websocekt to forntend
+            #use and modify but dont break current functionalty
             positions = content["positions"]
             for position in positions:
-                trade_pair = position.get("trade_pair", [])[0]
-                try:
-                    key = f"{trade_pair}-{trader_id}"
-                    current_time = datetime.utcnow() - timedelta(hours=1)
-                    close_time = convert_timestamp_to_datetime(position["close_ms"])
+                
+                
+                # go through each object , add al trade pairs and its count at root level
+                # add the user email , id and name at root level avaialble through challenge.user
+            
+                # create an api , that queries that redis table and provides to frontend.
+                    
+                    
+                    
+                
+                
+                
+                
+                
+                
+                
+                    trade_pair = position.get("trade_pair", [])[0]
+                    try:
+                        key = f"{trade_pair}-{trader_id}"
+                        current_time = datetime.utcnow() - timedelta(hours=1)
+                        close_time = convert_timestamp_to_datetime(position["close_ms"])
 
-                    if position["is_closed_position"] and current_time > close_time:
-                        delete_hash_value(key)
-                        continue
+                        if position["is_closed_position"] and current_time > close_time:
+                            delete_hash_value(key)
+                            continue
 
-                    price, taoshi_profit_loss, taoshi_profit_loss_without_fee = position["orders"][-1]["price"], \
-                        position["return_at_close"], position["current_return"]
-                    profit_loss = (taoshi_profit_loss * 100) - 100
-                    profit_loss_without_fee = (taoshi_profit_loss_without_fee * 100) - 100
-                    position_uuid = position["position_uuid"]
-                    value = [str(datetime.now()), price, profit_loss, profit_loss_without_fee, taoshi_profit_loss,
-                             taoshi_profit_loss_without_fee, position_uuid, hot_key, len(position["orders"]),
-                             position["average_entry_price"], position["is_closed_position"]]
-                    set_hash_value(key=key, value=value)
-                except Exception as ex:
-                    push_to_redis_queue(
-                        data=f"**Monitor Taoshi Positions** => Error Occurred While Fetching {_type} Position {trade_pair}-{trader_id}: {ex}",
-                        queue_name=ERROR_QUEUE_NAME)
-                    logger.error(f"An error occurred while fetching position {trade_pair}-{trader_id}: {ex}")
+                        price, taoshi_profit_loss, taoshi_profit_loss_without_fee = position["orders"][-1]["price"], \
+                            position["return_at_close"], position["current_return"]
+                        profit_loss = (taoshi_profit_loss * 100) - 100
+                        profit_loss_without_fee = (taoshi_profit_loss_without_fee * 100) - 100
+                        position_uuid = position["position_uuid"]
+                        value = [str(datetime.now()), price, profit_loss, profit_loss_without_fee, taoshi_profit_loss,
+                                taoshi_profit_loss_without_fee, position_uuid, hot_key, len(position["orders"]),
+                                position["average_entry_price"], position["is_closed_position"]]
+                        set_hash_value(key=key, value=value)
+                    except Exception as ex:
+                        push_to_redis_queue(
+                            data=f"**Monitor Taoshi Positions** => Error Occurred While Fetching {_type} Position {trade_pair}-{trader_id}: {ex}",
+                            queue_name=ERROR_QUEUE_NAME)
+                        logger.error(f"An error occurred while fetching position {trade_pair}-{trader_id}: {ex}")
 
+                   # store the whole thing in a new redis table
 
 @celery_app.task(name='src.tasks.monitor_miner_positions.monitor_miner')
 def monitor_miner():

@@ -24,3 +24,13 @@ variable "project_id" {
   description = "GCP Project ID"
   type        = string
 }
+
+variable "use_existing_vpc" {
+  description = "Use Existing VPC"
+  type        = bool
+}
+
+variable "existing_vpc_name" {
+  description = "existing vpc name"
+  type        = string
+}
