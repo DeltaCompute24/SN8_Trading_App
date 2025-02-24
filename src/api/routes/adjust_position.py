@@ -7,6 +7,8 @@ from src.services.trade_service import update_transaction_async, get_open_or_adj
 from src.utils.logging import setup_logging
 from src.utils.websocket_manager import websocket_manager
 from src.validations.position import validate_position, validate_leverage
+from datetime import datetime,timezone
+
 
 logger = setup_logging()
 router = APIRouter()
@@ -30,7 +32,9 @@ async def adjust_position_endpoint(position_data: TransactionUpdate, db: AsyncSe
     try:
         prev_leverage = position.leverage
         new_leverage = position_data.leverage
-
+        
+        #Prevent Monitoring if only Sl/TP changed. As in this case no new trade is submited
+        status = Status.open
         cumulative_stop_loss = position_data.stop_loss
         cumulative_take_profit = position_data.take_profit
         cumulative_leverage = position.cumulative_leverage
@@ -51,6 +55,8 @@ async def adjust_position_endpoint(position_data: TransactionUpdate, db: AsyncSe
                 logger.error("Failed to submit adjustment")
                 raise HTTPException(status_code=500, detail="Failed to submit adjustment")
             
+            #Monitoring is done through Trade Status, hence here the trade should be monitored for updated data
+            status = Status.adjust_processing
       
         updated_transaction = await update_transaction_async(
             db, 
@@ -64,8 +70,9 @@ async def adjust_position_endpoint(position_data: TransactionUpdate, db: AsyncSe
             take_profit = cumulative_take_profit,
             cumulative_stop_loss = cumulative_stop_loss,
             cumulative_take_profit = cumulative_take_profit,
-            status = Status.adjust_processing if position.status == Status.open else position.status,
-            old_status = position.status
+            status = status if position.status == Status.open else position.status,
+            old_status = position.status,
+            adjust_time= datetime.now(timezone.utc)
            )
         )
 

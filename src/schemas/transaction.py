@@ -41,6 +41,8 @@ class TransactionUpdateDatabase(BaseModel):
     status : Status
     old_status : Status
     leverage : float
+    adjust_time: datetime
+    
     
     
 class TransactionUpdateDatabaseGen(BaseModel):
