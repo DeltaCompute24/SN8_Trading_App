@@ -11,6 +11,7 @@ class TraderBase(BaseModel):
     sortino_ratio: str
     omega_ratio: str
     sharpe_ratio: str
+    thirty_days_return: str
     all_time_returns: str
 
 class TraderCreate(TraderBase):

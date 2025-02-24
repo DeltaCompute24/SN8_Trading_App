@@ -23,6 +23,7 @@ def get_top_traders():
                 omega_ratio=str(top_trader["omega"]),
                 sharpe_ratio=str(top_trader["sharpe"]),
                 all_time_returns=str(top_trader["all_time_returns"]),
+                thirty_days_return=str(top_trader["thirty_days_return"]),
             ) for top_trader in top_traders
         ]
     except Exception as e:

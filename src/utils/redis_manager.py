@@ -137,7 +137,8 @@ def get_top_traders_by_rank_and_metrics(top_n=3):
             "trader_pairs": trader_data["trader_pairs"],
             "username": trader_data["username"],
             "email": trader_data["email"],
-            "all_time_returns": trader_data["all_time_returns"],
+            "thirty_days_return": trader_data["all_time_returns"],
+            "all_time_returns": trader_scores_weight["scores"]["return"]["value"],
             "sortino": trader_scores_weight["scores"]["sortino"]["value"],
             "omega": trader_scores_weight["scores"]["omega"]["value"],
             "sharpe": trader_scores_weight["scores"]["sharpe"]["value"]
