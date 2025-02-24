@@ -95,6 +95,7 @@ def check_initiate_position(db, position, data):
         return
 
     now = datetime.utcnow() - timedelta(minutes=5)
+    #Postion opened in last 5 minutes
     if position.open_time < now:
         push_to_redis_queue(
             data=f"**Monitor Processing Positions** => An initiated processing position is not initiated but closed because we "
@@ -195,7 +196,7 @@ def check_close_position(db, position, data, closed):
 
 
 @celery_app.task(name='src.tasks.monitor_processing_positions.processing_positions')
-def processing_positions():
+def     processing_positions():
     """
     PROCESS the submitted positions to initiate them
     """
@@ -223,6 +224,7 @@ def processing_positions():
                 "order_level": len_order,
                 "max_profit_loss": profit_loss,
             }
+            print(f"BOT OPENING {position.trader_id} {position.trade_pair}")
 
             check_initiate_position(db, position, data)
             check_adjust_position(db, position, data)

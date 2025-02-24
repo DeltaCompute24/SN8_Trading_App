@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime,timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -10,6 +10,7 @@ from src.schemas.monitored_position import MonitoredPositionCreate
 from src.schemas.transaction import TransactionCreate , TransactionUpdate , TransactionUpdateDatabase , TransactionUpdateDatabaseGen
 from sqlalchemy.orm import Session
 from typing import List
+
 
 async def create_transaction(db: AsyncSession, transaction_data: TransactionCreate, entry_price: float,
                              operation_type: str, initial_price: float, position_id: int = None,
@@ -39,7 +40,7 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
             select(func.max(Transaction.trade_order)).filter(Transaction.position_id == position_id))
         trade_order = (max_trade_order or 0) + 1
     if not open_time:
-        open_time = datetime.utcnow()
+        open_time = datetime.now(timezone.utc)
     new_transaction = Transaction(
         trader_id=transaction_data.trader_id,
         trade_pair=transaction_data.trade_pair,
