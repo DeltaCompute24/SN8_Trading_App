@@ -3,7 +3,7 @@ name: Run Actions
 on:
   push:
     branches:
-      - api-v2
+      - api-main
 
 jobs:
   deploy:
