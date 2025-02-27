@@ -45,11 +45,11 @@ def set_hash_value(key, value, hash_name=POSITIONS_TABLE):
     redis_client.hset(hash_name, key, json.dumps(value))
 
 
-def set_hash_value_generic(hash_name, key, value):
+def set_hash_data(hash_name,  data):
     """
-    Set the key, value against a hash set in Redis
+    Set a whole dict inside a table 
     """
-    redis_client.hset(hash_name, key, json.dumps(value))
+    redis_client.hmset(hash_name,data)
 
 
 
@@ -113,35 +113,3 @@ def get_trader_scores_and_weight(hot_key):
     return json.loads(trader_scores_weight) if trader_scores_weight else None
 
 
-def get_top_traders_by_rank_and_metrics(top_n=3):
-    """
-    Get the top N traders sorted by rank and include their most frequently used currency,
-    Sortino, Omega, and Sharpe ratios, and annualized all_time_returns
-    """
-    trader_returns = get_all_trader_returns()
-
-    
-    sorted_traders = sorted(trader_returns.items(), key=lambda x: x[1])
-    top_traders = sorted_traders[:top_n]
-    
-    result = []
-    for hot_key, rank in top_traders:
-        trader_data = get_trader_data(hot_key)
-        trader_scores_weight = get_trader_scores_and_weight(hot_key)
-        if not trader_data or not trader_scores_weight:
-            continue
-        
-        result.append({
-            "hot_key": hot_key,
-            "rank": str(int(float(rank))),
-            "trader_pairs": trader_data["trader_pairs"],
-            "username": trader_data["username"],
-            "email": trader_data["email"],
-            "thirty_days_return": trader_data["all_time_returns"],
-            "all_time_returns": trader_scores_weight["scores"]["return"]["value"],
-            "sortino": trader_scores_weight["scores"]["sortino"]["value"],
-            "omega": trader_scores_weight["scores"]["omega"]["value"],
-            "sharpe": trader_scores_weight["scores"]["sharpe"]["value"]
-        })
-    
-    return result

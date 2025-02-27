@@ -18,16 +18,6 @@ def call_main_net(url=POSITIONS_URL, token=POSITIONS_TOKEN):
     return response.json()
 
 
-def call_statistics_net(url=STATISTICS_URL, token=STATISTICS_TOKEN):
-    headers = {
-        'Content-Type': 'application/json',
-        'x-taoshi-consumer-request-key': token,
-    }
-
-    response = requests.request(method="GET", url=url, headers=headers)
-    if response.status_code != 200:
-        return {}
-    return response.json()
 
 
 def testnet_websocket(monitor=False):

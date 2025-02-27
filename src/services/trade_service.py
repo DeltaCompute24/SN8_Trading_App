@@ -9,7 +9,8 @@ from src.models.transaction import Transaction,Status
 from src.schemas.monitored_position import MonitoredPositionCreate
 from src.schemas.transaction import TransactionCreate , TransactionUpdate , TransactionUpdateDatabase , TransactionUpdateDatabaseGen
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List , Dict, Any
+from src.schemas.trader import HotKeyMap
 
 async def create_transaction(db: AsyncSession, transaction_data: TransactionCreate, entry_price: float,
                              operation_type: str, initial_price: float, position_id: int = None,
@@ -383,3 +384,38 @@ def get_SLTP_pending_positions(db: Session) -> List[Transaction]:
     result = db.execute(query)
     positions = result.scalars().unique().all()
     return positions
+
+
+def get_user_hotkey_map(db: Session) -> HotKeyMap:
+    """
+    Get a mapping of hot_keys to user details from challenges and firebase_users tables.
+    Returns:
+        Dict[str, Any]: A dictionary with hot_keys as keys and user details as values
+    """
+    try:
+        query = text("""
+            SELECT 
+                jsonb_object_agg(
+                    c.hot_key,
+                    jsonb_build_object(
+                        'name', u.username,
+                        'email', u.email,
+                        'user_id', u.id,
+                        'trader_id', c.trader_id,
+                        'id', u.id  
+                    )
+                ) as user_hotkey_map
+            FROM challenges c
+            JOIN firebase_users u ON c.user_id = u.id
+        """)
+        
+        result = db.execute(query)
+        user_map = result.scalar()
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"DB Error fetching user hotkey map: {str(e)}"
+        )
+    return HotKeyMap(data=user_map)
+

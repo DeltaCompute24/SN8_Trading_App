@@ -1,25 +1,22 @@
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Dict, Optional
 
-class TraderBase(BaseModel):
-    hot_key: str
-    name: str = None
-    email: str = None
-    username: str = None
-    rank: str
-    trader_pairs: str
-    sortino_ratio: str
-    omega_ratio: str
-    sharpe_ratio: str
-    thirty_days_return: str
-    all_time_returns: str
+        
+        
+class UserDetails(BaseModel):
+    """
+    Represents user details associated with a hotkey.
+    Used for mapping hotkeys to user information.
+    """
+    name: Optional[str] = None
+    email: Optional[str] = None
+    user_id: Optional[int] = None
+    trader_id: Optional[int] = None
+    top_trader_pairs: Optional[Dict] = None
+    all_time_returns: Optional[float] =None
+    id: Optional[int] = None  # Added id field with default None
 
-class TraderCreate(TraderBase):
-    pass
-
-class TraderUpdate(TraderBase):
-    pass
-
-class TraderRead(TraderBase):
+class HotKeyMap(BaseModel):
+    data: Dict[str, UserDetails]
     class Config:
         orm_mode = True
