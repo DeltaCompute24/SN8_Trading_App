@@ -39,8 +39,3 @@ images:
   - "us-east1-docker.pkg.dev/delta-prop-shop/defi-backend-fastapi:latest"
   - "us-east1-docker.pkg.dev/delta-prop-shop/defi-backend-celery_worker:latest"
   - "us-east1-docker.pkg.dev/delta-prop-shop/defi-backend-celery_beat:latest"
- 
- gcloud artifacts repositories add-iam-policy-binding defi-backend --location=us-east1 --member=serviceAccount:489944993179-compute@developer.gserviceaccount.com --role="roles/artifactregistry.writer"
-
- gcloud projects add-iam-policy-binding delta-prop-shop --member="user:hatim@deltapropshop.io" --role="roles/artifactregistry.admin"
- gcloud artifacts repositories add-iam-policy-binding defi-backend --location=us-east1 --member="serviceAccount:489944993179-compute@developer.gserviceaccount.com" --role="roles/artifactregistry.writer"
