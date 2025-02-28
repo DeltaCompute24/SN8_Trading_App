@@ -45,6 +45,14 @@ def set_hash_value(key, value, hash_name=POSITIONS_TABLE):
     redis_client.hset(hash_name, key, json.dumps(value))
 
 
+def set_hash_data(hash_name,  data):
+    """
+    Set a whole dict inside a table 
+    """
+    redis_client.hmset(hash_name,data)
+
+
+
 def set_live_price(key: str, value: dict):
     """
     set the key, value against a hash set, preserving the types in value object
@@ -80,3 +88,28 @@ def pop_queue_right_item(queue_name=OPERATION_QUEUE_NAME, count=1):
 
 def delete_hash_value(key, hash_name=POSITIONS_TABLE):
     redis_client.hdel(hash_name, key)
+
+
+def get_all_trader_returns():
+    """
+    Retrieve all trader returns from Redis
+    """
+    trader_returns = redis_client.hgetall("trader_returns")
+    return {hot_key: int(float(rank)) for hot_key, rank in trader_returns.items() if float(rank).is_integer()}
+
+def get_trader_data(hot_key):
+    """
+    Retrieve the most frequently used currency for a trader from Redis
+    """
+    trader_data = redis_client.hget("trader_data", hot_key)
+    return json.loads(trader_data) if trader_data else None
+
+
+def get_trader_scores_and_weight(hot_key):
+    """
+    Retrieve the scores and weight for a trader from Redis
+    """
+    trader_scores_weight = redis_client.hget("trader_rank_data", hot_key)
+    return json.loads(trader_scores_weight) if trader_scores_weight else None
+
+

@@ -1,6 +1,6 @@
 import requests
 
-from src.config import POSITIONS_URL, POSITIONS_TOKEN, TESTNET_CHECKPOINT_URL
+from src.config import POSITIONS_URL, POSITIONS_TOKEN, TESTNET_CHECKPOINT_URL, STATISTICS_URL, STATISTICS_TOKEN
 from src.services.user_service import get_hot_key
 from src.utils.constants import ERROR_QUEUE_NAME
 from src.utils.redis_manager import push_to_redis_queue
@@ -16,6 +16,8 @@ def call_main_net(url=POSITIONS_URL, token=POSITIONS_TOKEN):
     if response.status_code != 200:
         return {}
     return response.json()
+
+
 
 
 def testnet_websocket(monitor=False):

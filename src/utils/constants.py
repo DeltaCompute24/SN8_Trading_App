@@ -30,6 +30,7 @@ STOP_LOSS_POSITIONS_TABLE = 'sl_positions'
 OPERATION_QUEUE_NAME = 'db_operations_queue'
 ERROR_QUEUE_NAME = 'errors'
 TOURNAMENT = 'tournament_score'
+TOP_TRADERS = 'top_traders'
 
 # -------------------- Assets Minimum and Maximum Leverages -------------------------
 CRYPTO_MIN_LEVERAGE = 0.01
