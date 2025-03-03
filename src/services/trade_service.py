@@ -41,7 +41,7 @@ async def create_transaction(db: AsyncSession, transaction_data: TransactionCrea
             select(func.max(Transaction.trade_order)).filter(Transaction.position_id == position_id))
         trade_order = (max_trade_order or 0) + 1
     if not open_time:
-        open_time = datetime.now(timezone.utc)
+        open_time = datetime.now()
     new_transaction = Transaction(
         trader_id=transaction_data.trader_id,
         trade_pair=transaction_data.trade_pair,
